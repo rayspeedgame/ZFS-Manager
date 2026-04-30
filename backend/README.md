@@ -1,16 +1,78 @@
-# Phase 1-3: SSH, Parser, FastAPI State Flow, and WebSocket
+# Backend
 
-This backend starts with an SSH/parser slice and now includes a small FastAPI app backed by an in-memory state store.
+This backend provides the host-integration and realtime API layer for
+ZFS-Manager.
+
+It currently includes:
+
+- SSH-based host querying
+- parsers for disk, pool, and dataset state
+- an in-memory state machine
+- FastAPI REST endpoints
+- FastAPI WebSocket streaming
+- fixture mode for local development
+- live SSH mode for real host polling
+
+## Folder Map
+
+```text
+backend/
+├── app/                # backend application package
+├── scripts/            # local debugging helpers
+├── tests/              # tests and parser fixtures
+├── config.example.json # example runtime config
+├── config.json         # local private runtime config (ignored)
+└── requirements.txt
+```
+
+See:
+
+- [app/README.md](./app/README.md)
+- [scripts/README.md](./scripts/README.md)
+- [tests/README.md](./tests/README.md)
+
+## Runtime Modes
+
+### Fixture mode
+
+Uses saved sample output files instead of a live SSH target.
+
+Best for:
+
+- parser work
+- API and frontend integration
+- local development without a host
+
+### SSH mode
+
+Uses the configured host and credentials to fetch live state.
+
+Best for:
+
+- real integration testing
+- staging
+- deployment
 
 ## Configuration
 
-Create `backend/config.json` based on [config.example.json](C:/Users/raysp/Documents/New%20project/backend/config.example.json).
+Create `backend/config.json` from [config.example.json](./config.example.json).
 
-- `poller.mode = "fixture"` keeps using saved sample outputs
-- `poller.mode = "ssh"` switches the poller to the real host
-- `poller.fallback_to_fixture = true` keeps the API available if SSH refresh fails
+Important settings:
 
-You can also override the same values with environment variables, which is useful in Docker:
+- `poller.mode`
+  - `fixture`
+  - `ssh`
+- `poller.interval_seconds`
+- `poller.fallback_to_fixture`
+- `ssh.host`
+- `ssh.username`
+- `ssh.password`
+- `ssh.key_files`
+- `ssh.command_timeout`
+- `ssh.keepalive_interval`
+- `ssh.keepalive_count_max`
+
+Environment-variable overrides are also supported:
 
 - `ZFS_MANAGER_POLLER_MODE`
 - `ZFS_MANAGER_POLLER_INTERVAL`
@@ -32,48 +94,45 @@ You can also override the same values with environment variables, which is usefu
 pip install -r requirements.txt
 ```
 
-## Run from saved sample
-
-```bash
-python scripts/debug_ssh_parser.py --source file --command lsblk --input-file tests/fixtures/lsblk_sample.json
-python scripts/debug_ssh_parser.py --source file --command zpool --input-file tests/fixtures/zpool_status_sample.txt
-python scripts/debug_ssh_parser.py --source file --command disk_overview --input-file tests/fixtures/disk_overview_sample.txt
-python scripts/debug_ssh_parser.py --source file --command zpool_overview --input-file tests/fixtures/zpool_overview_sample.txt
-python scripts/debug_ssh_parser.py --source file --command dataset_overview --input-file tests/fixtures/dataset_overview_sample.txt
-```
-
-## Run against a real host
-
-```bash
-python scripts/debug_ssh_parser.py --source ssh --command lsblk --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519 --save-output tests/fixtures/real_lsblk.json
-python scripts/debug_ssh_parser.py --source ssh --command zpool --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519 --save-output tests/fixtures/real_zpool_status.txt
-python scripts/debug_ssh_parser.py --source ssh --command disk_overview --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519 --save-output tests/fixtures/real_disk_overview.txt
-python scripts/debug_ssh_parser.py --source ssh --command zpool_overview --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519 --save-output tests/fixtures/real_zpool_overview.txt
-python scripts/debug_ssh_parser.py --source ssh --command dataset_overview --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519 --save-output tests/fixtures/real_dataset_overview.txt
-```
-
-## Recommended polling shape
-
-- `disk_overview`: one round-trip for block devices, mounts, and blkid metadata
-- `zpool_overview`: one round-trip for pool topology, capacity summary, and all pool properties
-- `dataset_overview`: one round-trip for dataset list plus all dataset properties
-
-## Test
-
-```bash
-pytest
-```
-
 ## Run the API
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Then open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) and call `GET /api/state`.
+Useful endpoints:
 
-## WebSocket endpoint
+- Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- REST state: [http://127.0.0.1:8000/api/state](http://127.0.0.1:8000/api/state)
+- Health: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
+- WebSocket: `ws://127.0.0.1:8000/ws/state`
 
-- `ws://127.0.0.1:8000/ws/state`
+## Parser Debugging
 
-The socket sends the latest state snapshot whenever the in-memory state store is updated.
+Run directly against saved samples:
+
+```bash
+python scripts/debug_ssh_parser.py --source file --command disk_overview --input-file tests/fixtures/disk_overview_sample.txt
+python scripts/debug_ssh_parser.py --source file --command zpool_overview --input-file tests/fixtures/zpool_overview_sample.txt
+python scripts/debug_ssh_parser.py --source file --command dataset_overview --input-file tests/fixtures/dataset_overview_sample.txt
+```
+
+Run against a real host:
+
+```bash
+python scripts/debug_ssh_parser.py --source ssh --command disk_overview --host 192.168.1.10 --username root --key-file ~/.ssh/id_ed25519
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+The suite currently covers:
+
+- config loading
+- parser output
+- REST endpoints
+- WebSocket streaming
+- SSH reconnect handling
