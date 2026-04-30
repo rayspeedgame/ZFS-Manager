@@ -1,0 +1,28 @@
+{
+  "blockdevices": [
+    {
+      "name": "sda",
+      "kname": "sda",
+      "path": "/dev/sda",
+      "type": "disk",
+      "size": "931.5G",
+      "model": "Samsung SSD",
+      "serial": "SAMPLE001",
+      "mountpoints": [
+        null
+      ],
+      "children": [
+        {
+          "name": "sda1",
+          "kname": "sda1",
+          "path": "/dev/sda1",
+          "type": "part",
+          "size": "931.5G",
+          "mountpoints": [
+            "/tank"
+          ]
+        }
+      ]
+    }
+  ]
+}

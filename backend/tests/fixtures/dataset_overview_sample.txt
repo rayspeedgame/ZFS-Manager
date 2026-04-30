@@ -1,0 +1,11 @@
+__ZFS_MANAGER_SECTION__ zfs_list
+tank	filesystem	248960000000	1750884147200	98304	/tank	lz4	-	-	131072	off	248960000000	98304	98304	0	98304	248959901696	0	1714305600
+tank/media	filesystem	104857600	1750884147200	104857600	/tank/media	zstd	-	-	131072	off	104857600	104857600	104857600	0	104857600	0	0	1714309200
+tank/vol1	volume	8589934592	1750884147200	8589934592	-	lz4	8589934592	8192	-	off	8589934592	8589934592	8589934592	0	8589934592	0	0	1714312800
+
+__ZFS_MANAGER_SECTION__ zfs_get
+tank	compression	lz4	local
+tank	mountpoint	/tank	local
+tank/media	compression	zstd	local
+tank/media	mountpoint	/tank/media	local
+tank/vol1	volsize	8589934592	local

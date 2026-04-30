@@ -1,0 +1,2 @@
+/dev/sda1: UUID="1111-2222" UUID_SUB="aaaa-bbbb" BLOCK_SIZE="4096" TYPE="zfs_member" PARTUUID="part-001"
+/dev/sdb1: LABEL="EFI" UUID="3333-4444" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="part-002"

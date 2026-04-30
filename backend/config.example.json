@@ -1,0 +1,21 @@
+{
+  "poller": {
+    "mode": "ssh",
+    "interval_seconds": 2,
+    "fallback_to_fixture": true
+  },
+  "ssh": {
+    "host": "192.168.1.10",
+    "username": "root",
+    "port": 22,
+    "password": "replace-with-password-or-remove-if-using-keys",
+    "key_files": [
+      "/run/secrets/id_ed25519"
+    ],
+    "known_hosts": null,
+    "connect_timeout": 10.0,
+    "command_timeout": 30.0,
+    "keepalive_interval": 30.0,
+    "keepalive_count_max": 3
+  }
+}

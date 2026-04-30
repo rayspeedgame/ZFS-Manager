@@ -1,0 +1,16 @@
+{
+  "filesystems": [
+    {
+      "target": "/tank",
+      "source": "tank",
+      "fstype": "zfs",
+      "options": "rw,relatime,xattr,posixacl"
+    },
+    {
+      "target": "/tank/media",
+      "source": "tank/media",
+      "fstype": "zfs",
+      "options": "rw,relatime,xattr,posixacl"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+__ZFS_MANAGER_SECTION__ zpool_status
+  pool: tank
+ state: ONLINE
+  scan: scrub repaired 0B in 00:10:12 with 0 errors on Mon Apr 28 12:00:00 2026
+config:
+
+        NAME        STATE     READ WRITE CKSUM
+        tank        ONLINE       0     0     0
+          mirror-0  ONLINE       0     0     0
+            /dev/disk/by-id/ata-disk-a-part1  ONLINE       0     0     0
+            /dev/disk/by-id/ata-disk-b-part1  ONLINE       0     0     0
+
+errors: No known data errors
+
+__ZFS_MANAGER_SECTION__ zpool_list
+tank	1999844147200	248960000000	1750884147200	-	12	13	1.00x	ONLINE	-
+
+__ZFS_MANAGER_SECTION__ zpool_get
+tank	ashift	12	local
+tank	autoreplace	off	default
+tank	autoexpand	off	default

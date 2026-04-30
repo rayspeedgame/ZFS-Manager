@@ -1,0 +1,44 @@
+__ZFS_MANAGER_SECTION__ lsblk_json
+{
+  "blockdevices": [
+    {
+      "name": "sda",
+      "kname": "sda",
+      "path": "/dev/sda",
+      "type": "disk",
+      "size": "931.5G",
+      "model": "Samsung SSD",
+      "serial": "SAMPLE001",
+      "mountpoints": [
+        null
+      ],
+      "children": [
+        {
+          "name": "sda1",
+          "kname": "sda1",
+          "path": "/dev/sda1",
+          "type": "part",
+          "size": "931.5G",
+          "mountpoints": [
+            "/tank"
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+__ZFS_MANAGER_SECTION__ findmnt_json
+{
+  "filesystems": [
+    {
+      "target": "/tank",
+      "source": "tank",
+      "fstype": "zfs",
+      "options": "rw,relatime,xattr,posixacl"
+    }
+  ]
+}
+
+__ZFS_MANAGER_SECTION__ blkid
+/dev/sda1: UUID="1111-2222" UUID_SUB="aaaa-bbbb" BLOCK_SIZE="4096" TYPE="zfs_member" PARTUUID="part-001"
