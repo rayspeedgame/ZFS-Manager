@@ -18,5 +18,6 @@ This folder contains the frontend application source.
 
 ## Current role
 
-The frontend currently acts as a realtime operations console skeleton. It is
-already split into navigation, topbar, multiple views, and detail drawers.
+The frontend acts as a realtime operations console backed by a structured
+snapshot contract. Resource pages mostly render backend-provided rows rather
+than rebuilding storage relationships in the browser.

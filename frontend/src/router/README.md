@@ -11,5 +11,5 @@ This folder defines the frontend route map.
 
 ## Note
 
-The current app uses hash-based navigation for simplicity. This keeps the
-frontend skeleton easy to run without a more complex server routing setup.
+The app uses hash-based navigation for simplicity. This keeps the UI easy to
+run without a more complex server routing setup.

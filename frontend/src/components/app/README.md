@@ -7,6 +7,10 @@ These components define the persistent application shell.
 - [AppSidebar.js](./AppSidebar.js)
   - left navigation
 - [AppTopbar.js](./AppTopbar.js)
-  - page title and global live state indicators
+  - page title
+  - WebSocket state indicator
+  - SSH source state
+  - last-success timestamp
+  - data-age indicator
 - [StatusBadge.js](./StatusBadge.js)
-  - compact connection-state badge
+  - compact transport-state badge

@@ -5,11 +5,12 @@ tests.
 
 ## Why fixtures matter
 
-They make parser work fast and repeatable:
+They make parser and polling work fast and repeatable:
 
 - no SSH dependency during local parser iteration
 - stable test input
 - easier debugging of edge cases
+- repeatable validation for snapshot assembly
 
 ## Current fixture types
 

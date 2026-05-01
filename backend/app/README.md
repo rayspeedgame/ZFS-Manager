@@ -5,11 +5,12 @@ This is the backend application package.
 ## Responsibilities
 
 - define API entry points
-- load configuration
-- manage in-memory state
-- run the polling loop
+- load runtime configuration
+- manage the in-memory snapshot store
+- schedule polling work by resource category
 - execute SSH commands
 - parse host output into structured state
+- assemble validated snapshots for REST and WebSocket consumers
 
 ## Subdirectories
 
@@ -23,5 +24,5 @@ This is the backend application package.
 
 - [main.py](./main.py)
   - creates the FastAPI app
-  - wires poller startup/shutdown into the app lifespan
+  - wires poller startup and shutdown into the app lifespan
   - includes REST and WebSocket routes

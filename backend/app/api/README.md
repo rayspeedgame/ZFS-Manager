@@ -11,11 +11,11 @@ This folder contains the transport layer of the backend.
 
 ## Notes
 
-The API layer should stay thin. It should mostly:
+The API layer stays intentionally thin. It should mostly:
 
 - accept requests
-- return validated state
-- stream updates
+- return validated snapshot data
+- stream updated snapshots
 
-Business logic should remain in `services/` and parsing/execution should remain
-in `ssh/`.
+Business logic belongs in `services/`, and SSH execution and parsing belong in
+`ssh/`.

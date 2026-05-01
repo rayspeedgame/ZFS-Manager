@@ -6,8 +6,10 @@ ZFS-Manager.
 It currently includes:
 
 - SSH-based host querying
-- parsers for disk, pool, and dataset state
-- an in-memory state machine
+- structured parsers for disk, pool, and dataset state
+- an in-memory snapshot store
+- retained last-good data when live refresh fails
+- decoupled polling schedules by resource category
 - FastAPI REST endpoints
 - FastAPI WebSocket streaming
 - fixture mode for local development
@@ -17,12 +19,12 @@ It currently includes:
 
 ```text
 backend/
-├── app/                # backend application package
-├── scripts/            # local debugging helpers
-├── tests/              # tests and parser fixtures
-├── config.example.json # example runtime config
-├── config.json         # local private runtime config (ignored)
-└── requirements.txt
+|- app/                # backend application package
+|- scripts/            # local debugging helpers
+|- tests/              # tests and parser fixtures
+|- config.example.json # example runtime config
+|- config.json         # local private runtime config (ignored)
+`- requirements.txt
 ```
 
 See:
@@ -42,6 +44,7 @@ Best for:
 - parser work
 - API and frontend integration
 - local development without a host
+- validating the decoupled polling logic without SSH
 
 ### SSH mode
 
@@ -53,6 +56,20 @@ Best for:
 - staging
 - deployment
 
+## Polling Model
+
+The poller no longer refreshes every resource at the same rate.
+
+Current schedule categories:
+
+- `disks`
+- `pools`
+- `datasets`
+- `properties`
+
+The backend keeps separate caches for these sections, merges them into one
+snapshot, and exposes refresh metadata in `meta.refresh_plan_seconds`.
+
 ## Configuration
 
 Create `backend/config.json` from [config.example.json](./config.example.json).
@@ -60,10 +77,13 @@ Create `backend/config.json` from [config.example.json](./config.example.json).
 Important settings:
 
 - `poller.mode`
-  - `fixture`
-  - `ssh`
 - `poller.interval_seconds`
+- `poller.tick_seconds`
 - `poller.fallback_to_fixture`
+- `poller.pools_interval_seconds`
+- `poller.datasets_interval_seconds`
+- `poller.disks_interval_seconds`
+- `poller.properties_interval_seconds`
 - `ssh.host`
 - `ssh.username`
 - `ssh.password`
@@ -76,7 +96,12 @@ Environment-variable overrides are also supported:
 
 - `ZFS_MANAGER_POLLER_MODE`
 - `ZFS_MANAGER_POLLER_INTERVAL`
+- `ZFS_MANAGER_POLLER_TICK`
 - `ZFS_MANAGER_POLLER_FALLBACK`
+- `ZFS_MANAGER_POLLER_POOLS_INTERVAL`
+- `ZFS_MANAGER_POLLER_DATASETS_INTERVAL`
+- `ZFS_MANAGER_POLLER_DISKS_INTERVAL`
+- `ZFS_MANAGER_POLLER_PROPERTIES_INTERVAL`
 - `ZFS_MANAGER_SSH_HOST`
 - `ZFS_MANAGER_SSH_USERNAME`
 - `ZFS_MANAGER_SSH_PORT`
@@ -129,10 +154,11 @@ python scripts/debug_ssh_parser.py --source ssh --command disk_overview --host 1
 pytest
 ```
 
-The suite currently covers:
+The suite covers:
 
 - config loading
 - parser output
 - REST endpoints
 - WebSocket streaming
-- SSH reconnect handling
+- SSH reconnect behavior
+- snapshot fields added for domain rows and refresh metadata

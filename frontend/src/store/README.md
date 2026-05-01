@@ -7,9 +7,10 @@ This folder contains the frontend realtime state module.
 - [state.js](./state.js)
   - opens the WebSocket connection
   - stores the latest snapshot
-  - exposes connection state and reconnect behavior
+  - exposes reconnect behavior and transport state
 
 ## Purpose
 
-At the moment this is intentionally lightweight. It behaves like a small custom
-store until the project needs something heavier such as Pinia.
+This store remains intentionally lightweight. It manages transport concerns,
+while freshness, source status, errors, and refresh cadence come from the
+backend snapshot `meta`.

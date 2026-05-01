@@ -9,7 +9,8 @@ into a multi-view dashboard layout.
 
 - left navigation shell
 - top status bar
-- live connection state
+- WebSocket transport state
+- SSH source and data-age indicators
 - Dashboard view
 - Disks view
 - Pools view
@@ -17,15 +18,27 @@ into a multi-view dashboard layout.
 - right-side detail drawers
 - development JSON panel
 
+## Current data contract
+
+The frontend now primarily consumes backend-prepared domain data from:
+
+- `snapshot.data.summary`
+- `snapshot.data.disks`
+- `snapshot.data.pools`
+- `snapshot.data.datasets`
+
+Raw overview fields are still available for compatibility and debugging, but
+the resource views no longer need to reconstruct relationships locally.
+
 ## Folder Map
 
 ```text
 frontend/
-├── src/            # application source
-├── index.html      # entry document
-├── package.json    # frontend dependencies and scripts
-├── vite.config.js  # Vite configuration
-└── README.md
+|- src/            # application source
+|- index.html      # entry document
+|- package.json    # frontend dependencies and scripts
+|- vite.config.js  # Vite configuration
+`- README.md
 ```
 
 See:
@@ -62,14 +75,12 @@ VITE_BACKEND_PORT=8000
 npm run build
 ```
 
-## Current UI Direction
+## UI Direction
 
-The frontend is intentionally moving toward a modern operations console:
+The frontend is intentionally moving toward a practical operations console:
 
-- dense but readable information layout
-- neutral dark theme
-- summary cards for global status
+- backend-driven state contract
+- clear freshness and degradation cues
+- summary cards for global health
 - tables for comparison-heavy resource views
 - drawers for object details
-
-This is the first structured UI layer, not the final polished design.

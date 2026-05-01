@@ -1,32 +1,40 @@
 # ZFS-Manager
 
 ZFS-Manager is a web-based management console for ZFS storage on a Linux host.
-The current codebase already includes:
+The project now has a working end-to-end architecture with:
 
 - a Python backend that connects to a host through SSH
-- parsers for disk, zpool, and dataset state
-- an in-memory state machine refreshed by a background poller
+- structured parsing for disk, pool, and dataset state
+- an in-memory snapshot store with retained last-good data
 - REST and WebSocket APIs built with FastAPI
-- a Vue frontend skeleton that renders live state in a modern operations-style UI
+- a Vue frontend that renders backend-provided domain data
+- decoupled polling schedules for different resource types
 
-The project is being built in stages. At the moment, the architecture and live data flow are already working end to end.
+## Current Stage
 
-## Current Status
-
-Implemented:
+Implemented in this stage:
 
 - SSH command execution with `asyncssh`
-- multi-command storage overview collection
 - parsing for:
   - `lsblk`
   - `findmnt`
   - `blkid`
   - `zpool status`
-  - `zpool list/get`
-  - `zfs list/get`
+  - `zpool list`
+  - `zpool get`
+  - `zfs list`
+  - `zfs get`
+- backend snapshot model split into `meta` and `data`
+- stale-data behavior which keeps the last successful snapshot on SSH failure
+- backend-generated `summary`, `disks`, `pools`, and `datasets` data for the UI
+- decoupled polling intervals for:
+  - disks
+  - pools
+  - datasets
+  - properties
 - FastAPI state API
 - WebSocket state streaming
-- Vue control-panel skeleton with:
+- Vue control-panel UI with:
   - Dashboard
   - Disks
   - Pools
@@ -34,50 +42,50 @@ Implemented:
 
 Planned next:
 
-- richer frontend views and filtering
-- resource detail editing flows
-- dataset and pool management actions
-- Docker packaging and deployment workflow
+- action flows for pool and dataset management
+- richer filtering and search
+- authentication and deployment packaging
+- long-term observability and audit features
 
 ## Repository Structure
 
 ```text
 ZFS-Manager/
-├── backend/      # FastAPI backend, SSH integration, parsers, tests
-├── frontend/     # Vue frontend skeleton and live WebSocket client
-├── Documents/    # Planning notes and original design documents
-└── README.md
+|- backend/      # FastAPI backend, SSH integration, polling, tests
+|- frontend/     # Vue frontend and realtime state client
+|- Documents/    # planning notes and architecture references
+`- README.md
 ```
 
-More detailed directory notes live inside each major folder:
+More detailed notes live in:
 
 - [backend/README.md](./backend/README.md)
-- [backend/app/README.md](./backend/app/README.md)
 - [frontend/README.md](./frontend/README.md)
-- [frontend/src/README.md](./frontend/src/README.md)
 - [Documents/README.md](./Documents/README.md)
 
 ## Architecture Overview
 
 ### Backend flow
 
-1. The poller gathers disk, pool, and dataset information.
-2. Raw command output is parsed into structured Python dictionaries.
-3. Parsed data is validated into Pydantic models.
-4. The latest validated snapshot is stored in the in-memory state store.
-5. REST returns the latest snapshot on demand.
-6. WebSocket pushes updated snapshots to connected frontend clients.
+1. The poller schedules refresh jobs for disks, pools, datasets, and properties.
+2. SSH commands are executed in grouped read-only batches.
+3. Raw host output is parsed into structured Python dictionaries.
+4. Parsed sections are merged into a validated `AppState` snapshot.
+5. `meta` describes freshness, source status, errors, and refresh plan.
+6. `data` exposes summary and UI-ready resource rows plus raw overview data.
+7. REST returns the latest snapshot on demand.
+8. WebSocket pushes updated snapshots to connected frontend clients.
 
 ### Frontend flow
 
 1. The app opens a WebSocket connection to the backend.
-2. Incoming snapshots are stored in a simple client-side state module.
-3. Views derive dashboard cards, tables, and detail drawers from that snapshot.
-4. The UI updates automatically whenever a new state payload arrives.
+2. Incoming snapshots are stored in a lightweight client-side store.
+3. Views consume backend-provided domain rows from `snapshot.data.*`.
+4. The UI keeps rendering the last successful data even when SSH becomes stale.
 
 ## Backend Quick Start
 
-See [backend/README.md](./backend/README.md) for full details.
+See [backend/README.md](./backend/README.md) for details.
 
 ```bash
 cd backend
@@ -126,22 +134,22 @@ cd backend
 pytest
 ```
 
-The current test suite covers:
+Current automated coverage includes:
 
 - parser behavior
 - config loading
 - API responses
 - WebSocket streaming
-- SSH reconnection handling
+- SSH reconnect handling
+- snapshot shape for new `meta/data` fields
 
 ## Design Direction
 
-The UI is intentionally moving toward a modern operations console:
+The current architecture is intentionally centered around the backend as the
+source of truth:
 
-- left navigation
-- top status bar
-- resource-focused views
-- right-side detail drawers
-- live state as the primary source of truth
-
-This is meant to become a usable management tool, not just a JSON viewer.
+- backend-owned domain models
+- stale-safe snapshots
+- thin transport layer
+- frontend views that mostly render prepared data
+- polling that can evolve per resource without reshaping the UI contract

@@ -9,4 +9,4 @@ Shared view-agnostic UI components live here.
 - [EmptyState.js](./EmptyState.js)
   - fallback UI for missing data
 - [JsonDebugPanel.js](./JsonDebugPanel.js)
-  - raw state preview used during development
+  - raw snapshot preview used during development
