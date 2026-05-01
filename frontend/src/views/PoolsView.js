@@ -39,16 +39,10 @@ export default {
     const selectedPool = ref(null);
     const drawerOpen = ref(false);
 
-    const pools = computed(() => props.state.snapshot.value?.zpool_overview?.pools || []);
-    const status = computed(() => props.state.snapshot.value?.zpool_overview?.status || {});
-    const properties = computed(() => props.state.snapshot.value?.zpool_overview?.properties || {});
+    const pools = computed(() => props.state.snapshot.value?.data?.pools || []);
 
     function openPool(pool) {
-      selectedPool.value = {
-        ...pool,
-        status: status.value.pool === pool.name ? status.value : null,
-        properties: properties.value[pool.name] || {},
-      };
+      selectedPool.value = pool;
       drawerOpen.value = true;
     }
 

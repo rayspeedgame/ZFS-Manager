@@ -8,7 +8,11 @@ from app.ssh.commands import (
     DISK_OVERVIEW,
     LSBLK_JSON,
     SECTION_PREFIX,
+    ZFS_DATASET_CORE,
+    ZFS_DATASET_PROPERTIES,
     ZFS_DATASET_OVERVIEW,
+    ZPOOL_CORE,
+    ZPOOL_PROPERTIES,
     ZPOOL_OVERVIEW,
     ZPOOL_STATUS,
 )
@@ -253,6 +257,18 @@ def parse_zpool_overview(raw_output: str) -> dict[str, Any]:
     }
 
 
+def parse_zpool_core(raw_output: str) -> dict[str, Any]:
+    sections = parse_sectioned_output(raw_output)
+    return {
+        "status": parse_zpool_status(sections["zpool_status"]),
+        "pools": parse_zpool_list(sections["zpool_list"]),
+    }
+
+
+def parse_zpool_properties(raw_output: str) -> dict[str, Any]:
+    return {"properties": parse_zpool_get(raw_output)}
+
+
 def parse_dataset_overview(raw_output: str) -> dict[str, Any]:
     """Parse the aggregated dataset overview command into structured sections."""
     sections = parse_sectioned_output(raw_output)
@@ -262,6 +278,15 @@ def parse_dataset_overview(raw_output: str) -> dict[str, Any]:
     }
 
 
+def parse_dataset_core(raw_output: str) -> dict[str, Any]:
+    sections = parse_sectioned_output(raw_output)
+    return {"datasets": parse_zfs_list(sections["zfs_list"])}
+
+
+def parse_dataset_properties(raw_output: str) -> dict[str, Any]:
+    return {"properties": parse_zfs_get(raw_output)}
+
+
 def parse_command_output(command: str, raw_output: str) -> dict[str, Any]:
     """Dispatch raw command output to the matching parser."""
     normalized = command.strip()
@@ -269,8 +294,16 @@ def parse_command_output(command: str, raw_output: str) -> dict[str, Any]:
 
     if normalized == DISK_OVERVIEW:
         return parse_disk_overview(raw_output)
+    if normalized == ZPOOL_CORE:
+        return parse_zpool_core(raw_output)
+    if normalized == ZPOOL_PROPERTIES:
+        return parse_zpool_properties(raw_output)
     if normalized == ZPOOL_OVERVIEW:
         return parse_zpool_overview(raw_output)
+    if normalized == ZFS_DATASET_CORE:
+        return parse_dataset_core(raw_output)
+    if normalized == ZFS_DATASET_PROPERTIES:
+        return parse_dataset_properties(raw_output)
     if normalized == ZFS_DATASET_OVERVIEW:
         return parse_dataset_overview(raw_output)
     if normalized == LSBLK_JSON or (lowered.startswith("lsblk") and "--json" in lowered):

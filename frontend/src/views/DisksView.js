@@ -16,30 +16,7 @@ export default {
     const selectedDisk = ref(null);
     const drawerOpen = ref(false);
 
-    const rows = computed(() => {
-      const devices = props.state.snapshot.value?.disk_overview?.lsblk?.blockdevices || [];
-      const blkidRows = props.state.snapshot.value?.disk_overview?.blkid || [];
-      const poolMembership = new Map();
-
-      for (const dataset of props.state.snapshot.value?.dataset_overview?.datasets || []) {
-        if (dataset.mountpoint && dataset.name) {
-          poolMembership.set(dataset.mountpoint, dataset.name.split("/")[0]);
-        }
-      }
-
-      return devices.map((device) => {
-        const partition = (device.children || [])[0];
-        const blkid = blkidRows.find((item) => item.device === partition?.path);
-        const mountpoint = (partition?.mountpoints || []).find(Boolean) || (device.mountpoints || []).find(Boolean);
-        return {
-          ...device,
-          blkid,
-          filesystem: blkid?.type || "-",
-          mountpoint: mountpoint || "-",
-          poolName: poolMembership.get(mountpoint) || "-",
-        };
-      });
-    });
+    const rows = computed(() => props.state.snapshot.value?.data?.disks || []);
 
     function openDisk(row) {
       selectedDisk.value = row;
@@ -125,7 +102,7 @@ export default {
               <div><dt>Filesystem</dt><dd>{{ selectedDisk.filesystem }}</dd></div>
               <div><dt>Pool</dt><dd>{{ selectedDisk.poolName }}</dd></div>
               <div><dt>Mount</dt><dd>{{ selectedDisk.mountpoint }}</dd></div>
-              <div><dt>Partition</dt><dd>{{ selectedDisk.children?.[0]?.path || '-' }}</dd></div>
+              <div><dt>Partition</dt><dd>{{ selectedDisk.partitionPath || '-' }}</dd></div>
             </dl>
           </section>
         </div>

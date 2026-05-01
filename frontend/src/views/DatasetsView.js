@@ -2,7 +2,7 @@ import { computed, ref } from "vue";
 
 import DetailDrawer from "../components/common/DetailDrawer.js";
 import EmptyState from "../components/common/EmptyState.js";
-import { flattenDatasetRows, formatBytes, formatDateTime, getPropertySourceSummary } from "../lib/formatters.js";
+import { formatBytes, formatDateTime } from "../lib/formatters.js";
 
 export default {
   components: {
@@ -16,19 +16,10 @@ export default {
     const selectedDataset = ref(null);
     const drawerOpen = ref(false);
 
-    const propertyMap = computed(() => props.state.snapshot.value?.dataset_overview?.properties || {});
-    const rows = computed(() =>
-      flattenDatasetRows(props.state.snapshot.value?.dataset_overview?.datasets || []).map((dataset) => ({
-        ...dataset,
-        sourceSummary: getPropertySourceSummary(propertyMap.value[dataset.name] || {}),
-      }))
-    );
+    const rows = computed(() => props.state.snapshot.value?.data?.datasets || []);
 
     function openDataset(row) {
-      selectedDataset.value = {
-        ...row,
-        properties: propertyMap.value[row.name] || {},
-      };
+      selectedDataset.value = row;
       drawerOpen.value = true;
     }
 

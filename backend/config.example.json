@@ -2,7 +2,12 @@
   "poller": {
     "mode": "ssh",
     "interval_seconds": 2,
-    "fallback_to_fixture": true
+    "fallback_to_fixture": true,
+    "tick_seconds": 1,
+    "pools_interval_seconds": 5,
+    "datasets_interval_seconds": 15,
+    "disks_interval_seconds": 60,
+    "properties_interval_seconds": 120
   },
   "ssh": {
     "host": "192.168.1.10",

@@ -12,6 +12,9 @@ def test_get_state_returns_snapshot() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ready"
+    assert body["meta"]["refresh_plan_seconds"]["properties"] >= body["meta"]["refresh_plan_seconds"]["pools"]
+    assert body["data"]["summary"]["pool_count"] >= 1
+    assert body["data"]["pools"][0]["name"] == "tank"
     assert body["disk_overview"]["lsblk"]["blockdevices"][0]["name"] == "sda"
     assert body["zpool_overview"]["status"]["pool"] == "tank"
     assert body["dataset_overview"]["datasets"][1]["name"] == "tank/media"

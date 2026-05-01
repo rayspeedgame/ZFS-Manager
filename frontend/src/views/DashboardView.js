@@ -12,40 +12,43 @@ export default {
   },
   setup(props) {
     const snapshot = computed(() => props.state.snapshot.value);
+    const meta = computed(() => snapshot.value?.meta || {});
+    const summary = computed(() => snapshot.value?.data?.summary || {});
     const pools = computed(() => snapshot.value?.zpool_overview?.pools || []);
     const disks = computed(() => snapshot.value?.disk_overview?.lsblk?.blockdevices || []);
     const datasets = computed(() => snapshot.value?.dataset_overview?.datasets || []);
 
     const summaryCards = computed(() => {
-      const unhealthyPools = pools.value.filter((pool) => pool.health !== "ONLINE").length;
-      const used = pools.value.reduce((total, pool) => total + Number(pool.allocated || 0), 0);
-      const free = pools.value.reduce((total, pool) => total + Number(pool.free || 0), 0);
       return [
         {
           label: "Connection",
-          value: snapshot.value?.status || "unknown",
-          meta: props.state.connectionState.value,
+          value: meta.value?.app_status || "unknown",
+          meta: `SSH ${meta.value?.source_status || "unknown"}`,
         },
         {
           label: "Pools",
-          value: String(pools.value.length),
-          meta: unhealthyPools ? `${unhealthyPools} unhealthy` : "All healthy",
+          value: String(summary.value?.pool_count ?? pools.value.length),
+          meta:
+            (summary.value?.unhealthy_pool_count ?? 0) > 0
+              ? `${summary.value.unhealthy_pool_count} unhealthy`
+              : "All healthy",
         },
         {
           label: "Capacity",
-          value: formatBytes(used),
-          meta: `${formatBytes(free)} free`,
+          value: formatBytes(summary.value?.total_allocated ?? 0),
+          meta: `${formatBytes(summary.value?.total_free ?? 0)} free`,
         },
         {
           label: "Datasets",
-          value: String(datasets.value.length),
-          meta: `${disks.value.length} disks discovered`,
+          value: String(summary.value?.dataset_count ?? datasets.value.length),
+          meta: `${summary.value?.disk_count ?? disks.value.length} disks discovered`,
         },
       ];
     });
 
     return {
       disks,
+      meta,
       pools,
       snapshot,
       summaryCards,

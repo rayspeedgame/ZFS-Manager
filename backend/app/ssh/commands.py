@@ -21,6 +21,17 @@ DISK_OVERVIEW = (
     "'"
 )
 
+ZPOOL_CORE = (
+    "sh -lc '"
+    f'printf "{SECTION_PREFIX} zpool_status\\n"; '
+    "zpool status -LP; "
+    f'printf "\\n{SECTION_PREFIX} zpool_list\\n"; '
+    "zpool list -Hp -o name,size,allocated,free,checkpoint,fragmentation,capacity,dedupratio,health,altroot"
+    "'"
+)
+
+ZPOOL_PROPERTIES = "zpool get -Hp all"
+
 ZPOOL_OVERVIEW = (
     "sh -lc '"
     f'printf "{SECTION_PREFIX} zpool_status\\n"; '
@@ -31,6 +42,17 @@ ZPOOL_OVERVIEW = (
     "zpool get -Hp all"
     "'"
 )
+
+ZFS_DATASET_CORE = (
+    "sh -lc '"
+    f'printf "{SECTION_PREFIX} zfs_list\\n"; '
+    "zfs list -Hp -t filesystem,volume,snapshot "
+    "-o name,type,used,avail,refer,mountpoint,compression,volsize,volblocksize,recordsize,readonly,"
+    "logicalused,logicalreferenced,written,usedbysnapshots,usedbydataset,usedbychildren,usedbyrefreservation,creation"
+    "'"
+)
+
+ZFS_DATASET_PROPERTIES = "zfs get -Hp -t filesystem,volume,snapshot all"
 
 ZFS_DATASET_OVERVIEW = (
     "sh -lc '"
@@ -47,7 +69,11 @@ COMMANDS = {
     "lsblk": LSBLK_JSON,
     "zpool": ZPOOL_STATUS,
     "disk_overview": DISK_OVERVIEW,
+    "zpool_core": ZPOOL_CORE,
+    "zpool_properties": ZPOOL_PROPERTIES,
     "zpool_overview": ZPOOL_OVERVIEW,
+    "dataset_core": ZFS_DATASET_CORE,
+    "dataset_properties": ZFS_DATASET_PROPERTIES,
     "dataset_overview": ZFS_DATASET_OVERVIEW,
 }
 

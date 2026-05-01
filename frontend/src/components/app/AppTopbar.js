@@ -1,7 +1,7 @@
 import { computed } from "vue";
 
 import StatusBadge from "./StatusBadge.js";
-import { formatDateTime, formatSourceLabel } from "../../lib/formatters.js";
+import { formatDateTime } from "../../lib/formatters.js";
 
 export default {
   components: {
@@ -14,17 +14,25 @@ export default {
   },
   setup(props) {
     const snapshot = computed(() => props.state.snapshot.value);
+    const meta = computed(() => snapshot.value?.meta || {});
     const connectionState = computed(() => props.state.connectionState.value);
-    const sourceLabel = computed(() =>
-      formatSourceLabel(snapshot.value?.message, snapshot.value?.status)
-    );
-    const lastUpdated = computed(() => formatDateTime(snapshot.value?.last_updated));
+    const sourceStatus = computed(() => meta.value?.source_status || "unknown");
+    const lastUpdated = computed(() => formatDateTime(meta.value?.last_success_at));
+    const staleText = computed(() => {
+      const staleSeconds = meta.value?.stale_seconds;
+      if (staleSeconds === null || staleSeconds === undefined) {
+        return "Fresh";
+      }
+      return staleSeconds === 0 ? "Fresh" : `${staleSeconds}s old`;
+    });
 
     return {
       connectionState,
       lastUpdated,
+      meta,
       snapshot,
-      sourceLabel,
+      sourceStatus,
+      staleText,
     };
   },
   template: `
@@ -37,16 +45,16 @@ export default {
 
       <div class="topbar-meta">
         <div class="meta-pill">
-          <span class="meta-label">Source</span>
-          <strong>{{ sourceLabel }}</strong>
+          <span class="meta-label">SSH Source</span>
+          <strong>{{ sourceStatus }}</strong>
         </div>
         <div class="meta-pill">
-          <span class="meta-label">Updated</span>
+          <span class="meta-label">Last Success</span>
           <strong>{{ lastUpdated }}</strong>
         </div>
         <div class="meta-pill">
-          <span class="meta-label">Interval</span>
-          <strong>{{ snapshot?.refresh_interval_seconds || "-" }}s</strong>
+          <span class="meta-label">Data Age</span>
+          <strong>{{ staleText }}</strong>
         </div>
         <StatusBadge :state="connectionState" />
       </div>
