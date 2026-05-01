@@ -1,6 +1,6 @@
 # ZFS-Manager
 
-ZFS-Manager is a web-based management console for ZFS storage on a PVE host.
+ZFS-Manager is a web-based management console for ZFS storage on a Linux host.
 The current codebase already includes:
 
 - a Python backend that connects to a host through SSH
@@ -9,8 +9,7 @@ The current codebase already includes:
 - REST and WebSocket APIs built with FastAPI
 - a Vue frontend skeleton that renders live state in a modern operations-style UI
 
-The project is being built in stages. At the moment, the architecture and live
-data flow are already working end to end.
+The project is being built in stages. At the moment, the architecture and live data flow are already working end to end.
 
 ## Current Status
 
