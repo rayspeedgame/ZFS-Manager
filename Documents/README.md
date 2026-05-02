@@ -1,22 +1,12 @@
 # Documents
 
-This folder stores the planning documents used to bootstrap the project
-architecture.
+这里存放项目说明、阶段目标和面向 Agent 的协作文档。
 
-## Files
+## 当前文件
 
-- [target.md](./target.md)
-  - product goal and intended use case
-- [ProjectStruction.md](./ProjectStruction.md)
-  - logical system layers and responsibilities
-- [ProjectDirectoryStructure.md](./ProjectDirectoryStructure.md)
-  - planned repository layout
+- `agent.md`: 面向协作 Agent 的项目说明
+- `target.md`: 当前阶段目标与完成情况
+- `ProjectStruction.md`: 项目结构说明
+- `ProjectDirectoryStructure.md`: 目录树说明
 
-## Purpose
-
-These documents are reference material. They explain why the repository is
-organized the way it is and what each stage of the build is trying to achieve.
-
-The implementation has now moved beyond the earliest skeleton stage: the
-backend owns a structured snapshot contract, the frontend consumes backend
-domain rows directly, and polling has been split by resource cadence.
+这一阶段文档已经同步到最新实现，包括状态模型、分频轮询、磁盘分区展开和池属性分组展示。

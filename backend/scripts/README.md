@@ -1,14 +1,9 @@
-# backend/scripts
+# scripts
 
-This folder contains local development and debugging helpers.
+这里放后端开发辅助脚本。
 
-## Files
+## 当前脚本
 
-- [debug_ssh_parser.py](./debug_ssh_parser.py)
-  - runs parser logic against fixture files
-  - or executes commands through SSH and prints parsed JSON
+- `debug_ssh_parser.py`: 用于本地加载 fixture 或命令输出，快速验证 parser 行为
 
-## Use case
-
-This is useful when developing parsers or SSH command groupings without running
-the full FastAPI app.
+当解析器或拓扑映射出现问题时，建议先在这里复现实例，再进入业务代码修正。

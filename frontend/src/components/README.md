@@ -1,10 +1,10 @@
-# frontend/src/components
+# components
 
-Reusable UI building blocks live here.
+这里存放前端复用组件。
 
-## Subfolders
+## 子目录
 
-- [app/README.md](./app/README.md)
-  - layout and shell components
-- [common/README.md](./common/README.md)
-  - shared utility UI components
+- `app/`: 应用框架级组件，如顶栏和侧栏
+- `common/`: 页面间共享的基础组件
+
+当前阶段组件层的主要目标是把状态展示和通用交互抽离出来，减少各个 view 的重复代码。

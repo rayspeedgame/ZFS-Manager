@@ -1,28 +1,25 @@
-# backend/app/ssh
+# ssh
 
-This folder contains the execution and parsing layer for host interaction.
+这一层负责所有与远端主机交互或解析命令输出的逻辑。
 
-## Files
+## 文件说明
 
-- [client.py](./client.py)
-  - async SSH client wrapper
-  - keepalive support
-  - reconnect-on-disconnect behavior
-- [commands.py](./commands.py)
-  - centralized read-only host command definitions
-  - split overview commands into core and properties groups for decoupled polling
-- [parser.py](./parser.py)
-  - transforms raw command output into structured dictionaries
-  - supports both combined overview payloads and split core/property payloads
+- `commands.py`: 定义分组命令
+- `client.py`: 建立 SSH 连接并执行命令
+- `parser.py`: 把命令输出解析为结构化数据
 
-## Design intent
+## 当前命令分组
 
-This layer stays host-facing and protocol-focused.
+为了配合分频轮询，命令已经按用途拆开：
 
-It is responsible for:
+- `DISK_OVERVIEW`
+- `ZPOOL_CORE`
+- `ZPOOL_PROPERTIES`
+- `ZFS_DATASET_CORE`
+- `ZFS_DATASET_PROPERTIES`
 
-- command construction
-- SSH execution
-- output parsing
+## 当前解析重点
 
-It should not contain API routing or UI-specific rendering behavior.
+- `zpool status` 已支持多 pool 拓扑解析
+- `status_by_pool` 用于池详情和磁盘归属推断
+- 解析结果既服务于 overview，也服务于更高层的领域数据构建

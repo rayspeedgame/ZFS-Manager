@@ -1,24 +1,20 @@
-# backend/app/core
+# core
 
-This folder contains shared backend runtime infrastructure.
+这一层放置后端基础设施代码。
 
-## Files
+## 文件说明
 
-- [config.py](./config.py)
-  - loads config from `backend/config.json`
-  - supports environment-variable overrides
-  - exposes polling cadence settings and SSH settings
-- [state.py](./state.py)
-  - stores the latest validated snapshot in memory
-  - exposes versioned waiting for WebSocket push updates
+- `config.py`: 读取并校验配置，包含 SSH 与轮询参数
+- `state.py`: 保存当前应用快照，供 REST 与 WebSocket 共用
 
-## Design intent
+## 当前配置重点
 
-`core/` contains application-wide primitives, not feature-specific logic.
+轮询相关参数已经从“单一刷新间隔”扩展为更细的计划：
 
-Examples:
+- `tick_seconds`
+- `pools_interval_seconds`
+- `datasets_interval_seconds`
+- `disks_interval_seconds`
+- `properties_interval_seconds`
 
-- configuration loading
-- global state
-- future logging setup
-- future dependency wiring
+这让高频状态和低频属性可以分别刷新。

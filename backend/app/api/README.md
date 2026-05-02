@@ -1,21 +1,16 @@
-# backend/app/api
+# api
 
-This folder contains the transport layer of the backend.
+这一层负责把后端内存中的最新快照暴露给前端。
 
-## Files
+## 文件说明
 
-- [rest.py](./rest.py)
-  - REST endpoints for current application state
-- [ws.py](./ws.py)
-  - WebSocket endpoint for live state streaming
+- `rest.py`: HTTP 接口，适合页面初始化和调试
+- `ws.py`: WebSocket 推送，适合前端实时更新
 
-## Notes
+## 当前约定
 
-The API layer stays intentionally thin. It should mostly:
-
-- accept requests
-- return validated snapshot data
-- stream updated snapshots
-
-Business logic belongs in `services/`, and SSH execution and parsing belong in
-`ssh/`.
+- REST 返回 JSON 快照
+- WebSocket 使用 `send_json()` 推送完整快照
+- 前端需要区分两种状态：
+  - 浏览器到后端的 WebSocket 连接状态
+  - 后端到 SSH 主机的 `source_status`

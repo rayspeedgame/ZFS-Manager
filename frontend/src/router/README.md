@@ -1,15 +1,9 @@
-# frontend/src/router
+# router
 
-This folder defines the frontend route map.
+这里负责前端页面路由。
 
-## Files
+## 当前内容
 
-- [routes.js](./routes.js)
-  - route metadata
-  - page labels
-  - view component bindings
+- `routes.js`: Dashboard、Disks、Pools、Datasets 的路由定义
 
-## Note
-
-The app uses hash-based navigation for simplicity. This keeps the UI easy to
-run without a more complex server routing setup.
+当前项目体量不大，路由保持扁平即可；若后续加入编辑页或设置页，再考虑分模块拆分。

@@ -1,34 +1,20 @@
-# backend/tests
+# tests
 
-This folder contains backend tests and parser fixtures.
+这里是后端测试目录。
 
-## Files
+## 当前覆盖范围
 
-- [conftest.py](./conftest.py)
-  - test environment setup
-  - forces fixture mode so local SSH config does not affect tests
-- [test_parser.py](./test_parser.py)
-  - parser coverage
-- [test_api.py](./test_api.py)
-  - REST endpoint coverage
-  - snapshot contract coverage for `meta` and `data`
-- [test_ws.py](./test_ws.py)
-  - WebSocket coverage
-  - live snapshot shape coverage
-- [test_config.py](./test_config.py)
-  - config model coverage
-- [test_ssh_client.py](./test_ssh_client.py)
-  - reconnect behavior coverage
-- [fixtures/README.md](./fixtures/README.md)
-  - sample command outputs used during parser development
+- `test_api.py`: REST 快照接口
+- `test_ws.py`: WebSocket 推送
+- `test_config.py`: 配置读取
+- `test_parser.py`: 命令解析，包含多 pool `zpool status` 场景
+- `test_ssh_client.py`: SSH 客户端行为
 
-## Testing approach
+## 当前测试重点
 
-Tests default to fixture mode so they can validate:
+这一阶段新增或强化的关注点：
 
-- parser shape
-- snapshot assembly
-- decoupled polling outputs
-- API compatibility
-
-without requiring a real SSH target.
+- `AppState(meta, data)` 结构
+- 保留旧快照后的接口输出
+- 多 pool 拓扑解析
+- 前端依赖的新领域数据结构

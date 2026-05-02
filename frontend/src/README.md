@@ -1,23 +1,18 @@
-# frontend/src
+# src
 
-This folder contains the frontend application source.
+`src/` 是前端主代码目录。
 
-## Structure
+## 文件与目录
 
-- [components/README.md](./components/README.md)
-- [lib/README.md](./lib/README.md)
-- [router/README.md](./router/README.md)
-- [store/README.md](./store/README.md)
-- [views/README.md](./views/README.md)
-- [App.js](./App.js)
-  - root application shell
-- [main.js](./main.js)
-  - mounts the Vue app
-- [styles.css](./styles.css)
-  - shared app styling
+- `App.js`: 应用框架
+- `main.js`: 入口
+- `styles.css`: 全局样式
+- `components/`: 复用组件
+- `lib/`: 格式化工具
+- `router/`: 路由定义
+- `store/`: 前端状态与 WebSocket 管理
+- `views/`: 页面级视图
 
-## Current role
+## 当前实现重点
 
-The frontend acts as a realtime operations console backed by a structured
-snapshot contract. Resource pages mostly render backend-provided rows rather
-than rebuilding storage relationships in the browser.
+前端当前主要承担展示职责，尽量不再自行推断池关系、拼接分区归属或计算页面主数据。

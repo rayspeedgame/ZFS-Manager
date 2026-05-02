@@ -1,12 +1,15 @@
-# frontend/src/components/common
+# components/common
 
-Shared view-agnostic UI components live here.
+这里放置通用基础组件。
 
-## Files
+## 文件说明
 
-- [DetailDrawer.js](./DetailDrawer.js)
-  - right-side overlay for resource details
-- [EmptyState.js](./EmptyState.js)
-  - fallback UI for missing data
-- [JsonDebugPanel.js](./JsonDebugPanel.js)
-  - raw snapshot preview used during development
+- `DetailDrawer.js`: 详情抽屉
+- `EmptyState.js`: 空状态提示
+- `JsonDebugPanel.js`: 调试用 JSON 展示
+
+## 当前使用方式
+
+- Pools 页的属性详情使用 `DetailDrawer`
+- 若页面数据为空或尚未准备好，优先通过 `EmptyState` 提示
+- `JsonDebugPanel` 保留用于开发和排查结构问题

@@ -1,27 +1,16 @@
-# backend/app/schemas
+# schemas
 
-This folder contains Pydantic models used by the backend.
+这一层定义后端向内和向外使用的数据模型。
 
-## Files
+## 当前重点模型
 
-- [zfs_state.py](./zfs_state.py)
-  - models the application snapshot returned by REST and WebSocket
+- `AppState`: 顶层快照
+- `AppMeta`: 运行状态、来源状态、错误与时间信息
+- `AppData`: 结构化业务数据与兼容 overview
+- `SummaryRow`、`DiskRow`、`PoolRow`、`DatasetRow`: 前端直接消费的数据行
 
-## Current snapshot design
+## 设计要点
 
-The snapshot is now split into:
-
-- `meta`
-  - app status
-  - source status
-  - timestamps
-  - stale age
-  - section state
-  - refresh plan
-- `data`
-  - summary metrics
-  - UI-ready `disks`, `pools`, and `datasets`
-  - raw overview data retained for compatibility and debugging
-
-Computed compatibility fields such as `status` and `disk_overview` are still
-present so older consumers do not break while the frontend evolves.
+- 继续保留原始 overview，方便调试和兼容迁移
+- 新增 `summary/disks/pools/datasets`，减少前端重复拼装
+- 用 `meta` 明确描述 `ready`、`degraded`、`error`、`disconnected`

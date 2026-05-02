@@ -1,17 +1,9 @@
-# frontend/src/lib
+# lib
 
-This folder contains small pure utility helpers.
+这里存放前端工具函数。
 
-## Files
+## 当前内容
 
-- [formatters.js](./formatters.js)
-  - byte formatting
-  - percent formatting
-  - datetime formatting
-  - legacy source-label helpers
+- `formatters.js`: 日期、容量、状态文本等展示辅助格式化
 
-## Note
-
-Several row-shaping helpers were intentionally moved out of the frontend during
-this stage. Resource preparation now happens in the backend so views can mostly
-render `snapshot.data.*` directly.
+这类函数应保持无副作用，尽量只处理展示逻辑，不承担业务推断。

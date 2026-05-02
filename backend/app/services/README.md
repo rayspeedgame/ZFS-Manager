@@ -1,34 +1,30 @@
-# backend/app/services
+# services
 
-This folder contains backend runtime services.
+这一层负责后端运行时的核心行为，尤其是轮询、缓存和快照组装。
 
-## Files
+## 文件说明
 
-- [poller.py](./poller.py)
-  - drives scheduled state refresh
-  - supports fixture mode and live SSH mode
-  - caches section data independently
-  - keeps last-good data on refresh failures
-  - merges section caches into the shared in-memory state store
+- `poller.py`: 当前最核心的服务，负责：
+  - 调度不同频率的 SSH 刷新任务
+  - 维护最近一次成功快照
+  - 在失败时保留旧数据并更新状态
+  - 生成 `summary`、`disks`、`pools`、`datasets`
 
-## Current behavior
+## 当前轮询设计
 
-The polling layer now separates refresh work by resource type:
+`StatePoller` 使用一个轻量级 tick 循环，根据到期时间分别刷新：
 
-- disks
-- pools
-- datasets
-- properties
+- `pools`
+- `datasets`
+- `disks`
+- `properties`
 
-This makes it possible to update fast-changing data more frequently than slow
-or expensive queries without changing the frontend contract.
+这样可以避免每次轮询都执行全部命令，也为后续进一步拆分和按需加载打下基础。
 
-## Future direction
+## 当前数据聚合
 
-This layer is the right place for:
+`poller.py` 不只负责调度，还负责把解析结果整理成页面友好的数据：
 
-- adaptive polling frequency
-- on-demand detail refresh
-- action orchestration
-- task tracking
-- audit and event logging
+- `disks`: 包含池归属、文件系统和可展开分区
+- `pools`: 包含每个池的状态、拓扑和属性
+- `datasets`: 包含层级、池名和常用属性
