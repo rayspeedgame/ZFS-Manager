@@ -7,7 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.rest import router as rest_router
 from app.api.ws import router as ws_router
-from app.runtime import poller, pool_property_updater
+from app.runtime import (
+    poller,
+    pool_creator,
+    pool_destroyer,
+    pool_property_updater,
+    pool_remover,
+    pool_topology_updater,
+)
 
 
 @asynccontextmanager
@@ -18,6 +25,10 @@ async def lifespan(_: FastAPI):
     try:
         yield
     finally:
+        await pool_creator.close()
+        await pool_destroyer.close()
+        await pool_remover.close()
+        await pool_topology_updater.close()
         await pool_property_updater.close()
         await poller.stop()
 

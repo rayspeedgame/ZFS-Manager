@@ -1,30 +1,35 @@
 # ZFS Manager
 
-ZFS Manager 是一个通过 SSH 采集远端 ZFS 主机状态，并通过 Web 页面展示与管理的项目。当前阶段已经从“只读监控”推进到“有限属性写回”，支持在前端修改部分 pool 属性，并查看每项写回结果和 SSH 执行日志。
+ZFS Manager 是一个通过 SSH 管理远端 ZFS 主机的 Web 控制台。项目由 FastAPI 后端、Vue 3 前端和一组轮询/解析服务组成，目标是把常见的 ZFS 状态查看与 pool 操作放到统一界面里完成。
 
-## 当前能力
+## 当前功能
 
-- 后端统一输出 `meta + data` 双层快照模型
-- 轮询任务按 `disks`、`pools`、`datasets`、`properties` 分频执行
-- SSH 采集失败时保留最近一次成功快照，并返回 `degraded` 或 `disconnected`
-- 前端直接消费后端整理后的 `summary`、`disks`、`pools`、`datasets`
-- Pools 详情抽屉支持编辑可写属性、确认保存、逐项结果回显与 SSH 日志查看
-- 属性保存后后端会强制刷新一次状态，尽快把最新数据推回前端
+- 实时展示 `disks`、`pools`、`datasets` 和汇总统计
+- 通过 WebSocket 持续推送最新快照，写操作后通过 REST 主动刷新
+- 查看 pool 拓扑，并显示整盘路径、`/dev/disk/by-id`、pool 内状态和 R/W/C
+- 修改 pool 可编辑属性，并回显每条 SSH 执行结果
+- 为现有 pool 添加附加设备
+  - `log / ZIL`
+  - `cache / L2ARC`
+  - `special`
+  - `dedup`
+  - `spare`
+- 创建新 pool
+  - 基础属性设置
+  - `data vdev` 分步构建
+  - 附加设备分步构建
+  - 最终以一条原子化 `zpool create` 命令提交
+- 删除 pool
+- 移除可删除的拓扑目标
+  - 有阵列时优先移除阵列
+  - 无阵列时才暴露单盘移除
+- 对已 `destroy`、但仍保留 `zfs_member` 标签的磁盘做“inactive”识别，既保留提示，也允许再次用于建池或附加设备
 
 ## 目录
 
-- `backend/`: FastAPI 后端、SSH 客户端、轮询与写回服务
-- `frontend/`: Vue 3 + Vite 前端
-- `Documents/`: 项目说明、阶段目标、协作约定
-
-## 数据流
-
-1. 后端 `StatePoller` 按计划执行 SSH 查询。
-2. `parser` 将命令输出解析为结构化数据。
-3. `poller` 基于解析结果生成 `summary`、`disks`、`pools`、`datasets`。
-4. 快照写入内存中的 `state_store`，并通过 REST / WebSocket 对外提供。
-5. 前端根据 `snapshot.meta` 展示连接与新鲜度，根据 `snapshot.data.*` 渲染页面。
-6. 当用户保存 pool 属性时，后端执行 `zpool set`，返回每项结果，并强制刷新最新状态。
+- [backend/README.md](./backend/README.md): 后端服务、接口、SSH 写入链路
+- [frontend/README.md](./frontend/README.md): 前端视图、抽屉、确认弹窗与状态同步
+- [Documents/README.md](./Documents/README.md): 补充说明、结构文档与目标说明
 
 ## 运行方式
 
@@ -44,13 +49,15 @@ npm install
 npm run dev
 ```
 
-## 配置重点
+## 配置说明
 
-后端配置见 `backend/config.example.json`。当前阶段最关键的配置项包括：
+后端通过 `backend/config.json` 读取轮询和 SSH 配置，常见项包括：
 
 - `tick_seconds`
 - `pools_interval_seconds`
 - `datasets_interval_seconds`
 - `disks_interval_seconds`
 - `properties_interval_seconds`
-- SSH 连接参数与命令超时
+- SSH 连接地址、账号、密钥或密码
+
+建议先参考 `backend/config.example.json`。

@@ -1,43 +1,55 @@
-# 项目结构说明
+# Project Structure
 
-## 总体分层
+## 整体分层
 
-项目分为三个主要部分：
+### `backend`
 
-- `backend`
-  - 负责 SSH 查询、解析、轮询、缓存、写回和接口输出
-- `frontend`
-  - 负责展示快照、处理导航、保存交互和结果回显
-- `Documents`
-  - 负责记录项目说明、阶段目标和协作约定
-
-## 当前后端结构
+后端负责和远端主机交互，并把结果整理成前端可直接消费的快照。
 
 - `api`
-  - 对外提供 REST 和 WebSocket
+  - REST / WebSocket 入口
 - `core`
-  - 管理配置和共享状态
+  - 配置、状态存储
 - `schemas`
-  - 定义快照和写回结果模型
+  - 请求响应模型
 - `services`
-  - 负责轮询、快照组装和属性写回
+  - 轮询、聚合、写操作执行
 - `ssh`
-  - 定义命令、执行 SSH、解析输出
+  - SSH 命令和解析逻辑
 
-## 当前前端结构
+### `frontend`
 
-- `components/app`
-  - 顶栏、侧栏等框架组件
+前端负责把快照转成界面，并把高风险操作组织成确认流。
+
 - `components/common`
-  - 抽屉、确认弹窗、空状态、调试面板等通用组件
+  - 通用抽屉、确认框、空态组件
 - `store`
-  - 快照状态、WebSocket 生命周期、主动刷新与保存请求
+  - WebSocket 状态和 REST 写接口
 - `views`
-  - Dashboard、Disks、Pools、Datasets 页面
+  - Dashboard / Disks / Pools / Datasets
 
-## 当前设计原则
+### `Documents`
 
-- 状态真相源尽量放在后端
-- 前端优先消费结构化结果，不重复拼装业务数据
-- 写回后通过强制刷新拿最新状态，而不是在前端本地猜测结果
-- 关键逻辑处补充简洁注释，帮助后续维护
+面向维护者的补充说明，帮助快速建立上下文。
+
+## pool 相关实现拆分
+
+- “读”链路
+  - `poller.py` 定时采集并聚合状态
+  - `parser.py` 解析 `zpool status`、`blkid`、`/dev/disk/by-id`
+- “写”链路
+  - `pool_creator.py`: `zpool create`
+  - `topology_updater.py`: `zpool add`
+  - `pool_destroyer.py`: `zpool destroy`
+  - `pool_remover.py`: `zpool remove`
+- “展示”链路
+  - `PoolsView.js` 负责属性、拓扑、新建、删除、移除交互
+  - `DisksView.js` 负责磁盘和 inactive 标签展示
+
+## 当前边界
+
+- 支持添加附加设备：`log`、`cache`、`special`、`dedup`、`spare`
+- 新建 pool 支持 `data vdev` 和附加设备一起原子化提交
+- 删除 pool 已支持
+- 拓扑移除当前走 `zpool remove`
+- 还没有实现更复杂的 `replace`、`detach`、`offline` 等维护动作

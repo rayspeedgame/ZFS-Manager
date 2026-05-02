@@ -98,7 +98,7 @@ export default {
                   </td>
                   <td>{{ row.model || "-" }}</td>
                   <td>{{ formatBytes(row.size) }}</td>
-                  <td>{{ row.filesystem }}</td>
+                  <td>{{ row.filesystemDisplay || row.filesystem }}</td>
                   <td>{{ row.poolName }}</td>
                   <td class="action-cell">
                     <button type="button" class="ghost-button" @click="openDisk(row)">View</button>
@@ -124,7 +124,7 @@ export default {
                         <span>{{ partition.path }}</span>
                         <span>{{ partition.type }}</span>
                         <span>{{ formatBytes(partition.size) }}</span>
-                        <span>{{ partition.filesystem }}</span>
+                        <span>{{ partition.filesystemDisplay || partition.filesystem }}</span>
                         <span>{{ partition.poolName }}</span>
                       </div>
                     </div>
@@ -155,7 +155,7 @@ export default {
           <section class="drawer-section">
             <h4>Filesystem Relation</h4>
             <dl class="detail-grid">
-              <div><dt>Filesystem</dt><dd>{{ selectedDisk.filesystem }}</dd></div>
+              <div><dt>Filesystem</dt><dd>{{ selectedDisk.filesystemDisplay || selectedDisk.filesystem }}</dd></div>
               <div><dt>Pool</dt><dd>{{ selectedDisk.poolName }}</dd></div>
               <div><dt>Partition</dt><dd>{{ selectedDisk.partitionPath || '-' }}</dd></div>
             </dl>

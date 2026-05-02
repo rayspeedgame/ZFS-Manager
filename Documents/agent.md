@@ -1,69 +1,74 @@
 # Agent Guide
 
-## 项目定位
+这份文档面向后续接手项目的开发者或智能体，目标是让新成员快速理解“状态从哪里来、写操作怎么落下去、哪些地方最容易出错”。
 
-ZFS Manager 是一个通过 SSH 采集远端 ZFS 主机状态，并以 Web 界面展示和管理的项目。当前阶段已经从只读监控进入“有限写回”阶段，支持修改部分 pool 属性并查看执行结果。
+## 技术栈
 
-## 当前架构摘要
-
-- 后端：FastAPI + asyncssh + Pydantic
+- 后端：FastAPI + Pydantic + async SSH
 - 前端：Vue 3 + Vite
-- 传输：REST + WebSocket，统一使用 JSON
+- 数据传输：REST + WebSocket
 
-## 当前状态模型
+## 先建立的三个核心概念
 
-后端快照分为：
+### 1. 快照是唯一界面数据源
 
-- `meta`
-  - `app_status`
-  - `source_status`
-  - `message`
-  - `last_attempt_at`
-  - `last_success_at`
-  - `stale_seconds`
-  - `refresh_plan_seconds`
-- `data`
-  - `summary`
-  - `disks`
-  - `pools`
-  - `datasets`
-  - 兼容保留的 overview
+前端主要消费：
 
-修改功能时，应继续保持这套分层，不要把状态字段和业务数据重新混在一起。
+- `snapshot.meta`
+- `snapshot.data.summary`
+- `snapshot.data.disks`
+- `snapshot.data.pools`
+- `snapshot.data.datasets`
 
-## 当前业务约定
+不要让前端自己推断 ZFS 真实状态，优先让后端把结构整理好再传。
 
-### 后端
+### 2. pool 写操作是“执行命令 + 强制刷新”
 
-- 轮询任务按 `pools`、`datasets`、`disks`、`properties` 分频执行
-- 属性写回使用独立接口，不直接手改快照，而是执行命令后强制刷新
-- 写回结果按属性逐项返回，允许部分成功、部分失败
+所有 pool 写接口都遵循同一模式：
 
-### 前端
+1. 校验输入
+2. 通过 SSH 执行命令
+3. 立即 `refresh_once(force_all=True)`
+4. 返回结果和刷新错误
 
-- 顶栏区分 WebSocket 状态和 SSH 来源状态
-- Pools 详情页支持：
-  - 只读属性与可编辑属性分组
-  - 保存前确认
-  - 保存中状态展示
-  - 逐项结果列表
-  - SSH Terminal Log
+### 3. 设备识别不能只看字符串
 
-## 编码约定
+`zpool status` 里常见的是 `/dev/disk/by-id/...`，而 `lsblk` 里常见的是 `/dev/sdX` 或 `/dev/nvme...`。  
+当前代码会把：
 
-- 在关键逻辑处加入简洁注释，帮助快速理解意图
-- 注释应解释“为什么这样做”或“这段逻辑负责什么”
-- 不要添加逐行翻译式注释，也不要堆砌显而易见的说明
+- by-id 名称
+- 实际分区路径
+- 父磁盘路径
 
-## 修改建议
+统一打通，避免把拓扑成员错误映射到别的盘。
 
-- 优先让后端产出稳定数据，再让前端消费
-- 新增字段时，优先扩展 `data.*` 领域模型
-- 涉及性能问题时，优先减少不必要的深层监听、重复计算和大对象序列化
-- 涉及 UI 状态表达时，注意区分“连接层异常”和“数据源异常”
+## 维护 pool 功能时先看哪里
 
-## 后续方向
+- 读链路
+  - `backend/app/services/poller.py`
+  - `backend/app/ssh/parser.py`
+- 写链路
+  - `backend/app/api/rest.py`
+  - `backend/app/services/pool_creator.py`
+  - `backend/app/services/topology_updater.py`
+  - `backend/app/services/pool_destroyer.py`
+  - `backend/app/services/pool_remover.py`
+- 前端
+  - `frontend/src/views/PoolsView.js`
+  - `frontend/src/store/state.js`
 
-- 接入 SMART 信息
-- 扩展 dataset 可写属性能力
-- 继续细化属性分组和多语言支持
+## 当前特别容易踩坑的点
+
+- `zpool destroy` 后磁盘仍可能保留 `zfs_member` 标签
+  - 当前会显示为 `zfs_member (inactive)`
+  - 同时允许再次用于建池或附加设备
+- pool 写操作后不能只等 WebSocket
+  - 前端还会主动调用一次 `/api/state`
+- 拓扑移除目标不要让前端自己猜
+  - 当前后端会生成 `removalTargets`
+
+## 推荐维护方式
+
+- 优先从 fixture 和真实 `zpool status` 输出来校验解析结果
+- 前端只消费结构化字段，不再自己猜 pool 成员类别
+- 给高风险功能先加后端白名单校验，再加 UI 入口

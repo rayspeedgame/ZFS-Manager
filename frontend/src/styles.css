@@ -344,6 +344,11 @@ svg {
   color: #86efac;
 }
 
+.inline-status[data-health="AVAIL"] {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
 .split-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -444,7 +449,22 @@ svg {
   filter: brightness(1.06);
 }
 
+.danger-button {
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(190, 24, 93, 0.92));
+  color: #fff5f5;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.danger-button:hover {
+  filter: brightness(1.06);
+}
+
 .primary-button:disabled,
+.danger-button:disabled,
 .ghost-button:disabled,
 .drawer-close:disabled,
 .property-field:disabled {
@@ -543,7 +563,16 @@ svg {
 
 .pool-expand-panel h4 {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pool-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .pool-quick-grid {
@@ -734,12 +763,126 @@ svg {
 }
 
 .topology-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
+  display: grid;
+  gap: 8px;
   padding: 10px 12px;
   border-radius: 8px;
   background: rgba(14, 23, 43, 0.92);
+}
+
+.topology-main-line,
+.topology-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.topology-disk-id {
+  color: #7dd3fc;
+  font-size: 12px;
+}
+
+.topology-group-list,
+.topology-device-list {
+  display: grid;
+  gap: 12px;
+}
+
+.topology-group-card {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(14, 23, 43, 0.92);
+}
+
+.wizard-step-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wizard-step-list .ghost-button[data-active="true"] {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(10, 37, 64, 0.96);
+}
+
+.simple-detail-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.simple-detail-list li {
+  display: grid;
+  gap: 4px;
+}
+
+.topology-member-card-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.topology-member-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(9, 18, 36, 0.96);
+}
+
+.topology-member-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.topology-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-field span {
+  color: #8ea2c4;
+  font-size: 12px;
+}
+
+.topology-device-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.topology-device-option {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(14, 23, 43, 0.92);
+}
+
+.topology-device-option[data-selected="true"] {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(10, 37, 64, 0.96);
+}
+
+.topology-device-option input {
+  margin-top: 4px;
+}
+
+.create-pool-actions {
+  margin-top: 0;
+  justify-content: space-between;
 }
 
 .dialog-backdrop {
@@ -813,9 +956,12 @@ svg {
 .progress-spinner {
   width: 18px;
   height: 18px;
+  flex: 0 0 18px;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
   border: 2px solid rgba(148, 163, 184, 0.24);
   border-top-color: #38bdf8;
-  border-radius: 999px;
+  border-radius: 50%;
   animation: dialog-spin 0.9s linear infinite;
 }
 
@@ -893,7 +1039,8 @@ svg {
   .summary-grid,
   .split-list,
   .detail-grid,
-  .pool-expand-shell {
+  .pool-expand-shell,
+  .topology-form-grid {
     grid-template-columns: 1fr;
   }
 }

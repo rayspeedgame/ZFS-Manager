@@ -30,6 +30,12 @@ _DEVICE_LINE_RE = re.compile(
     r"(?P<cksum>\d+)"
     r"(?:\s+(?P<notes>.*))?$"
 )
+_STATE_ONLY_LINE_RE = re.compile(
+    r"^(?P<indent>\s*)(?P<name>\S+)\s+"
+    r"(?P<state>\S+)"
+    r"(?:\s+(?P<notes>.*))?$"
+)
+_LABEL_ONLY_LINE_RE = re.compile(r"^(?P<indent>\s*)(?P<name>\S+)\s*$")
 _ERRORS_RE = re.compile(r"^\s*errors:\s*(?P<errors>.+?)\s*$")
 _SECTION_RE = re.compile(rf"^{re.escape(SECTION_PREFIX)}\s+(?P<name>[a-zA-Z0-9_]+)\s*$")
 _BLKID_LINE_RE = re.compile(r'^(?P<device>/\S+):\s*(?P<attrs>.*)$')
@@ -90,6 +96,26 @@ def parse_blkid_output(raw_output: str) -> list[dict[str, Any]]:
     return devices
 
 
+def parse_disk_by_id_output(raw_output: str) -> list[dict[str, Any]]:
+    """Parse tab-separated by-id output into alias -> device mappings."""
+    entries: list[dict[str, Any]] = []
+    for line in raw_output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        parts = stripped.split("\t")
+        if len(parts) != 2:
+            continue
+        alias, target = parts
+        entries.append(
+            {
+                "id": alias,
+                "path": target if target.startswith("/dev/") else f"/dev/{target}",
+            }
+        )
+    return entries
+
+
 def parse_zpool_status(raw_output: str) -> dict[str, Any]:
     """Parse the first zpool status block for backward-compatible callers."""
     statuses = parse_zpool_statuses(raw_output)
@@ -110,6 +136,10 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
         nonlocal result
         if result is None:
             return
+        result["config"] = _normalize_top_level_topology(
+            result.get("config", []),
+            str(result.get("pool") or ""),
+        )
         pool_name = result.get("pool")
         if pool_name:
             statuses[str(pool_name)] = result
@@ -143,27 +173,57 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
         if in_config and (not line.strip() or line.strip() == "config:"):
             continue
         if in_config and (match := _DEVICE_LINE_RE.match(line)):
-            node = {
-                "name": match.group("name"),
-                "state": match.group("state"),
-                "read": int(match.group("read")),
-                "write": int(match.group("write")),
-                "cksum": int(match.group("cksum")),
-                "notes": (match.group("notes") or "").strip() or None,
-                "children": [],
-            }
-            indent = len(match.group("indent"))
-
-            # zpool status uses indentation to describe the vdev hierarchy.
-            while stack and stack[-1][0] >= indent:
-                stack.pop()
-
-            if stack:
-                stack[-1][1]["children"].append(node)
-            else:
-                result["config"].append(node)
-
-            stack.append((indent, node))
+            _append_config_node(
+                result=result,
+                stack=stack,
+                node={
+                    "name": match.group("name"),
+                    "state": match.group("state"),
+                    "read": int(match.group("read")),
+                    "write": int(match.group("write")),
+                    "cksum": int(match.group("cksum")),
+                    "notes": (match.group("notes") or "").strip() or None,
+                    "children": [],
+                },
+                indent=len(match.group("indent")),
+            )
+            continue
+        if in_config and (match := _STATE_ONLY_LINE_RE.match(line)):
+            if str(match.group("name") or "").lower() == "errors:":
+                continue
+            _append_config_node(
+                result=result,
+                stack=stack,
+                node={
+                    "name": match.group("name"),
+                    "state": match.group("state"),
+                    "read": None,
+                    "write": None,
+                    "cksum": None,
+                    "notes": (match.group("notes") or "").strip() or None,
+                    "children": [],
+                },
+                indent=len(match.group("indent")),
+            )
+            continue
+        if in_config and (match := _LABEL_ONLY_LINE_RE.match(line)):
+            lowered = str(match.group("name") or "").lower()
+            if lowered in {"config:", "name", "errors:"}:
+                continue
+            _append_config_node(
+                result=result,
+                stack=stack,
+                node={
+                    "name": match.group("name"),
+                    "state": None,
+                    "read": None,
+                    "write": None,
+                    "cksum": None,
+                    "notes": None,
+                    "children": [],
+                },
+                indent=len(match.group("indent")),
+            )
             continue
         if match := _ERRORS_RE.match(line):
             result["errors"] = match.group("errors")
@@ -188,6 +248,39 @@ def parse_sectioned_output(raw_output: str) -> dict[str, str]:
             sections[current_name].append(line)
 
     return {name: "\n".join(lines).strip() for name, lines in sections.items()}
+
+
+def _append_config_node(
+    *,
+    result: dict[str, Any],
+    stack: list[tuple[int, dict[str, Any]]],
+    node: dict[str, Any],
+    indent: int,
+) -> None:
+    # zpool status uses indentation to describe the vdev hierarchy.
+    while stack and stack[-1][0] >= indent:
+        stack.pop()
+
+    if stack:
+        stack[-1][1]["children"].append(node)
+    else:
+        result["config"].append(node)
+
+    stack.append((indent, node))
+
+
+def _normalize_top_level_topology(config: list[dict[str, Any]], pool_name: str) -> list[dict[str, Any]]:
+    if not config or not pool_name:
+        return config
+    root_index = next((index for index, node in enumerate(config) if str(node.get("name") or "") == pool_name), None)
+    if root_index is None:
+        return config
+
+    root = config[root_index]
+    siblings = [node for index, node in enumerate(config) if index != root_index]
+    if siblings:
+        root["children"] = [*(root.get("children") or []), *siblings]
+    return [root]
 
 
 def parse_tsv_lines(raw_output: str, columns: list[str]) -> list[dict[str, Any]]:
@@ -275,6 +368,7 @@ def parse_disk_overview(raw_output: str) -> dict[str, Any]:
         "lsblk": parse_lsblk_json(sections["lsblk_json"]),
         "findmnt": parse_findmnt_json(sections["findmnt_json"]),
         "blkid": parse_blkid_output(sections["blkid"]),
+        "by_id": parse_disk_by_id_output(sections.get("disk_by_id", "")),
     }
 
 

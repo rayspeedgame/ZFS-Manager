@@ -42,3 +42,7 @@ __ZFS_MANAGER_SECTION__ findmnt_json
 
 __ZFS_MANAGER_SECTION__ blkid
 /dev/sda1: UUID="1111-2222" UUID_SUB="aaaa-bbbb" BLOCK_SIZE="4096" TYPE="zfs_member" PARTUUID="part-001"
+
+__ZFS_MANAGER_SECTION__ disk_by_id
+nvme-Samsung_SSD_980_PRO_1TB_S5GXNX0T123456X	/dev/sda
+nvme-Samsung_SSD_980_PRO_1TB_S5GXNX0T123456X-part1	/dev/sda1

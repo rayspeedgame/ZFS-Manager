@@ -100,6 +100,66 @@ async function updatePoolProperties(poolName, changes) {
   return payload;
 }
 
+async function updatePoolTopology(poolName, additions) {
+  const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/topology`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ additions }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.detail || `Failed to update pool topology: ${response.status}`);
+  }
+  return payload;
+}
+
+async function createPool(payload) {
+  const response = await fetch(`${buildApiBaseUrl()}/pools`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || `Failed to create pool: ${response.status}`);
+  }
+  return result;
+}
+
+async function destroyPool(poolName) {
+  const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/destroy`, {
+    method: "POST",
+  });
+
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || `Failed to destroy pool: ${response.status}`);
+  }
+  return result;
+}
+
+async function removePoolTarget(poolName, commandTarget) {
+  const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/remove`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ command_target: commandTarget }),
+  });
+
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || `Failed to remove pool target: ${response.status}`);
+  }
+  return result;
+}
+
 export function useAppState() {
   return {
     state: {
@@ -111,7 +171,11 @@ export function useAppState() {
     },
     connect,
     disconnect,
+    createPool,
+    destroyPool,
+    removePoolTarget,
     refreshStateOnce,
     updatePoolProperties,
+    updatePoolTopology,
   };
 }

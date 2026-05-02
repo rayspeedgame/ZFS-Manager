@@ -17,7 +17,12 @@ DISK_OVERVIEW = (
     f'printf "\\n{SECTION_PREFIX} findmnt_json\\n"; '
     "findmnt --json -A; "
     f'printf "\\n{SECTION_PREFIX} blkid\\n"; '
-    "blkid -o full"
+    "blkid -o full; "
+    f'printf "\\n{SECTION_PREFIX} disk_by_id\\n"; '
+    "for entry in /dev/disk/by-id/*; do "
+    '[ -e "$entry" ] || continue; '
+    'printf "%s\\t%s\\n" "$(basename "$entry")" "$(readlink -f "$entry")"; '
+    "done 2>/dev/null || true"
     "'"
 )
 

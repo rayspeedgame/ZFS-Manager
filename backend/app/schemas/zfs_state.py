@@ -13,11 +13,16 @@ class PropertyValue(BaseModel):
 
 class ZPoolStatusNode(BaseModel):
     name: str
-    state: str
-    read: int
-    write: int
-    cksum: int
+    state: str | None = None
+    read: int | None = None
+    write: int | None = None
+    cksum: int | None = None
     notes: str | None = None
+    display_name: str | None = None
+    vdev_class: str | None = None
+    role_label: str | None = None
+    node_kind: str | None = None
+    layout: str | None = None
     children: list["ZPoolStatusNode"] = Field(default_factory=list)
 
 

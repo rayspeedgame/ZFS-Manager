@@ -9,6 +9,18 @@ config:
           mirror-0  ONLINE       0     0     0
             /dev/disk/by-id/ata-disk-a-part1  ONLINE       0     0     0
             /dev/disk/by-id/ata-disk-b-part1  ONLINE       0     0     0
+        logs
+          /dev/disk/by-id/nvme-log-disk-part1  ONLINE       0     0     0
+        cache
+          /dev/disk/by-id/nvme-cache-disk-part1  ONLINE       0     0     0
+        special
+          mirror-1  ONLINE       0     0     0
+            /dev/disk/by-id/ata-special-a-part1  ONLINE       0     0     0
+            /dev/disk/by-id/ata-special-b-part1  ONLINE       0     0     0
+        dedup
+          /dev/disk/by-id/nvme-dedup-disk-part1  ONLINE       0     0     0
+        spares
+          /dev/disk/by-id/ata-spare-a-part1  AVAIL
 
 errors: No known data errors
 

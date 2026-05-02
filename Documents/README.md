@@ -1,20 +1,24 @@
 # Documents
 
-这里存放项目说明、阶段目标和面向协作 Agent 的约定。
+这个目录存放项目补充说明，重点是帮助后续维护者快速理解项目目标、目录结构和当前实现边界。
 
-## 当前文件
+## 文件说明
 
-- `agent.md`: 面向协作 Agent 的项目说明与编码约定
-- `target.md`: 当前阶段目标与完成情况
-- `ProjectStruction.md`: 项目分层说明
-- `ProjectDirectoryStructure.md`: 目录树说明
+- `agent.md`
+  - 适合接手此项目的开发者说明
+- `target.md`
+  - 当前产品目标和阶段性能力
+- `ProjectStruction.md`
+  - 模块分工和职责说明
+- `ProjectDirectoryStructure.md`
+  - 目录树概览
 
-## 当前阶段同步内容
+## 本轮已同步的重点
 
-这一阶段文档已更新到最新实现，重点包括：
-
-- pool 属性写回能力
-- 保存确认弹窗与逐项结果回显
-- SSH Terminal Log 展示
-- 强制刷新最新状态的后端流程
-- 编码时补充简洁注释的约定
+- pool 属性修改
+- pool 拓扑附加设备
+- pool 新建向导
+- pool 删除
+- pool 拓扑目标移除
+- inactive `zfs_member` 识别与可复用规则
+- pool 写操作后的强制刷新策略
