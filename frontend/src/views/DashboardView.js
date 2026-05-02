@@ -21,9 +21,9 @@ export default {
     const summaryCards = computed(() => {
       return [
         {
-          label: "Connection",
-          value: meta.value?.app_status || "unknown",
-          meta: `SSH ${meta.value?.source_status || "unknown"}`,
+          label: "Disks",
+          value: String(summary.value?.disk_count ?? disks.value.length),
+          meta: "All healthy",
         },
         {
           label: "Pools",

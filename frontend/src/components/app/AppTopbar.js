@@ -16,6 +16,7 @@ export default {
     const snapshot = computed(() => props.state.snapshot.value);
     const meta = computed(() => snapshot.value?.meta || {});
     const connectionState = computed(() => props.state.connectionState.value);
+    const appStatus = computed(() => meta.value?.app_status || "unknown");
     const sourceStatus = computed(() => meta.value?.source_status || "unknown");
     const lastUpdated = computed(() => formatDateTime(meta.value?.last_success_at));
     const staleText = computed(() => {
@@ -27,6 +28,7 @@ export default {
     });
 
     return {
+      appStatus,
       connectionState,
       lastUpdated,
       meta,
@@ -44,7 +46,7 @@ export default {
       </div>
 
       <div class="topbar-meta">
-        <div class="meta-pill">
+        <div class="meta-pill" :data-status="appStatus">
           <span class="meta-label">SSH Source</span>
           <strong>{{ sourceStatus }}</strong>
         </div>
@@ -56,7 +58,11 @@ export default {
           <span class="meta-label">Data Age</span>
           <strong>{{ staleText }}</strong>
         </div>
-        <StatusBadge :state="connectionState" />
+        <div class="meta-pill">
+          <span class="meta-label">WebSocket</span>
+          <strong>{{ connectionState }}</strong>
+        </div>
+        <StatusBadge :state="appStatus" />
       </div>
     </header>
   `,

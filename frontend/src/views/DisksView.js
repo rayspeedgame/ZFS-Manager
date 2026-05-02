@@ -15,6 +15,7 @@ export default {
   setup(props) {
     const selectedDisk = ref(null);
     const drawerOpen = ref(false);
+    const expandedRows = ref({});
 
     const rows = computed(() => props.state.snapshot.value?.data?.disks || []);
 
@@ -23,11 +24,26 @@ export default {
       drawerOpen.value = true;
     }
 
+    function toggleRow(row) {
+      const key = row.path || row.name;
+      expandedRows.value = {
+        ...expandedRows.value,
+        [key]: !expandedRows.value[key],
+      };
+    }
+
+    function isExpanded(row) {
+      return Boolean(expandedRows.value[row.path || row.name]);
+    }
+
     return {
       drawerOpen,
+      expandedRows,
+      isExpanded,
       openDisk,
       rows,
       selectedDisk,
+      toggleRow,
       formatBytes,
     };
   },
@@ -56,25 +72,65 @@ export default {
                 <th>Size</th>
                 <th>Filesystem</th>
                 <th>Pool</th>
-                <th>Mount</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in rows" :key="row.path || row.name">
-                <td>
-                  <strong>{{ row.name }}</strong>
-                  <div class="subtle-text">{{ row.path }}</div>
-                </td>
-                <td>{{ row.model || "-" }}</td>
-                <td>{{ formatBytes(row.size) }}</td>
-                <td>{{ row.filesystem }}</td>
-                <td>{{ row.poolName }}</td>
-                <td>{{ row.mountpoint }}</td>
-                <td class="action-cell">
-                  <button type="button" class="ghost-button" @click="openDisk(row)">View</button>
-                </td>
-              </tr>
+              <template v-for="row in rows" :key="row.path || row.name">
+                <tr>
+                  <td>
+                    <div class="disk-cell">
+                      <button
+                        v-if="row.partitions?.length"
+                        type="button"
+                        class="row-toggle"
+                        :data-expanded="isExpanded(row)"
+                        @click="toggleRow(row)"
+                      >
+                        ▸
+                      </button>
+                      <span v-else class="row-toggle-placeholder"></span>
+                      <div>
+                        <strong>{{ row.name }}</strong>
+                        <div class="subtle-text">{{ row.path }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ row.model || "-" }}</td>
+                  <td>{{ formatBytes(row.size) }}</td>
+                  <td>{{ row.filesystem }}</td>
+                  <td>{{ row.poolName }}</td>
+                  <td class="action-cell">
+                    <button type="button" class="ghost-button" @click="openDisk(row)">View</button>
+                  </td>
+                </tr>
+                <tr v-if="isExpanded(row)" class="partition-row">
+                  <td colspan="6">
+                    <div class="partition-shell">
+                      <div class="partition-header">
+                        <span>Name</span>
+                        <span>Path</span>
+                        <span>Type</span>
+                        <span>Size</span>
+                        <span>Filesystem</span>
+                        <span>Pool</span>
+                      </div>
+                      <div
+                        v-for="partition in row.partitions"
+                        :key="partition.path || partition.name"
+                        class="partition-item"
+                      >
+                        <strong>{{ partition.name }}</strong>
+                        <span>{{ partition.path }}</span>
+                        <span>{{ partition.type }}</span>
+                        <span>{{ formatBytes(partition.size) }}</span>
+                        <span>{{ partition.filesystem }}</span>
+                        <span>{{ partition.poolName }}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -101,7 +157,6 @@ export default {
             <dl class="detail-grid">
               <div><dt>Filesystem</dt><dd>{{ selectedDisk.filesystem }}</dd></div>
               <div><dt>Pool</dt><dd>{{ selectedDisk.poolName }}</dd></div>
-              <div><dt>Mount</dt><dd>{{ selectedDisk.mountpoint }}</dd></div>
               <div><dt>Partition</dt><dd>{{ selectedDisk.partitionPath || '-' }}</dd></div>
             </dl>
           </section>

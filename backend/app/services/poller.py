@@ -358,7 +358,7 @@ class StatePoller:
             ),
             data=AppData(
                 summary=_build_summary(zpool_data, disk_data, dataset_data),
-                disks=_build_disk_rows(disk_data, dataset_data),
+                disks=_build_disk_rows(disk_data, dataset_data, zpool_data),
                 pools=_build_pool_rows(zpool_data),
                 datasets=_build_dataset_rows(dataset_data),
                 disk_overview=DiskOverview.model_validate(disk_data),
@@ -517,10 +517,15 @@ def _build_summary(zpool_data: dict, disk_data: dict, dataset_data: dict) -> Sum
     )
 
 
-def _build_disk_rows(disk_data: dict, dataset_data: dict) -> list[dict]:
+def _build_disk_rows(disk_data: dict, dataset_data: dict, zpool_data: dict) -> list[dict]:
     devices = disk_data.get("lsblk", {}).get("blockdevices", [])
     blkid_rows = disk_data.get("blkid", [])
     datasets = dataset_data.get("datasets", [])
+    zpool_roots = {
+        str(dataset.get("name")).split("/")[0]
+        for dataset in datasets
+        if dataset.get("name")
+    }
     pool_membership: dict[str, str] = {}
 
     for dataset in datasets:
@@ -529,23 +534,42 @@ def _build_disk_rows(disk_data: dict, dataset_data: dict) -> list[dict]:
         if mountpoint and name:
             pool_membership[mountpoint] = str(name).split("/")[0]
 
+    topology_membership = _build_topology_membership_map(zpool_data)
+    single_pool_name = next(iter(zpool_roots), None) if len(zpool_roots) == 1 else None
+
     rows: list[dict] = []
     for device in devices:
         children = device.get("children") or []
-        partition = children[0] if children else {}
-        partition_path = partition.get("path")
-        blkid = next((item for item in blkid_rows if item.get("device") == partition_path), None)
-        mountpoints = partition.get("mountpoints") or device.get("mountpoints") or []
-        mountpoint = next((value for value in mountpoints if value), None)
+        partitions = [
+            _build_partition_row(
+                child,
+                blkid_rows,
+                topology_membership,
+                single_pool_name,
+            )
+            for child in children
+        ]
+        primary_partition = partitions[0] if partitions else {}
+        primary_pool_name = primary_partition.get("poolName")
+        primary_filesystem = primary_partition.get("filesystem")
+        device_pool_name = _resolve_disk_pool_name(
+            device=device,
+            primary_partition=primary_partition,
+            topology_membership=topology_membership,
+            single_pool_name=single_pool_name,
+        )
+        filesystem = primary_filesystem or _filesystem_from_device(
+            device=device,
+            blkid_rows=blkid_rows,
+        )
 
         rows.append(
             {
                 **device,
-                "blkid": blkid,
-                "filesystem": (blkid or {}).get("type") or "-",
-                "mountpoint": mountpoint or "-",
-                "poolName": pool_membership.get(mountpoint or "", "-"),
-                "partitionPath": partition_path or "-",
+                "filesystem": filesystem or "-",
+                "poolName": device_pool_name or primary_pool_name or single_pool_name or "-",
+                "partitionPath": primary_partition.get("path") or "-",
+                "partitions": partitions,
             }
         )
 
@@ -555,7 +579,7 @@ def _build_disk_rows(disk_data: dict, dataset_data: dict) -> list[dict]:
 def _build_pool_rows(zpool_data: dict) -> list[dict]:
     pools = zpool_data.get("pools", [])
     properties = zpool_data.get("properties", {})
-    status = zpool_data.get("status", {})
+    status_by_pool = zpool_data.get("status_by_pool", {})
     rows: list[dict] = []
 
     for pool in pools:
@@ -563,7 +587,7 @@ def _build_pool_rows(zpool_data: dict) -> list[dict]:
         rows.append(
             {
                 **pool,
-                "status": status if status.get("pool") == name else None,
+                "status": status_by_pool.get(name),
                 "properties": properties.get(name, {}),
             }
         )
@@ -605,3 +629,88 @@ def _get_property_source_summary(properties: dict[str, dict]) -> str:
     if inherited_only:
         return "Inherited"
     return "Mixed"
+
+
+def _build_partition_row(
+    partition: dict,
+    blkid_rows: list[dict],
+    topology_membership: dict[str, str],
+    single_pool_name: str | None,
+) -> dict:
+    partition_path = partition.get("path")
+    blkid = next((item for item in blkid_rows if item.get("device") == partition_path), None)
+    filesystem = (blkid or {}).get("type") or "-"
+    pool_name = _lookup_pool_name(partition_path, partition.get("name"), topology_membership)
+    if not pool_name and single_pool_name and filesystem == "zfs_member":
+        pool_name = single_pool_name
+
+    return {
+        **partition,
+        "filesystem": filesystem,
+        "poolName": pool_name or "-",
+    }
+
+
+def _build_topology_membership_map(zpool_data: dict) -> dict[str, str]:
+    membership: dict[str, str] = {}
+    status_by_pool = zpool_data.get("status_by_pool", {})
+
+    def visit(node: dict, pool_name: str) -> None:
+        name = node.get("name")
+        if name:
+            for candidate in _device_identity_candidates(name, name):
+                membership[candidate] = pool_name
+        for child in node.get("children", []):
+            visit(child, pool_name)
+
+    for pool_name, status in status_by_pool.items():
+        for node in status.get("config", []):
+            visit(node, str(pool_name))
+
+    return membership
+
+
+def _resolve_disk_pool_name(
+    *,
+    device: dict,
+    primary_partition: dict,
+    topology_membership: dict[str, str],
+    single_pool_name: str | None,
+) -> str | None:
+    device_pool_name = _lookup_pool_name(device.get("path"), device.get("name"), topology_membership)
+    if device_pool_name:
+        return device_pool_name
+    if primary_partition.get("poolName") and primary_partition.get("poolName") != "-":
+        return str(primary_partition["poolName"])
+    if single_pool_name and (
+        primary_partition.get("filesystem") == "zfs_member" or device.get("type") == "disk"
+    ):
+        return single_pool_name
+    return None
+
+
+def _filesystem_from_device(*, device: dict, blkid_rows: list[dict]) -> str:
+    device_path = device.get("path")
+    blkid = next((item for item in blkid_rows if item.get("device") == device_path), None)
+    return (blkid or {}).get("type") or "-"
+
+
+def _lookup_pool_name(path: str | None, name: str | None, topology_membership: dict[str, str]) -> str | None:
+    for candidate in _device_identity_candidates(path, name):
+        if candidate in topology_membership:
+            return topology_membership[candidate]
+    return None
+
+
+def _device_identity_candidates(path: str | None, name: str | None) -> list[str]:
+    candidates: list[str] = []
+    for value in (path, name):
+        if not value:
+            continue
+        text = str(value)
+        candidates.append(text)
+        if "/" in text:
+            candidates.append(text.rsplit("/", 1)[-1])
+        if text.startswith("/dev/"):
+            candidates.append(text.removeprefix("/dev/"))
+    return list(dict.fromkeys(candidates))

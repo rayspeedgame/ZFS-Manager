@@ -10,6 +10,7 @@ from app.ssh.parser import (
     parse_dataset_overview,
     parse_disk_overview,
     parse_lsblk_json,
+    parse_zpool_statuses,
     parse_zpool_overview,
     parse_zpool_status,
 )
@@ -61,8 +62,36 @@ def test_parse_zpool_overview() -> None:
     parsed = parse_zpool_overview(raw)
 
     assert parsed["status"]["pool"] == "tank"
+    assert parsed["status_by_pool"]["tank"]["state"] == "ONLINE"
     assert parsed["pools"][0]["size"] == 1999844147200
     assert parsed["properties"]["tank"]["ashift"]["value"] == "12"
+
+
+def test_parse_multiple_zpool_status_blocks() -> None:
+    raw = """  pool: test
+ state: ONLINE
+config:
+
+        NAME        STATE     READ WRITE CKSUM
+        test        ONLINE       0     0     0
+          sda       ONLINE       0     0     0
+
+errors: No known data errors
+
+  pool: test2
+ state: ONLINE
+config:
+
+        NAME        STATE     READ WRITE CKSUM
+        test2       ONLINE       0     0     0
+          sdb       ONLINE       0     0     0
+
+errors: No known data errors
+"""
+    parsed = parse_zpool_statuses(raw)
+
+    assert parsed["test"]["config"][0]["children"][0]["name"] == "sda"
+    assert parsed["test2"]["config"][0]["children"][0]["name"] == "sdb"
 
 
 def test_parse_dataset_overview() -> None:

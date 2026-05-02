@@ -91,15 +91,44 @@ def parse_blkid_output(raw_output: str) -> list[dict[str, Any]]:
 
 
 def parse_zpool_status(raw_output: str) -> dict[str, Any]:
-    """Parse the human-readable zpool topology into a nested tree."""
+    """Parse the first zpool status block for backward-compatible callers."""
+    statuses = parse_zpool_statuses(raw_output)
+    if not statuses:
+        return {"pool": None, "state": None, "scan": None, "config": [], "errors": None}
+    return next(iter(statuses.values()))
+
+
+def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
+    """Parse one or more zpool status blocks into a pool-name map."""
     lines = raw_output.splitlines()
-    result: dict[str, Any] = {"pool": None, "state": None, "scan": None, "config": [], "errors": None}
+    statuses: dict[str, dict[str, Any]] = {}
+    result: dict[str, Any] | None = None
     in_config = False
     stack: list[tuple[int, dict[str, Any]]] = []
 
+    def commit_current() -> None:
+        nonlocal result
+        if result is None:
+            return
+        pool_name = result.get("pool")
+        if pool_name:
+            statuses[str(pool_name)] = result
+        result = None
+
     for line in lines:
         if match := _POOL_HEADER_RE.match(line):
-            result["pool"] = match.group("name")
+            commit_current()
+            result = {
+                "pool": match.group("name"),
+                "state": None,
+                "scan": None,
+                "config": [],
+                "errors": None,
+            }
+            in_config = False
+            stack.clear()
+            continue
+        if result is None:
             continue
         if match := _STATE_RE.match(line):
             result["state"] = match.group("state")
@@ -139,8 +168,10 @@ def parse_zpool_status(raw_output: str) -> dict[str, Any]:
         if match := _ERRORS_RE.match(line):
             result["errors"] = match.group("errors")
             in_config = False
+            commit_current()
 
-    return result
+    commit_current()
+    return statuses
 
 
 def parse_sectioned_output(raw_output: str) -> dict[str, str]:
@@ -250,8 +281,13 @@ def parse_disk_overview(raw_output: str) -> dict[str, Any]:
 def parse_zpool_overview(raw_output: str) -> dict[str, Any]:
     """Parse the aggregated zpool overview command into structured sections."""
     sections = parse_sectioned_output(raw_output)
+    status_by_pool = parse_zpool_statuses(sections["zpool_status"])
     return {
-        "status": parse_zpool_status(sections["zpool_status"]),
+        "status": next(
+            iter(status_by_pool.values()),
+            {"pool": None, "state": None, "scan": None, "config": [], "errors": None},
+        ),
+        "status_by_pool": status_by_pool,
         "pools": parse_zpool_list(sections["zpool_list"]),
         "properties": parse_zpool_get(sections["zpool_get"]),
     }
@@ -259,8 +295,13 @@ def parse_zpool_overview(raw_output: str) -> dict[str, Any]:
 
 def parse_zpool_core(raw_output: str) -> dict[str, Any]:
     sections = parse_sectioned_output(raw_output)
+    status_by_pool = parse_zpool_statuses(sections["zpool_status"])
     return {
-        "status": parse_zpool_status(sections["zpool_status"]),
+        "status": next(
+            iter(status_by_pool.values()),
+            {"pool": None, "state": None, "scan": None, "config": [], "errors": None},
+        ),
+        "status_by_pool": status_by_pool,
         "pools": parse_zpool_list(sections["zpool_list"]),
     }
 

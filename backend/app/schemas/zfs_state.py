@@ -37,6 +37,7 @@ class DiskOverview(BaseModel):
 
 class ZPoolOverview(BaseModel):
     status: ZPoolStatus = Field(default_factory=ZPoolStatus)
+    status_by_pool: dict[str, ZPoolStatus] = Field(default_factory=dict)
     pools: list[dict[str, Any]] = Field(default_factory=list)
     properties: dict[str, dict[str, PropertyValue]] = Field(default_factory=dict)
 
