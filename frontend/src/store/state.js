@@ -5,6 +5,7 @@ const state = reactive({
   statusMessage: "Opening WebSocket connection...",
   snapshot: null,
   websocketUrl: "",
+  apiBaseUrl: "",
 });
 
 let socket = null;
@@ -14,6 +15,11 @@ function buildWebSocketUrl() {
   const backendPort = import.meta.env.VITE_BACKEND_PORT || "8000";
   const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${wsProtocol}://${window.location.hostname}:${backendPort}/ws/state`;
+}
+
+function buildApiBaseUrl() {
+  const backendPort = import.meta.env.VITE_BACKEND_PORT || "8000";
+  return `${window.location.protocol}//${window.location.hostname}:${backendPort}/api`;
 }
 
 function connect() {
@@ -27,6 +33,7 @@ function connect() {
   }
 
   state.websocketUrl = buildWebSocketUrl();
+  state.apiBaseUrl = buildApiBaseUrl();
   state.connectionState = "connecting";
   state.statusMessage = `Connecting to ${state.websocketUrl}`;
 
@@ -65,6 +72,34 @@ function disconnect() {
   }
 }
 
+async function refreshStateOnce() {
+  // Use REST as an explicit resync path after writes or transient WS issues.
+  const response = await fetch(`${buildApiBaseUrl()}/state`);
+  if (!response.ok) {
+    throw new Error(`Failed to refresh state: ${response.status}`);
+  }
+  const snapshot = await response.json();
+  state.snapshot = snapshot;
+  state.statusMessage = snapshot.message || "Fetched latest state snapshot.";
+  return snapshot;
+}
+
+async function updatePoolProperties(poolName, changes) {
+  const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/properties`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ changes }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.detail || `Failed to update pool properties: ${response.status}`);
+  }
+  return payload;
+}
+
 export function useAppState() {
   return {
     state: {
@@ -72,8 +107,11 @@ export function useAppState() {
       statusMessage: computed(() => state.statusMessage),
       snapshot: computed(() => state.snapshot),
       websocketUrl: computed(() => state.websocketUrl),
+      apiBaseUrl: computed(() => state.apiBaseUrl),
     },
     connect,
     disconnect,
+    refreshStateOnce,
+    updatePoolProperties,
   };
 }

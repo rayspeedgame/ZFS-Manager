@@ -16,7 +16,10 @@ export default {
     const selectedDataset = ref(null);
     const drawerOpen = ref(false);
 
-    const rows = computed(() => props.state.snapshot.value?.data?.datasets || []);
+    const rows = computed(() => {
+      const value = props.state.snapshot.value?.data?.datasets;
+      return Array.isArray(value) ? value : [];
+    });
 
     function openDataset(row) {
       selectedDataset.value = row;
@@ -98,7 +101,7 @@ export default {
               <div><dt>Mountpoint</dt><dd>{{ selectedDataset.mountpoint || '-' }}</dd></div>
               <div><dt>Used</dt><dd>{{ formatBytes(selectedDataset.used) }}</dd></div>
               <div><dt>Available</dt><dd>{{ formatBytes(selectedDataset.avail) }}</dd></div>
-              <div><dt>Created</dt><dd>{{ formatDateTime(selectedDataset.creation * 1000) }}</dd></div>
+              <div><dt>Created</dt><dd>{{ formatDateTime(Number(selectedDataset.creation || 0) * 1000) }}</dd></div>
               <div><dt>Readonly</dt><dd>{{ selectedDataset.readonly }}</dd></div>
             </dl>
           </section>
@@ -106,7 +109,7 @@ export default {
           <section class="drawer-section">
             <h4>Property Sources</h4>
             <dl class="detail-grid">
-              <div v-for="(property, name) in selectedDataset.properties" :key="name">
+              <div v-for="(property, name) in (selectedDataset.properties || {})" :key="name">
                 <dt>{{ name }}</dt>
                 <dd>{{ property.value }} <span class="subtle-text">({{ property.source }})</span></dd>
               </div>

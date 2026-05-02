@@ -3,6 +3,9 @@ import { computed } from "vue";
 import JsonDebugPanel from "../components/common/JsonDebugPanel.js";
 import { formatBytes, formatPercent } from "../lib/formatters.js";
 
+// Rendering the full snapshot JSON is useful for debugging, but expensive on large payloads.
+const SHOW_DEBUG_PANEL = import.meta.env.VITE_SHOW_JSON_DEBUG === "true";
+
 export default {
   components: {
     JsonDebugPanel,
@@ -51,6 +54,7 @@ export default {
       meta,
       pools,
       snapshot,
+      showDebugPanel: SHOW_DEBUG_PANEL,
       summaryCards,
       datasets,
       formatBytes,
@@ -128,8 +132,7 @@ export default {
           </div>
         </article>
       </div>
-
-      <JsonDebugPanel :payload="snapshot" />
+      <JsonDebugPanel v-if="showDebugPanel" :payload="snapshot" />
     </section>
   `,
 };

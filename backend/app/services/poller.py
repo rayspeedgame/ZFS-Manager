@@ -100,15 +100,13 @@ class StatePoller:
             await self.refresh_once()
             await asyncio.sleep(self._tick_seconds)
 
-    async def refresh_once(self) -> AppState:
+    async def refresh_once(self, *, force_all: bool = False) -> AppState:
         attempt_at = datetime.now(timezone.utc)
-        due_jobs = self._collect_due_jobs(attempt_at)
+        # Writes can bypass the schedule and request a full refresh immediately.
+        due_jobs = list(self._schedules.keys()) if force_all else self._collect_due_jobs(attempt_at)
 
         if not due_jobs and self._has_cached_data():
             return await state_store.get_state()
-
-        if not due_jobs:
-            due_jobs = list(self._schedules.keys())
 
         try:
             if self._config.poller.mode == "ssh":

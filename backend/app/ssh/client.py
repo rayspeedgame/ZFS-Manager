@@ -22,6 +22,17 @@ class SSHConfig:
     keepalive_count_max: int = 3
 
 
+@dataclass(slots=True)
+class SSHCommandResult:
+    stdout: str
+    stderr: str
+    exit_status: int
+
+    @property
+    def success(self) -> bool:
+        return self.exit_status == 0
+
+
 class SSHClient:
     """Small asyncssh wrapper for phase 1 command execution."""
 
@@ -60,19 +71,37 @@ class SSHClient:
             return self._connection
 
     async def run(self, command: str, *, check: bool = True, timeout: float | None = None) -> str:
+        result = await self.run_detailed(command, check=check, timeout=timeout)
+        return result.stdout
+
+    async def run_detailed(
+        self,
+        command: str,
+        *,
+        check: bool = True,
+        timeout: float | None = None,
+    ) -> SSHCommandResult:
         connection = await self.connect()
         try:
             result = await asyncio.wait_for(connection.run(command, check=check), timeout=timeout)
-            return result.stdout
+            return SSHCommandResult(
+                stdout=result.stdout,
+                stderr=result.stderr,
+                exit_status=result.exit_status,
+            )
         except Exception as exc:
             if not self._should_retry_after_disconnect(exc):
                 raise
 
-            # Rebuild the SSH session once if the remote side closed it.
+            # Rebuild the SSH session once if the remote side closed it mid-command.
             await self._drop_connection()
             connection = await self.connect()
             result = await asyncio.wait_for(connection.run(command, check=check), timeout=timeout)
-            return result.stdout
+            return SSHCommandResult(
+                stdout=result.stdout,
+                stderr=result.stderr,
+                exit_status=result.exit_status,
+            )
 
     async def close(self) -> None:
         async with self._lock:

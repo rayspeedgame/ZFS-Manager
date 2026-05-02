@@ -1,30 +1,14 @@
 # services
 
-这一层负责后端运行时的核心行为，尤其是轮询、缓存和快照组装。
+这一层负责后端运行时的核心行为，尤其是轮询、缓存、快照组装和属性写回。
 
 ## 文件说明
 
-- `poller.py`: 当前最核心的服务，负责：
-  - 调度不同频率的 SSH 刷新任务
-  - 维护最近一次成功快照
-  - 在失败时保留旧数据并更新状态
-  - 生成 `summary`、`disks`、`pools`、`datasets`
+- `poller.py`: 调度不同频率的 SSH 刷新任务，维护最近一次成功快照，并生成 `summary`、`disks`、`pools`、`datasets`
+- `property_updater.py`: 负责执行 `zpool set` 写回，并为每个属性生成独立的执行结果
 
-## 当前轮询设计
+## 当前设计
 
-`StatePoller` 使用一个轻量级 tick 循环，根据到期时间分别刷新：
-
-- `pools`
-- `datasets`
-- `disks`
-- `properties`
-
-这样可以避免每次轮询都执行全部命令，也为后续进一步拆分和按需加载打下基础。
-
-## 当前数据聚合
-
-`poller.py` 不只负责调度，还负责把解析结果整理成页面友好的数据：
-
-- `disks`: 包含池归属、文件系统和可展开分区
-- `pools`: 包含每个池的状态、拓扑和属性
-- `datasets`: 包含层级、池名和常用属性
+- `StatePoller` 按 `pools`、`datasets`、`disks`、`properties` 四类任务分频刷新
+- 写回接口不会直接修改内存快照，而是调用 `poller.refresh_once()` 重新采集状态
+- 写回结果按属性逐项返回，支持部分成功、部分失败的场景
