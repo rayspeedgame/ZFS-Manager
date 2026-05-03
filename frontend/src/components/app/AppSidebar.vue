@@ -1,10 +1,13 @@
 <script setup>
 import { RouterLink } from "vue-router";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps({
   routes: { type: Array, required: true },
   currentRouteKey: { type: String, required: true },
 });
+
+const { t } = useI18n();
 
 const icons = {
   grid: `
@@ -39,12 +42,12 @@ function iconMarkup(icon) {
     <div class="sidebar-brand">
       <div class="brand-mark">Z</div>
       <div>
-        <strong>ZFS Manager</strong>
-        <p>Storage Control</p>
+        <strong>{{ t("app.brandTitle") }}</strong>
+        <p>{{ t("app.brandSubtitle") }}</p>
       </div>
     </div>
 
-    <nav class="nav-list" aria-label="Primary">
+    <nav class="nav-list" :aria-label="t('common.primaryNav')">
       <RouterLink
         v-for="route in props.routes"
         :key="route.key"
@@ -53,7 +56,7 @@ function iconMarkup(icon) {
         :data-active="route.key === props.currentRouteKey"
       >
         <span class="nav-icon" v-html="iconMarkup(route.icon)"></span>
-        <span>{{ route.label }}</span>
+        <span>{{ t(route.labelKey) }}</span>
       </RouterLink>
     </nav>
   </aside>

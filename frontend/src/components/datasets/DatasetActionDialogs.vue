@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import ConfirmDialog from "../common/ConfirmDialog.vue";
 import CommandLogPanel from "../common/CommandLogPanel.vue";
 import CommandResultList from "../common/CommandResultList.vue";
@@ -33,6 +35,7 @@ defineProps({
   createPayload: { type: Object, required: true },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "update:confirmDialogOpen",
   "update:destroyConfirmDialogOpen",
@@ -49,18 +52,18 @@ const emit = defineEmits([
     :busy="submitting"
     :can-confirm="Boolean(changedItems.length)"
     :result-mode="dialogPhase === 'result'"
-    :confirm-text="dialogPhase === 'submitting' ? 'Applying...' : 'Confirm Apply'"
-    title="Confirm Dataset Property Changes"
+    :confirm-text="dialogPhase === 'submitting' ? t('datasets.dialogs.applying') : t('datasets.dialogs.confirmApply')"
+    :title="t('datasets.dialogs.confirmDatasetPropertyChanges')"
     :description="selectedDataset?.name || ''"
     @update:modelValue="emit('update:confirmDialogOpen', $event)"
     @confirm="emit('confirm-property')"
   >
     <div v-if="dialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">These dataset property changes will be sent to the host after confirmation.</p>
+      <p class="subtle-text">{{ t("datasets.dialogs.datasetChangesWillBeSent") }}</p>
       <CommandResultList :items="changedItems" empty-text="">
         <template #item="{ item }">
           <strong>{{ item.property }}</strong>
-          <span class="subtle-text">{{ item.old_value ?? "-" }} -> {{ item.value }}</span>
+          <span class="subtle-text">{{ t("common.valueTransition", { from: item.old_value ?? '-', to: item.value }) }}</span>
         </template>
       </CommandResultList>
     </div>
@@ -69,8 +72,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Applying dataset property changes...</strong>
-          <p class="subtle-text">Please wait while the backend updates the dataset and refreshes the latest state.</p>
+          <strong>{{ t("datasets.dialogs.applyingDatasetPropertyChanges") }}</strong>
+          <p class="subtle-text">{{ t("datasets.dialogs.applyingDatasetPropertyChangesDescription") }}</p>
         </div>
       </div>
     </div>
@@ -80,12 +83,12 @@ const emit = defineEmits([
       <p v-if="dialogError" class="error-text">{{ dialogError }}</p>
 
       <section>
-        <h4 class="dialog-mini-heading">Result List</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.resultList") }}</h4>
         <CommandResultList :items="dialogResults" />
       </section>
 
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="terminalLogLines" />
       </section>
     </div>
@@ -96,21 +99,21 @@ const emit = defineEmits([
     :busy="destroySubmitting"
     :can-confirm="canDestroyDataset"
     :result-mode="destroyDialogPhase === 'result'"
-    :confirm-text="destroyDialogPhase === 'submitting' ? 'Deleting...' : 'Confirm Delete'"
-    title="Confirm Dataset Delete"
+    :confirm-text="destroyDialogPhase === 'submitting' ? t('datasets.dialogs.deleting') : t('datasets.dialogs.confirmDelete')"
+    :title="t('datasets.dialogs.confirmDatasetDelete')"
     :description="selectedDataset?.name || ''"
     @update:modelValue="emit('update:destroyConfirmDialogOpen', $event)"
     @confirm="emit('confirm-destroy')"
   >
     <div v-if="destroyDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="error-text">This will run zfs destroy on the selected dataset and cannot be undone.</p>
+      <p class="error-text">{{ t("datasets.dialogs.deleteWarning") }}</p>
       <ul class="result-list">
         <li class="result-list-item">
-          <strong>Type</strong>
+          <strong>{{ t("datasets.columns.type") }}</strong>
           <span class="subtle-text">{{ selectedDataset?.type || "-" }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Name</strong>
+          <strong>{{ t("datasets.columns.name") }}</strong>
           <span class="subtle-text">{{ selectedDataset?.name || "-" }}</span>
         </li>
       </ul>
@@ -120,8 +123,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Deleting dataset...</strong>
-          <p class="subtle-text">Please wait while the backend runs zfs destroy and refreshes the latest state.</p>
+          <strong>{{ t("datasets.dialogs.deletingDataset") }}</strong>
+          <p class="subtle-text">{{ t("datasets.dialogs.deletingDatasetDescription") }}</p>
         </div>
       </div>
     </div>
@@ -131,15 +134,15 @@ const emit = defineEmits([
       <p v-if="destroyDialogError" class="error-text">{{ destroyDialogError }}</p>
 
       <section>
-        <h4 class="dialog-mini-heading">Result</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
         <CommandResultList
           :items="destroyDialogResult ? [{ ...destroyDialogResult, label: destroyDialogResult.dataset, key: destroyDialogResult.dataset || 'dataset' }] : []"
-          empty-text="No result was returned."
+          :empty-text="t('common.noResult')"
         />
       </section>
 
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="destroyTerminalLogLines" />
       </section>
     </div>
@@ -150,26 +153,26 @@ const emit = defineEmits([
     :busy="createSubmitting"
     :can-confirm="canSubmitCreate"
     :result-mode="createDialogPhase === 'result'"
-    :confirm-text="createDialogPhase === 'submitting' ? 'Creating...' : 'Confirm Create'"
-    title="Confirm Dataset Creation"
-    :description="createPayload.parent ? createPayload.parent + '/' + createPayload.name : 'New child dataset'"
+    :confirm-text="createDialogPhase === 'submitting' ? t('datasets.dialogs.creating') : t('datasets.dialogs.confirmCreate')"
+    :title="t('datasets.dialogs.confirmDatasetCreation')"
+    :description="createPayload.parent ? createPayload.parent + '/' + createPayload.name : t('datasets.dialogs.newChildDataset')"
     @update:modelValue="emit('update:createConfirmDialogOpen', $event)"
     @confirm="emit('confirm-create')"
   >
     <div v-if="createDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">This will run a zfs create command on the remote host.</p>
+      <p class="subtle-text">{{ t("datasets.dialogs.createWarning") }}</p>
       <ul class="result-list">
         <li class="result-list-item">
-          <strong>Type</strong>
-          <span class="subtle-text">{{ createDraft.type === "volume" ? "zvol" : "dataset" }}</span>
+          <strong>{{ t("datasets.columns.type") }}</strong>
+          <span class="subtle-text">{{ createDraft.type === "volume" ? "zvol" : t("datasets.create.dataset") }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Full Name</strong>
+          <strong>{{ t("datasets.create.fullName") }}</strong>
           <span class="subtle-text">{{ createPayload.parent }}/{{ createPayload.name }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Properties</strong>
-          <span class="subtle-text">{{ createPayload.properties.length ? createPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default properties only' }}</span>
+          <strong>{{ t("pools.properties") }}</strong>
+          <span class="subtle-text">{{ createPayload.properties.length ? createPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : t('datasets.create.defaultPropertiesOnly') }}</span>
         </li>
       </ul>
     </div>
@@ -178,8 +181,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Creating {{ createDraft.type === "volume" ? "zvol" : "dataset" }}...</strong>
-          <p class="subtle-text">Please wait while the backend runs zfs create and refreshes the latest state.</p>
+          <strong>{{ t("datasets.dialogs.creatingTarget", { kind: createDraft.type === 'volume' ? 'zvol' : t('datasets.create.dataset') }) }}</strong>
+          <p class="subtle-text">{{ t("datasets.dialogs.creatingTargetDescription") }}</p>
         </div>
       </div>
     </div>
@@ -189,15 +192,15 @@ const emit = defineEmits([
       <p v-if="createDialogError" class="error-text">{{ createDialogError }}</p>
 
       <section>
-        <h4 class="dialog-mini-heading">Result</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
         <CommandResultList
           :items="createDialogResult ? [{ ...createDialogResult, label: createDialogResult.dataset, key: createDialogResult.dataset || 'dataset' }] : []"
-          empty-text="No result was returned."
+          :empty-text="t('common.noResult')"
         />
       </section>
 
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="createTerminalLogLines" />
       </section>
     </div>

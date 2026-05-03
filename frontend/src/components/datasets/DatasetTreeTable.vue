@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import EmptyState from "../common/EmptyState.vue";
 import { formatBytes } from "../../lib/formatters.js";
 
@@ -8,6 +10,7 @@ defineProps({
   showSnapshots: { type: Boolean, default: false },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "update:showSnapshots",
   "toggle-row",
@@ -18,37 +21,37 @@ const emit = defineEmits([
 
 <template>
   <article class="surface-panel">
-    <div class="section-header">
-      <div>
-        <h3>Dataset Inventory</h3>
-        <p>Filesystem and volume inventory with manage and create workflows.</p>
-      </div>
+      <div class="section-header">
+        <div>
+          <h3>{{ t("datasets.inventory") }}</h3>
+          <p>{{ t("datasets.inventoryDescription") }}</p>
+        </div>
       <label class="inline-checkbox">
         <input
           :checked="showSnapshots"
           type="checkbox"
           @change="emit('update:showSnapshots', $event.target.checked)"
         />
-        <span>Show snapshots</span>
+        <span>{{ t("datasets.showSnapshots") }}</span>
       </label>
     </div>
 
     <EmptyState
       v-if="!rows.length"
-      title="No datasets discovered"
-      description="The current snapshot did not report any datasets."
+      :title="t('datasets.emptyTitle')"
+      :description="t('datasets.emptyDescription')"
     />
 
     <div v-else class="table-shell">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Mountpoint</th>
-            <th>Used</th>
-            <th>Available</th>
-            <th>Compression</th>
+            <th>{{ t("datasets.columns.name") }}</th>
+            <th>{{ t("datasets.columns.type") }}</th>
+            <th>{{ t("datasets.columns.mountpoint") }}</th>
+            <th>{{ t("datasets.columns.used") }}</th>
+            <th>{{ t("datasets.columns.available") }}</th>
+            <th>{{ t("datasets.columns.compression") }}</th>
             <th></th>
           </tr>
         </thead>
@@ -70,7 +73,7 @@ const emit = defineEmits([
                     type="button"
                     class="dataset-name-toggle"
                     :data-expanded="row.expanded ? 'true' : 'false'"
-                    :aria-label="row.expanded ? 'Collapse dataset' : 'Expand dataset'"
+                    :aria-label="row.expanded ? t('datasets.collapseDataset') : t('datasets.expandDataset')"
                     @click="emit('toggle-row', row.name)"
                   >
                     >
@@ -80,7 +83,7 @@ const emit = defineEmits([
                   <div class="dataset-name-stack">
                     <div class="dataset-name-main">
                       <strong>{{ row.shortName }}</strong>
-                      <span v-if="row.depth === 0" class="dataset-root-badge">root</span>
+                      <span v-if="row.depth === 0" class="dataset-root-badge">{{ t("datasets.root") }}</span>
                     </div>
                     <span class="subtle-text">{{ row.name }}</span>
                   </div>
@@ -99,9 +102,9 @@ const emit = defineEmits([
                     class="ghost-button"
                     @click="emit('open-create', row)"
                   >
-                    New
+                    {{ t("common.new") }}
                   </button>
-                  <button type="button" class="ghost-button" @click="emit('open-dataset', row)">Manage</button>
+                  <button type="button" class="ghost-button" @click="emit('open-dataset', row)">{{ t("common.manage") }}</button>
                 </div>
               </td>
             </tr>

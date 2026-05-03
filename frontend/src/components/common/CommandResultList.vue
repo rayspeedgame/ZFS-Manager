@@ -1,9 +1,13 @@
 <script setup>
-defineProps({
+import { useI18n } from "vue-i18n";
+
+const props = defineProps({
   items: { type: Array, default: () => [] },
-  emptyText: { type: String, default: "No result rows were returned." },
+  emptyText: { type: String, default: "" },
   statusFormatter: { type: Function, default: null },
 });
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -13,12 +17,12 @@ defineProps({
         <div class="result-list-head">
           <strong>{{ item.label || item.property || item.name }}</strong>
           <span v-if="item.success !== undefined" class="inline-status" :data-health="item.success ? 'ONLINE' : 'DEGRADED'">
-            {{ statusFormatter ? statusFormatter(item) : item.success ? "Success" : "Failed" }}
+            {{ props.statusFormatter ? props.statusFormatter(item) : item.success ? t("common.success") : t("common.failed") }}
           </span>
         </div>
         <p v-if="item.message" class="subtle-text">{{ item.message }}</p>
       </slot>
     </li>
   </ul>
-  <p v-else class="subtle-text">{{ emptyText }}</p>
+  <p v-else class="subtle-text">{{ props.emptyText || t("common.noResultRows") }}</p>
 </template>

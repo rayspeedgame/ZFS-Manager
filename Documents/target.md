@@ -30,12 +30,20 @@ Build ZFS Manager into a practical web UI for a single host or small home-lab de
 - Edit dataset properties
 - Destroy dataset and zvol entries
 
+### UI capabilities
+
+- English and Simplified Chinese locale switching
+- Browser-language based first-load locale detection
+- Persisted locale preference in the frontend
+- Translated shell navigation, dashboard, pool workflows, dataset workflows, dialogs, and command-result panels
+
 ## Frontend Direction
 
 - `PoolsView` and `DatasetsView` are now page containers instead of giant all-in-one templates.
 - Shared property editors, command results, and command logs are centralized under `frontend/src/components/common/`.
 - Pool-specific and dataset-specific workflow UIs live under their own component folders.
 - Live snapshot refreshes should update visible data without wiping in-progress edits.
+- User-visible frontend copy should be sourced from translation keys so new locales can be added without refactoring the shell or views.
 
 ## Next Steps
 
@@ -43,3 +51,4 @@ Build ZFS Manager into a practical web UI for a single host or small home-lab de
 - Expand SMART and disk-health integration
 - Add finer-grained permission handling
 - Continue splitting large workflow logic into smaller composable units where it improves clarity
+- Expand locale coverage for any future frontend additions as they are introduced

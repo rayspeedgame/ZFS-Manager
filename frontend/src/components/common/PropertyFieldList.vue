@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 const props = defineProps({
   fields: { type: Array, required: true },
   modelValue: { type: Object, default: () => ({}) },
@@ -11,6 +13,7 @@ const props = defineProps({
   itemClass: { type: String, default: "" },
 });
 
+const { t, te } = useI18n();
 const emit = defineEmits(["update:modelValue"]);
 
 function fieldName(field) {
@@ -18,11 +21,35 @@ function fieldName(field) {
 }
 
 function fieldLabel(field) {
-  return typeof field === "string" ? field : field.label || field.name;
+  if (typeof field === "string") {
+    return te(`properties.names.${field}`) ? t(`properties.names.${field}`) : field;
+  }
+  if (field.labelKey && te(field.labelKey)) {
+    return t(field.labelKey);
+  }
+  if (field.label) {
+    return field.label;
+  }
+  return te(`properties.names.${field.name}`) ? t(`properties.names.${field.name}`) : field.name;
 }
 
 function inputSpec(name) {
   return props.getInputSpec ? props.getInputSpec(name) || { type: "text" } : { type: "text" };
+}
+
+function optionLabel(option) {
+  if (option?.labelKey && te(option.labelKey)) {
+    return t(option.labelKey);
+  }
+  return option?.label ?? option?.value ?? "";
+}
+
+function placeholderText(name) {
+  const spec = inputSpec(name);
+  if (spec.placeholderKey && te(spec.placeholderKey)) {
+    return t(spec.placeholderKey);
+  }
+  return spec.placeholder || "";
 }
 
 function updateValue(name, value) {
@@ -64,7 +91,7 @@ function updateValue(name, value) {
               :key="fieldName(field) + ':' + option.value"
               :value="option.value"
             >
-              {{ option.label }}
+              {{ optionLabel(option) }}
             </option>
           </select>
 
@@ -73,7 +100,7 @@ function updateValue(name, value) {
             :value="modelValue[fieldName(field)]"
             type="text"
             class="property-field"
-            :placeholder="inputSpec(fieldName(field)).placeholder || ''"
+            :placeholder="placeholderText(fieldName(field))"
             :disabled="disabled"
             @input="updateValue(fieldName(field), $event.target.value)"
           />

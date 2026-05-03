@@ -1,5 +1,6 @@
 <script>
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
 import CreateDatasetDrawer from "../components/datasets/CreateDatasetDrawer.vue";
 import DatasetActionDialogs from "../components/datasets/DatasetActionDialogs.vue";
@@ -27,6 +28,7 @@ export default {
     state: { type: Object, required: true },
   },
   setup(props) {
+    const { t } = useI18n();
     const { createDataset, destroyDataset, refreshStateOnce, updateDatasetProperties } = useAppState();
     const selectedDataset = ref(null);
     const drawerOpen = ref(false);
@@ -77,7 +79,7 @@ export default {
     const filteredRows = computed(() =>
       showSnapshots.value ? rows.value : rows.value.filter((row) => row.type !== "snapshot")
     );
-    const treeRows = computed(() => buildVisibleDatasetRows(filteredRows.value, expandedRows.value));
+    const treeRows = computed(() => buildVisibleDatasetRows(filteredRows.value, expandedRows.value, t));
 
     const changedItems = computed(() => {
       const editable = selectedDataset.value?.customProperties?.all || [];
@@ -293,8 +295,8 @@ export default {
         const response = await updateDatasetProperties(selectedDataset.value.name, changedItems.value);
         dialogResults.value = Array.isArray(response?.results) ? response.results : [];
         dialogSummary.value = response?.refreshed
-          ? "Dataset properties applied and state refreshed."
-          : "Dataset properties applied, but the post-write refresh did not complete.";
+          ? t("datasets.summary.propertiesAppliedAndRefreshed")
+          : t("datasets.summary.propertiesAppliedRefreshFailed");
         if (response?.refresh_error) {
           dialogError.value = response.refresh_error;
         }
@@ -324,8 +326,8 @@ export default {
         const response = await createDataset(createPayload.value);
         createDialogResult.value = response;
         createDialogSummary.value = response?.refreshed
-          ? "Dataset creation submitted and state refreshed."
-          : "Dataset creation submitted, but the post-create refresh did not complete.";
+          ? t("datasets.summary.createSubmittedAndRefreshed")
+          : t("datasets.summary.createSubmittedRefreshFailed");
         if (response?.refresh_error) {
           createDialogError.value = response.refresh_error;
         }
@@ -355,8 +357,8 @@ export default {
         const response = await destroyDataset(selectedDataset.value.name);
         destroyDialogResult.value = response;
         destroyDialogSummary.value = response?.refreshed
-          ? "Dataset destroy submitted and state refreshed."
-          : "Dataset destroy submitted, but the post-destroy refresh did not complete.";
+          ? t("datasets.summary.destroySubmittedAndRefreshed")
+          : t("datasets.summary.destroySubmittedRefreshFailed");
         if (response?.refresh_error) {
           destroyDialogError.value = response.refresh_error;
         }
@@ -424,6 +426,7 @@ export default {
       showSnapshots,
       submitting,
       terminalLogLines,
+      t,
       toggleRow,
       treeRows,
     };
@@ -490,7 +493,7 @@ function normalizeDataset(dataset, pools) {
   };
 }
 
-function buildVisibleDatasetRows(rows, expandedRows) {
+function buildVisibleDatasetRows(rows, expandedRows, t) {
   const rowNames = new Set(rows.map((row) => row.name));
   const childCountByName = new Map();
   for (const row of rows) {
@@ -508,8 +511,8 @@ function buildVisibleDatasetRows(rows, expandedRows) {
       visibleRows.push({
         key: `group:${currentPoolName || row.name}`,
         entryType: "group",
-        label: `Pool ${currentPoolName || row.name}`,
-        meta: `${currentPoolName || row.name} datasets`,
+        label: t("datasets.group.label", { name: currentPoolName || row.name }),
+        meta: t("datasets.group.meta", { name: currentPoolName || row.name }),
       });
     }
 

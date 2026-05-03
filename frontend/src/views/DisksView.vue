@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import DetailDrawer from "../components/common/DetailDrawer.vue";
 import EmptyState from "../components/common/EmptyState.vue";
@@ -9,6 +10,7 @@ const props = defineProps({
   state: { type: Object, required: true },
 });
 
+const { t } = useI18n();
 const selectedDisk = ref(null);
 const drawerOpen = ref(false);
 const expandedRows = ref({});
@@ -38,26 +40,26 @@ function isExpanded(row) {
     <article class="surface-panel">
       <div class="section-header">
         <div>
-          <h3>Disk Inventory</h3>
-          <p>Physical devices, partitions, and detected ZFS membership.</p>
+          <h3>{{ t("disks.inventory") }}</h3>
+          <p>{{ t("disks.inventoryDescription") }}</p>
         </div>
       </div>
 
       <EmptyState
         v-if="!rows.length"
-        title="No disks discovered"
-        description="The current snapshot did not report any block devices."
+        :title="t('disks.emptyTitle')"
+        :description="t('disks.emptyDescription')"
       />
 
       <div v-else class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Device</th>
-              <th>Model</th>
-              <th>Size</th>
-              <th>Filesystem</th>
-              <th>Pool</th>
+              <th>{{ t("disks.columns.device") }}</th>
+              <th>{{ t("disks.columns.model") }}</th>
+              <th>{{ t("disks.columns.size") }}</th>
+              <th>{{ t("disks.columns.filesystem") }}</th>
+              <th>{{ t("disks.columns.pool") }}</th>
               <th></th>
             </tr>
           </thead>
@@ -87,19 +89,19 @@ function isExpanded(row) {
                 <td>{{ row.filesystemDisplay || row.filesystem }}</td>
                 <td>{{ row.poolName }}</td>
                 <td class="action-cell">
-                  <button type="button" class="ghost-button" @click="openDisk(row)">View</button>
+                  <button type="button" class="ghost-button" @click="openDisk(row)">{{ t("common.view") }}</button>
                 </td>
               </tr>
               <tr v-if="isExpanded(row)" class="partition-row">
                 <td colspan="6">
                   <div class="partition-shell">
                     <div class="partition-header">
-                      <span>Name</span>
-                      <span>Path</span>
-                      <span>Type</span>
-                      <span>Size</span>
-                      <span>Filesystem</span>
-                      <span>Pool</span>
+                      <span>{{ t("disks.columns.name") }}</span>
+                      <span>{{ t("disks.columns.path") }}</span>
+                      <span>{{ t("disks.columns.type") }}</span>
+                      <span>{{ t("disks.columns.size") }}</span>
+                      <span>{{ t("disks.columns.filesystem") }}</span>
+                      <span>{{ t("disks.columns.pool") }}</span>
                     </div>
                     <div
                       v-for="partition in row.partitions"
@@ -124,26 +126,26 @@ function isExpanded(row) {
 
     <DetailDrawer
       v-model="drawerOpen"
-      title="Disk Details"
+      :title="t('disks.detailTitle')"
       :description="selectedDisk?.path || ''"
     >
       <div v-if="selectedDisk" class="drawer-section-list">
         <section class="drawer-section">
-          <h4>Identity</h4>
+          <h4>{{ t("disks.identity") }}</h4>
           <dl class="detail-grid">
-            <div><dt>Name</dt><dd>{{ selectedDisk.name }}</dd></div>
-            <div><dt>Path</dt><dd>{{ selectedDisk.path }}</dd></div>
-            <div><dt>Model</dt><dd>{{ selectedDisk.model || "-" }}</dd></div>
-            <div><dt>Size</dt><dd>{{ formatBytes(selectedDisk.size) }}</dd></div>
+            <div><dt>{{ t("disks.columns.name") }}</dt><dd>{{ selectedDisk.name }}</dd></div>
+            <div><dt>{{ t("disks.columns.path") }}</dt><dd>{{ selectedDisk.path }}</dd></div>
+            <div><dt>{{ t("disks.columns.model") }}</dt><dd>{{ selectedDisk.model || "-" }}</dd></div>
+            <div><dt>{{ t("disks.columns.size") }}</dt><dd>{{ formatBytes(selectedDisk.size) }}</dd></div>
           </dl>
         </section>
 
         <section class="drawer-section">
-          <h4>Filesystem Relation</h4>
+          <h4>{{ t("disks.filesystemRelation") }}</h4>
           <dl class="detail-grid">
-            <div><dt>Filesystem</dt><dd>{{ selectedDisk.filesystemDisplay || selectedDisk.filesystem }}</dd></div>
-            <div><dt>Pool</dt><dd>{{ selectedDisk.poolName }}</dd></div>
-            <div><dt>Partition</dt><dd>{{ selectedDisk.partitionPath || "-" }}</dd></div>
+            <div><dt>{{ t("disks.columns.filesystem") }}</dt><dd>{{ selectedDisk.filesystemDisplay || selectedDisk.filesystem }}</dd></div>
+            <div><dt>{{ t("disks.columns.pool") }}</dt><dd>{{ selectedDisk.poolName }}</dd></div>
+            <div><dt>{{ t("disks.columns.partition") }}</dt><dd>{{ selectedDisk.partitionPath || "-" }}</dd></div>
           </dl>
         </section>
       </div>

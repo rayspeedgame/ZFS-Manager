@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import DetailDrawer from "../common/DetailDrawer.vue";
 import PropertyFieldList from "../common/PropertyFieldList.vue";
 import PropertySection from "../common/PropertySection.vue";
@@ -17,6 +19,7 @@ const props = defineProps({
   getPropertyInput: { type: Function, required: true },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "update:modelValue",
   "update:draft-values",
@@ -43,28 +46,28 @@ function toMetaMap(items, prefix = "") {
 <template>
   <DetailDrawer
     :model-value="modelValue"
-    title="Dataset Details"
+    :title="t('datasets.datasetDetails')"
     :description="selectedDataset?.name || ''"
     @update:modelValue="emit('update:modelValue', $event)"
   >
     <div v-if="selectedDataset" class="drawer-section-list">
       <section class="drawer-section">
-        <h4>Overview</h4>
+        <h4>{{ t("common.overview") }}</h4>
         <dl class="detail-grid">
-          <div><dt>Type</dt><dd>{{ selectedDataset.type }}</dd></div>
-          <div><dt>Mountpoint</dt><dd>{{ selectedDataset.mountpoint || "-" }}</dd></div>
-          <div><dt>Used</dt><dd>{{ formatBytes(selectedDataset.used) }}</dd></div>
-          <div><dt>Available</dt><dd>{{ formatBytes(selectedDataset.avail) }}</dd></div>
-          <div><dt>Referenced</dt><dd>{{ formatBytes(selectedDataset.refer) }}</dd></div>
-          <div><dt>Compression</dt><dd>{{ selectedDataset.compressionDisplay }}</dd></div>
-          <div><dt>Created</dt><dd>{{ formatDateTime(Number(selectedDataset.creation || 0) * 1000) }}</dd></div>
-          <div><dt>Readonly</dt><dd>{{ selectedDataset.readonly || "-" }}</dd></div>
+          <div><dt>{{ t("datasets.detail.type") }}</dt><dd>{{ selectedDataset.type }}</dd></div>
+          <div><dt>{{ t("datasets.detail.mountpoint") }}</dt><dd>{{ selectedDataset.mountpoint || "-" }}</dd></div>
+          <div><dt>{{ t("datasets.detail.used") }}</dt><dd>{{ formatBytes(selectedDataset.used) }}</dd></div>
+          <div><dt>{{ t("datasets.detail.available") }}</dt><dd>{{ formatBytes(selectedDataset.avail) }}</dd></div>
+          <div><dt>{{ t("datasets.detail.referenced") }}</dt><dd>{{ formatBytes(selectedDataset.refer) }}</dd></div>
+          <div><dt>{{ t("datasets.detail.compression") }}</dt><dd>{{ selectedDataset.compressionDisplay }}</dd></div>
+          <div><dt>{{ t("datasets.detail.created") }}</dt><dd>{{ formatDateTime(Number(selectedDataset.creation || 0) * 1000) }}</dd></div>
+          <div><dt>{{ t("datasets.detail.readonly") }}</dt><dd>{{ selectedDataset.readonly || "-" }}</dd></div>
         </dl>
       </section>
 
       <PropertySection
-        title="Fixed Properties"
-        description="Read-only properties for the current dataset."
+        :title="t('datasets.fixedProperties')"
+        :description="t('datasets.fixedPropertiesDescription')"
       >
         <PropertyFieldList
           v-if="selectedDataset.fixedProperties.common.length"
@@ -73,11 +76,11 @@ function toMetaMap(items, prefix = "") {
           readonly
           grid-class="detail-grid"
         />
-        <p v-else class="subtle-text">No common fixed properties were reported.</p>
+        <p v-else class="subtle-text">{{ t("datasets.noCommonFixedProperties") }}</p>
 
         <div class="advanced-toggle-row">
           <button type="button" class="ghost-button" @click="emit('toggle-fixed-advanced')">
-            {{ fixedAdvancedOpen ? "Hide Advanced" : "Advanced" }}
+            {{ fixedAdvancedOpen ? t("common.hideAdvanced") : t("common.advanced") }}
           </button>
         </div>
 
@@ -88,25 +91,25 @@ function toMetaMap(items, prefix = "") {
           readonly
           grid-class="detail-grid advanced-detail-grid"
         />
-        <p v-else-if="fixedAdvancedOpen" class="subtle-text">No advanced fixed properties were reported.</p>
+        <p v-else-if="fixedAdvancedOpen" class="subtle-text">{{ t("datasets.noAdvancedFixedProperties") }}</p>
       </PropertySection>
 
       <PropertySection
-        title="Custom Properties"
-        description="Editable dataset properties. Changes follow the same confirm-and-refresh flow as pools."
+        :title="t('datasets.customProperties')"
+        :description="t('datasets.customPropertiesDescription')"
       >
         <template #actions>
           <div class="inline-action-controls">
             <label
               class="inline-checkbox"
               data-disabled="true"
-              title="zfs set does not provide a force flag."
+              :title="t('datasets.noForceInSet')"
             >
               <input :checked="propertyForce" type="checkbox" disabled />
-              <span>Force</span>
+              <span>{{ t("common.force") }}</span>
             </label>
             <button type="button" class="primary-button" :disabled="!changedItems.length" @click="emit('open-confirm')">
-              Apply Changes
+              {{ t("datasets.applyChanges") }}
             </button>
           </div>
         </template>
@@ -115,17 +118,17 @@ function toMetaMap(items, prefix = "") {
           v-if="selectedDataset.customProperties.common.length"
           :fields="selectedDataset.customProperties.common"
           :model-value="draftValues"
-          :meta-by-field="toMetaMap(selectedDataset.customProperties.common, 'Current: ')"
+          :meta-by-field="toMetaMap(selectedDataset.customProperties.common, t('common.currentPrefix'))"
           :get-input-spec="getPropertyInput"
           grid-class="detail-grid editable-detail-grid"
           item-class="editable-property-card"
           @update:modelValue="emit('update:draft-values', $event)"
         />
-        <p v-else class="subtle-text">No common editable properties are available for this dataset type.</p>
+        <p v-else class="subtle-text">{{ t("datasets.noCommonEditableProperties") }}</p>
 
         <div class="advanced-toggle-row">
           <button type="button" class="ghost-button" @click="emit('toggle-custom-advanced')">
-            {{ customAdvancedOpen ? "Hide Advanced" : "Advanced" }}
+            {{ customAdvancedOpen ? t("common.hideAdvanced") : t("common.advanced") }}
           </button>
         </div>
 
@@ -133,21 +136,21 @@ function toMetaMap(items, prefix = "") {
           v-if="customAdvancedOpen && selectedDataset.customProperties.advanced.length"
           :fields="selectedDataset.customProperties.advanced"
           :model-value="draftValues"
-          :meta-by-field="toMetaMap(selectedDataset.customProperties.advanced, 'Current: ')"
+          :meta-by-field="toMetaMap(selectedDataset.customProperties.advanced, t('common.currentPrefix'))"
           :get-input-spec="getPropertyInput"
           grid-class="detail-grid editable-detail-grid advanced-detail-grid"
           item-class="editable-property-card"
           @update:modelValue="emit('update:draft-values', $event)"
         />
-        <p v-else-if="customAdvancedOpen" class="subtle-text">No advanced editable properties are available for this dataset type.</p>
+        <p v-else-if="customAdvancedOpen" class="subtle-text">{{ t("datasets.noAdvancedEditableProperties") }}</p>
       </PropertySection>
 
       <section class="drawer-section">
         <div class="drawer-section-header">
           <div>
-            <h4>Danger Zone</h4>
+            <h4>{{ t("common.dangerZone") }}</h4>
             <p class="subtle-text">
-              Permanently delete this {{ selectedDataset.type === "volume" ? "zvol" : selectedDataset.type }} with the same SSH confirmation flow.
+              {{ t("datasets.dangerDescription", { kind: selectedDataset.type === 'volume' ? 'zvol' : selectedDataset.type }) }}
             </p>
           </div>
           <button
@@ -156,20 +159,20 @@ function toMetaMap(items, prefix = "") {
             :disabled="!canDestroyDataset"
             @click="emit('open-destroy-confirm')"
           >
-            Delete
+            {{ t("common.delete") }}
           </button>
         </div>
         <p v-if="!canDestroyDataset" class="subtle-text">
-          Root datasets are protected here. Use pool destroy from the Pools view if you really need to remove the whole pool.
+          {{ t("datasets.rootDatasetProtected") }}
         </p>
       </section>
 
       <section v-if="changedItems.length" class="drawer-section">
-        <h4>Pending Changes</h4>
+        <h4>{{ t("common.pendingChanges") }}</h4>
         <CommandResultList :items="changedItems" empty-text="" :status-formatter="null">
           <template #item="{ item }">
             <strong>{{ item.property }}</strong>
-            <span class="subtle-text">{{ item.old_value ?? "-" }} -> {{ item.value }}</span>
+            <span class="subtle-text">{{ t("common.valueTransition", { from: item.old_value ?? "-", to: item.value }) }}</span>
           </template>
         </CommandResultList>
       </section>

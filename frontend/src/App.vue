@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { RouterView, useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 
 import AppSidebar from "./components/app/AppSidebar.vue";
 import AppTopbar from "./components/app/AppTopbar.vue";
@@ -8,12 +9,13 @@ import { navigationRoutes } from "./router/routes.js";
 import { useAppState } from "./store/state.js";
 
 const route = useRoute();
+const { t } = useI18n();
 const { state, connect, disconnect } = useAppState();
 
 const currentRoute = computed(() => ({
   key: route.meta.key || "dashboard",
-  label: route.meta.label || "Dashboard",
-  description: route.meta.description || "Global storage health and live system summary.",
+  label: t(route.meta.labelKey || "routes.dashboard.label"),
+  description: t(route.meta.descriptionKey || "routes.dashboard.description"),
 }));
 
 onMounted(() => {

@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import EmptyState from "../common/EmptyState.vue";
 import TopologyNode from "./TopologyNode.vue";
 import { formatBytes, formatPercent } from "../../lib/formatters.js";
@@ -10,6 +12,7 @@ defineProps({
   destroySubmitting: { type: Boolean, default: false },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "create-pool",
   "toggle-row",
@@ -21,18 +24,18 @@ const emit = defineEmits([
 
 <template>
   <article class="surface-panel">
-    <div class="section-header">
-      <div>
-        <h3>Pool Overview</h3>
-        <p>Capacity, health, and topology details for each storage pool.</p>
-      </div>
-      <button type="button" class="primary-button" @click="emit('create-pool')">Create Pool</button>
+      <div class="section-header">
+        <div>
+          <h3>{{ t("pools.overview") }}</h3>
+          <p>{{ t("pools.overviewDescription") }}</p>
+        </div>
+      <button type="button" class="primary-button" @click="emit('create-pool')">{{ t("pools.createPool") }}</button>
     </div>
 
     <EmptyState
       v-if="!pools.length"
-      title="No pools discovered"
-      description="The current snapshot did not report any ZFS pools."
+      :title="t('pools.emptyTitle')"
+      :description="t('pools.emptyDescription')"
     />
 
     <div v-else class="table-shell">
@@ -40,13 +43,13 @@ const emit = defineEmits([
         <thead>
           <tr>
             <th></th>
-            <th>Name</th>
-            <th>Health</th>
-            <th>Size</th>
-            <th>Allocated</th>
-            <th>Free</th>
-            <th>Capacity</th>
-            <th>Fragmentation</th>
+            <th>{{ t("pools.columns.name") }}</th>
+            <th>{{ t("pools.columns.health") }}</th>
+            <th>{{ t("pools.columns.size") }}</th>
+            <th>{{ t("pools.columns.allocated") }}</th>
+            <th>{{ t("pools.columns.free") }}</th>
+            <th>{{ t("pools.columns.capacity") }}</th>
+            <th>{{ t("pools.columns.fragmentation") }}</th>
             <th></th>
           </tr>
         </thead>
@@ -71,7 +74,7 @@ const emit = defineEmits([
               <td>{{ formatPercent(pool.capacity) }}</td>
               <td>{{ formatPercent(pool.fragmentation) }}</td>
               <td class="action-cell">
-                <button type="button" class="ghost-button" @click="emit('open-pool', pool)">View</button>
+                <button type="button" class="ghost-button" @click="emit('open-pool', pool)">{{ t("common.view") }}</button>
               </td>
             </tr>
             <tr v-if="isExpanded(pool)" class="pool-expand-row">
@@ -79,25 +82,25 @@ const emit = defineEmits([
                 <div class="pool-expand-shell">
                   <section class="pool-expand-panel">
                     <div class="pool-panel-header">
-                      <h4>Topology</h4>
-                      <button type="button" class="ghost-button" @click="emit('open-topology', pool)">Edit Topology</button>
+                      <h4>{{ t("pools.topology") }}</h4>
+                      <button type="button" class="ghost-button" @click="emit('open-topology', pool)">{{ t("pools.editTopology") }}</button>
                     </div>
                     <ul class="topology-list" v-if="pool.status && Array.isArray(pool.status.config) && pool.status.config.length">
                       <TopologyNode v-for="node in pool.status.config" :key="node.name" :node="node" />
                     </ul>
-                    <p v-else class="subtle-text">No topology reported for this pool.</p>
+                    <p v-else class="subtle-text">{{ t("pools.noTopology") }}</p>
                   </section>
 
                   <section class="pool-expand-panel">
                     <div class="pool-panel-header">
-                      <h4>Quick Facts</h4>
+                      <h4>{{ t("pools.quickFacts") }}</h4>
                       <button
                         type="button"
                         class="danger-button"
                         :disabled="destroySubmitting"
                         @click="emit('destroy-pool', pool)"
                       >
-                        Destroy Pool
+                        {{ t("pools.destroyPool") }}
                       </button>
                     </div>
                     <dl class="pool-quick-grid">

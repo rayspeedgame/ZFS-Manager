@@ -130,51 +130,51 @@ export const COMMON_READONLY_POOL_PROPERTIES = new Set([
 
 export const CREATE_POOL_PROPERTY_OPTIONS = {
   ashift: {
-    label: "ashift",
+    labelKey: "properties.names.ashift",
     type: "select",
     options: [
       { label: "12", value: "12" },
       { label: "13", value: "13" },
     ],
   },
-  autoexpand: { label: "autoexpand", type: "select", options: BOOLEAN_OPTIONS },
-  autoreplace: { label: "autoreplace", type: "select", options: BOOLEAN_OPTIONS },
-  autotrim: { label: "autotrim", type: "select", options: BOOLEAN_OPTIONS },
-  failmode: { label: "failmode", type: "select", options: FAILMODE_OPTIONS },
-  comment: { label: "comment", type: "text", placeholder: "Optional pool comment" },
+  autoexpand: { labelKey: "properties.names.autoexpand", type: "select", options: BOOLEAN_OPTIONS },
+  autoreplace: { labelKey: "properties.names.autoreplace", type: "select", options: BOOLEAN_OPTIONS },
+  autotrim: { labelKey: "properties.names.autotrim", type: "select", options: BOOLEAN_OPTIONS },
+  failmode: { labelKey: "properties.names.failmode", type: "select", options: FAILMODE_OPTIONS },
+  comment: { labelKey: "properties.names.comment", type: "text", placeholderKey: "properties.placeholders.optionalPoolComment" },
 };
 
 export const CREATE_DATA_LAYOUT_OPTIONS = [
-  { label: "Stripe", value: "stripe" },
-  { label: "Mirror", value: "mirror" },
-  { label: "RAIDZ", value: "raidz" },
-  { label: "RAIDZ2", value: "raidz2" },
-  { label: "RAIDZ3", value: "raidz3" },
+  { labelKey: "pools.layouts.stripe", value: "stripe" },
+  { labelKey: "pools.layouts.mirror", value: "mirror" },
+  { labelKey: "pools.layouts.raidz", value: "raidz" },
+  { labelKey: "pools.layouts.raidz2", value: "raidz2" },
+  { labelKey: "pools.layouts.raidz3", value: "raidz3" },
 ];
 
 export const TOPOLOGY_CATEGORY_OPTIONS = [
-  { label: "Log / ZIL", value: "log" },
-  { label: "Cache / L2ARC", value: "cache" },
-  { label: "Special", value: "special" },
-  { label: "Dedup", value: "dedup" },
-  { label: "Spare", value: "spare" },
+  { labelKey: "pools.categories.log", value: "log" },
+  { labelKey: "pools.categories.cache", value: "cache" },
+  { labelKey: "pools.categories.special", value: "special" },
+  { labelKey: "pools.categories.dedup", value: "dedup" },
+  { labelKey: "pools.categories.spare", value: "spare" },
 ];
 
 export const TOPOLOGY_LAYOUT_OPTIONS = {
   log: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
+    { labelKey: "pools.layouts.stripe", value: "stripe" },
+    { labelKey: "pools.layouts.mirror", value: "mirror" },
   ],
-  cache: [{ label: "Stripe", value: "stripe" }],
+  cache: [{ labelKey: "pools.layouts.stripe", value: "stripe" }],
   special: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
+    { labelKey: "pools.layouts.stripe", value: "stripe" },
+    { labelKey: "pools.layouts.mirror", value: "mirror" },
   ],
   dedup: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
+    { labelKey: "pools.layouts.stripe", value: "stripe" },
+    { labelKey: "pools.layouts.mirror", value: "mirror" },
   ],
-  spare: [{ label: "Stripe", value: "stripe" }],
+  spare: [{ labelKey: "pools.layouts.stripe", value: "stripe" }],
 };
 
 export function buildPowerOfTwoSizeOptions(min, max) {
@@ -195,8 +195,8 @@ export const PROPERTY_INPUTS = {
   autoreplace: { type: "select", options: BOOLEAN_OPTIONS },
   autotrim: { type: "select", options: BOOLEAN_OPTIONS },
   bootfs: { type: "select", options: [] },
-  cachefile: { type: "text", placeholder: "Enter cachefile path or none" },
-  comment: { type: "text", placeholder: "Enter pool comment" },
+  cachefile: { type: "text", placeholderKey: "properties.placeholders.cachefilePath" },
+  comment: { type: "text", placeholderKey: "properties.placeholders.poolComment" },
   delegation: { type: "select", options: BOOLEAN_OPTIONS },
   failmode: { type: "select", options: FAILMODE_OPTIONS },
   listsnapshots: { type: "select", options: BOOLEAN_OPTIONS },
@@ -218,19 +218,19 @@ export const ROOT_DATASET_PROPERTY_INPUTS = {
   dnodesize: { type: "select", options: DNODESIZE_OPTIONS },
   exec: { type: "select", options: BOOLEAN_OPTIONS },
   logbias: { type: "select", options: LOGBIAS_OPTIONS },
-  mountpoint: { type: "text", placeholder: "/tank/data" },
+  mountpoint: { type: "text", placeholderKey: "properties.placeholders.mountpoint" },
   nbmand: { type: "select", options: BOOLEAN_OPTIONS },
   normalization: { type: "select", options: NORMALIZATION_OPTIONS },
   overlay: { type: "select", options: BOOLEAN_OPTIONS },
   primarycache: { type: "select", options: CACHE_OPTIONS },
-  quota: { type: "text", placeholder: "none, 100G, 1T" },
+  quota: { type: "text", placeholderKey: "properties.placeholders.quota" },
   readonly: { type: "select", options: BOOLEAN_OPTIONS },
   recordsize: { type: "select", options: RECORD_SIZE_OPTIONS },
   redundant_metadata: { type: "select", options: REDUNDANT_METADATA_OPTIONS },
-  refquota: { type: "text", placeholder: "none, 100G, 1T" },
-  refreservation: { type: "text", placeholder: "none, 50G" },
+  refquota: { type: "text", placeholderKey: "properties.placeholders.quota" },
+  refreservation: { type: "text", placeholderKey: "properties.placeholders.refreservation" },
   relatime: { type: "select", options: BOOLEAN_OPTIONS },
-  reservation: { type: "text", placeholder: "none, 50G" },
+  reservation: { type: "text", placeholderKey: "properties.placeholders.reservation" },
   secondarycache: { type: "select", options: CACHE_OPTIONS },
   setuid: { type: "select", options: BOOLEAN_OPTIONS },
   snapdir: { type: "select", options: SNAPDIR_OPTIONS },

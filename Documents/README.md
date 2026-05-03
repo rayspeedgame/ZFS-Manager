@@ -14,3 +14,4 @@ This folder keeps project-facing reference notes for maintainers and future cont
 - The frontend now uses a container-plus-components layout for `Pools` and `Datasets`.
 - Shared property editors, command results, and command log UI now live under `frontend/src/components/common/`.
 - Page containers in `frontend/src/views/` own API calls and protect in-progress drafts from live snapshot refreshes.
+- The frontend now has a shared `vue-i18n` layer with English and Simplified Chinese resources plus a persistent topbar language switcher.

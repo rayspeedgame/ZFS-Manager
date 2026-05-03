@@ -5,7 +5,7 @@ This note helps a new contributor understand where data comes from, where writes
 ## Stack
 
 - Backend: FastAPI + Pydantic + async SSH
-- Frontend: Vue 3 + Vite + `vue-router` + Pinia
+- Frontend: Vue 3 + Vite + `vue-router` + Pinia + `vue-i18n`
 - Transport: REST for writes, WebSocket for live snapshots
 
 ## Core Concepts
@@ -36,6 +36,13 @@ Most pool and dataset mutations follow the same lifecycle:
 - `frontend/src/components/pools/` and `frontend/src/components/datasets/`
   - host UI-only workflow pieces that emit events back to the page containers
 
+### Locale system
+
+- `frontend/src/i18n/index.js` chooses the initial locale from `localStorage` first, then browser language, then fallback locale.
+- `frontend/src/i18n/messages.js` holds grouped translation keys for shell, routes, common UI, dashboard, pools, and datasets.
+- Route metadata should use `labelKey` and `descriptionKey` so navigation and view headers react to locale changes.
+- When adding UI copy, prefer translation keys over raw strings unless the value is a domain-native token that should stay verbatim.
+
 ## Key Maintenance Entry Points
 
 - Read path
@@ -57,3 +64,4 @@ Most pool and dataset mutations follow the same lifecycle:
 - Dataset names may contain `/`, so REST routes must keep using `{dataset_name:path}`.
 - `Show snapshots` stays opt-in because large snapshot sets add a lot of UI noise.
 - `frontend/src/store/state.js` is still a compatibility layer; new state work should prefer the Pinia store in `frontend/src/stores/app.js`.
+- Locale-sensitive labels inside long-lived arrays should usually be wrapped in `computed()` so switching languages updates the active view immediately.

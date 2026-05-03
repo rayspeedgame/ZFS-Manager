@@ -157,6 +157,38 @@ svg {
   gap: 16px;
 }
 
+.topbar-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.topbar-locale-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cfe0fb;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.topbar-locale-label {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  writing-mode: horizontal-tb;
+}
+
+.topbar-locale-select {
+  min-width: 110px;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+
 .topbar-status-kicker {
   margin: 0 0 4px;
   color: #8fa4c7;
@@ -328,7 +360,7 @@ svg {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.85fr);
   gap: 20px;
 }
 

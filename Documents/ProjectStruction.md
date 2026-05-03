@@ -16,15 +16,17 @@
 ## Frontend
 
 - `components/app`
-  - application shell components such as the sidebar and topbar
+  - application shell components such as the sidebar, topbar, refresh action, and locale switcher
 - `components/common`
   - shared UI primitives for drawers, dialogs, property lists, command results, and logs
 - `components/pools`
   - pool-only workflow components and configuration
 - `components/datasets`
   - dataset-only workflow components and configuration
+- `i18n`
+  - locale bootstrap, browser locale detection, local storage persistence, and translation message bundles
 - `router`
-  - route definitions and router bootstrap
+  - route definitions and router bootstrap; route metadata now uses translation keys
 - `stores`
   - Pinia store that owns snapshot lifecycle and WebSocket state
 - `services`
@@ -48,3 +50,4 @@
 - Property-heavy UIs now share `PropertySection.vue` and `PropertyFieldList.vue`.
 - Confirmation results and SSH logs now share dedicated common components.
 - Dirty-draft guards prevent live snapshot updates from wiping active user input.
+- Locale changes are handled centrally and should update shell navigation plus page-level workflow copy immediately.

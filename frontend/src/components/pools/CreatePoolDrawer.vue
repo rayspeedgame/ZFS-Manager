@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import DetailDrawer from "../common/DetailDrawer.vue";
 import PropertyFieldList from "../common/PropertyFieldList.vue";
 import { formatBytes } from "../../lib/formatters.js";
@@ -30,6 +32,7 @@ const props = defineProps({
   formatTopologyDeviceLabel: { type: Function, required: true },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "update:modelValue",
   "set-step",
@@ -43,6 +46,11 @@ const emit = defineEmits([
   "update:create-pool-force",
   "open-confirm",
 ]);
+
+function optionText(option) {
+  // Support both legacy `label` options and newer translated `labelKey` options.
+  return option?.labelKey ? t(option.labelKey) : option?.label ?? option?.value ?? "";
+}
 
 function updateDraft(nextDraft) {
   emit("update:create-pool-draft", nextDraft);
@@ -76,8 +84,8 @@ function updatePropertyMap(path, value) {
 <template>
   <DetailDrawer
     :model-value="modelValue"
-    title="Create Pool"
-    description="Build the pool definition step by step, then submit one atomic zpool create command."
+    :title="t('pools.createPoolTitle')"
+    :description="t('pools.createPoolDescription')"
     @update:modelValue="emit('update:modelValue', $event)"
   >
     <div class="drawer-section-list">
@@ -97,10 +105,10 @@ function updatePropertyMap(path, value) {
       </section>
 
       <section v-if="createPoolStep === 'basic'" class="drawer-section">
-        <h4>Basic</h4>
+        <h4>{{ t("pools.basic") }}</h4>
         <div class="topology-form-grid">
           <label class="form-field">
-            <span>Pool Name</span>
+            <span>{{ t("pools.poolName") }}</span>
             <input
               :value="createPoolDraft.name"
               type="text"
@@ -112,7 +120,7 @@ function updatePropertyMap(path, value) {
           </label>
         </div>
         <PropertyFieldList
-          :fields="createPoolPropertyFields.map(([name, config]) => ({ name, label: config.label }))"
+          :fields="createPoolPropertyFields.map(([name, config]) => ({ name, labelKey: config.labelKey, label: config.label }))"
           :model-value="createPoolDraft.properties"
           :get-input-spec="(name) => createPoolPropertyFields.find(([field]) => field === name)?.[1]"
           :disabled="createPoolSubmitting"
@@ -125,8 +133,8 @@ function updatePropertyMap(path, value) {
       <section v-if="createPoolStep === 'rootfs'" class="drawer-section">
         <div class="drawer-section-header">
           <div>
-            <h4>Root Dataset</h4>
-            <p class="subtle-text">Optional properties for the pool's root filesystem dataset, submitted as part of the initial create command.</p>
+            <h4>{{ t("pools.rootDataset") }}</h4>
+            <p class="subtle-text">{{ t("pools.rootDatasetDescription") }}</p>
           </div>
         </div>
 
@@ -134,7 +142,7 @@ function updatePropertyMap(path, value) {
           :fields="createPoolRootCommonFields"
           :model-value="createPoolDraft.rootDatasetProperties"
           :get-input-spec="rootDatasetPropertyInput"
-          default-option-label="Default"
+          :default-option-label="t('common.default')"
           :disabled="createPoolSubmitting"
           grid-class="detail-grid editable-detail-grid"
           item-class="editable-property-card"
@@ -143,7 +151,7 @@ function updatePropertyMap(path, value) {
 
         <div class="advanced-toggle-row">
           <button type="button" class="ghost-button" @click="emit('toggle-root-advanced')">
-            {{ createPoolRootAdvancedOpen ? "Hide Advanced" : "Advanced" }}
+            {{ createPoolRootAdvancedOpen ? t("common.hideAdvanced") : t("common.advanced") }}
           </button>
         </div>
 
@@ -152,7 +160,7 @@ function updatePropertyMap(path, value) {
           :fields="createPoolRootAdvancedFields"
           :model-value="createPoolDraft.rootDatasetProperties"
           :get-input-spec="rootDatasetPropertyInput"
-          default-option-label="Default"
+          :default-option-label="t('common.default')"
           :disabled="createPoolSubmitting"
           grid-class="detail-grid editable-detail-grid advanced-detail-grid"
           item-class="editable-property-card"
@@ -163,30 +171,30 @@ function updatePropertyMap(path, value) {
       <section v-if="createPoolStep === 'data'" class="drawer-section">
         <div class="drawer-section-header">
           <div>
-            <h4>Data VDEVs</h4>
-            <p class="subtle-text">Add one or more required data vdevs before creating the pool.</p>
+            <h4>{{ t("pools.dataVdevs") }}</h4>
+            <p class="subtle-text">{{ t("pools.dataVdevsDescription") }}</p>
           </div>
           <button type="button" class="primary-button" :disabled="!createPoolDraft.dataBuilder.devices.length || createPoolSubmitting" @click="emit('add-vdev', 'dataBuilder')">
-            Add Data VDEV
+            {{ t("pools.addDataVdev") }}
           </button>
         </div>
         <div class="topology-form-grid">
           <label class="form-field">
-            <span>Layout</span>
+            <span>{{ t("pools.layout") }}</span>
             <select
               :value="createPoolDraft.dataBuilder.layout"
               class="property-field"
               :disabled="createPoolSubmitting"
               @change="updateNestedDraft('dataBuilder', 'layout', $event.target.value)"
             >
-              <option v-for="option in createPoolDataLayoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="option in createPoolDataLayoutOptions" :key="option.value" :value="option.value">{{ optionText(option) }}</option>
             </select>
           </label>
         </div>
         <div class="topology-device-picker">
           <div class="result-list-head">
-            <strong>Available Data Devices</strong>
-            <span class="subtle-text">{{ createPoolAvailableDataDevices.length }} selectable</span>
+            <strong>{{ t("pools.availableDataDevices") }}</strong>
+            <span class="subtle-text">{{ t("common.selectableCount", { count: createPoolAvailableDataDevices.length }) }}</span>
           </div>
           <div v-if="createPoolAvailableDataDevices.length" class="topology-device-list">
             <label
@@ -204,26 +212,26 @@ function updatePropertyMap(path, value) {
               <div>
                 <strong>{{ device.path }}</strong>
                 <div class="subtle-text">{{ device.diskId }}</div>
-                <div class="subtle-text">{{ device.model || "Unknown model" }}</div>
+                <div class="subtle-text">{{ device.model || t("common.unknownModel") }}</div>
                 <div class="subtle-text">{{ formatBytes(device.size) }}</div>
               </div>
             </label>
           </div>
         </div>
         <section v-if="createPoolDataSelectionSummary.length || createPoolDraft.dataVdevs.length" class="drawer-section">
-          <h4>Planned Data VDEVs</h4>
+          <h4>{{ t("pools.plannedDataVdevs") }}</h4>
           <ul class="result-list">
             <li v-for="(item, index) in createPoolDraft.dataVdevs" :key="'data-vdev-' + index" class="result-list-item">
               <div class="result-list-head">
-                <strong>data</strong>
-                <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="emit('remove-vdev', 'dataVdevs', index)">Remove</button>
+                <strong>{{ t("pools.categories.data") }}</strong>
+                <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="emit('remove-vdev', 'dataVdevs', index)">{{ t("pools.remove") }}</button>
               </div>
-              <span class="subtle-text">Layout: {{ item.layout }}</span>
+              <span class="subtle-text">{{ t("pools.layoutValue", { value: item.layout }) }}</span>
               <span class="subtle-text">{{ item.devices.join(', ') }}</span>
             </li>
             <li v-if="createPoolDataSelectionSummary.length" class="result-list-item">
-              <strong>Pending builder</strong>
-              <span class="subtle-text">Layout: {{ createPoolDraft.dataBuilder.layout }}</span>
+              <strong>{{ t("pools.pendingBuilder") }}</strong>
+              <span class="subtle-text">{{ t("pools.layoutValue", { value: createPoolDraft.dataBuilder.layout }) }}</span>
               <span class="subtle-text">{{ createPoolDataSelectionSummary.map(formatTopologyDeviceLabel).join(', ') }}</span>
             </li>
           </ul>
@@ -233,41 +241,41 @@ function updatePropertyMap(path, value) {
       <section v-if="createPoolStep === 'aux'" class="drawer-section">
         <div class="drawer-section-header">
           <div>
-            <h4>Extra Classes</h4>
-            <p class="subtle-text">Optionally add log, cache, special, dedup, or spare devices.</p>
+            <h4>{{ t("pools.extraClasses") }}</h4>
+            <p class="subtle-text">{{ t("pools.extraClassesDescription") }}</p>
           </div>
           <button type="button" class="primary-button" :disabled="!createPoolDraft.auxBuilder.devices.length || createPoolSubmitting" @click="emit('add-vdev', 'auxBuilder')">
-            Add Class
+            {{ t("pools.addClass") }}
           </button>
         </div>
         <div class="topology-form-grid">
           <label class="form-field">
-            <span>Category</span>
+            <span>{{ t("pools.category") }}</span>
             <select
               :value="createPoolDraft.auxBuilder.category"
               class="property-field"
               :disabled="createPoolSubmitting"
               @change="updateNestedDraft('auxBuilder', 'category', $event.target.value)"
             >
-              <option v-for="option in topologyCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="option in topologyCategoryOptions" :key="option.value" :value="option.value">{{ optionText(option) }}</option>
             </select>
           </label>
           <label class="form-field">
-            <span>Layout</span>
+            <span>{{ t("pools.layout") }}</span>
             <select
               :value="createPoolDraft.auxBuilder.layout"
               class="property-field"
               :disabled="createPoolSubmitting"
               @change="updateNestedDraft('auxBuilder', 'layout', $event.target.value)"
             >
-              <option v-for="option in createPoolAuxLayoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="option in createPoolAuxLayoutOptions" :key="option.value" :value="option.value">{{ optionText(option) }}</option>
             </select>
           </label>
         </div>
         <div class="topology-device-picker">
           <div class="result-list-head">
-            <strong>Available Devices</strong>
-            <span class="subtle-text">{{ createPoolAvailableAuxDevices.length }} selectable</span>
+            <strong>{{ t("pools.availableDevices") }}</strong>
+            <span class="subtle-text">{{ t("common.selectableCount", { count: createPoolAvailableAuxDevices.length }) }}</span>
           </div>
           <div v-if="createPoolAvailableAuxDevices.length" class="topology-device-list">
             <label
@@ -285,25 +293,25 @@ function updatePropertyMap(path, value) {
               <div>
                 <strong>{{ device.path }}</strong>
                 <div class="subtle-text">{{ device.diskId }}</div>
-                <div class="subtle-text">{{ device.model || "Unknown model" }}</div>
+                <div class="subtle-text">{{ device.model || t("common.unknownModel") }}</div>
                 <div class="subtle-text">{{ formatBytes(device.size) }}</div>
               </div>
             </label>
           </div>
         </div>
         <section v-if="createPoolAuxSelectionSummary.length || createPoolDraft.auxVdevs.length" class="drawer-section">
-          <h4>Planned Extra Classes</h4>
+          <h4>{{ t("pools.plannedExtraClasses") }}</h4>
           <ul class="result-list">
             <li v-for="(item, index) in createPoolDraft.auxVdevs" :key="'aux-vdev-' + index" class="result-list-item">
               <div class="result-list-head">
                 <strong>{{ item.category }}</strong>
-                <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="emit('remove-vdev', 'auxVdevs', index)">Remove</button>
+                <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="emit('remove-vdev', 'auxVdevs', index)">{{ t("pools.remove") }}</button>
               </div>
-              <span class="subtle-text">Layout: {{ item.layout }}</span>
+              <span class="subtle-text">{{ t("pools.layoutValue", { value: item.layout }) }}</span>
               <span class="subtle-text">{{ item.devices.join(', ') }}</span>
             </li>
             <li v-if="createPoolAuxSelectionSummary.length" class="result-list-item">
-              <strong>Pending builder</strong>
+              <strong>{{ t("pools.pendingBuilder") }}</strong>
               <span class="subtle-text">{{ createPoolDraft.auxBuilder.category }} / {{ createPoolDraft.auxBuilder.layout }}</span>
               <span class="subtle-text">{{ createPoolAuxSelectionSummary.map(formatTopologyDeviceLabel).join(', ') }}</span>
             </li>
@@ -312,26 +320,26 @@ function updatePropertyMap(path, value) {
       </section>
 
       <section v-if="createPoolStep === 'review'" class="drawer-section">
-        <h4>Review</h4>
+        <h4>{{ t("pools.review") }}</h4>
         <ul class="result-list">
           <li class="result-list-item">
-            <strong>Pool Name</strong>
+            <strong>{{ t("pools.poolName") }}</strong>
             <span class="subtle-text">{{ createPoolPayload.name || "-" }}</span>
           </li>
           <li class="result-list-item">
-            <strong>Force</strong>
+            <strong>{{ t("common.force") }}</strong>
             <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
           </li>
           <li class="result-list-item">
-            <strong>Properties</strong>
+            <strong>{{ t("pools.properties") }}</strong>
             <span class="subtle-text">
-              {{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}
+              {{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : t('pools.noExtraProperties') }}
             </span>
           </li>
           <li class="result-list-item">
-            <strong>Root Dataset Properties</strong>
+            <strong>{{ t("pools.rootDatasetProperties") }}</strong>
             <span class="subtle-text">
-              {{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}
+              {{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : t('pools.defaultRootDatasetProperties') }}
             </span>
           </li>
         </ul>
@@ -339,7 +347,7 @@ function updatePropertyMap(path, value) {
           <article v-for="group in createPoolReviewGroups" :key="group.label" class="topology-group-card">
             <div class="result-list-head">
               <strong>{{ group.label }}</strong>
-              <span class="subtle-text">{{ group.items.length }} item{{ group.items.length === 1 ? "" : "s" }}</span>
+              <span class="subtle-text">{{ t("common.itemCount", { count: group.items.length }) }}</span>
             </div>
             <ul class="simple-detail-list" v-if="group.items.length">
               <li v-for="(item, index) in group.items" :key="group.label + ':' + index">
@@ -348,14 +356,14 @@ function updatePropertyMap(path, value) {
                 <span class="subtle-text">{{ item.devices.join(', ') }}</span>
               </li>
             </ul>
-            <p v-else class="subtle-text">No items configured.</p>
+            <p v-else class="subtle-text">{{ t("pools.reviewNoItems") }}</p>
           </article>
         </div>
       </section>
 
       <section class="drawer-section">
         <div class="dialog-actions create-pool-actions">
-          <button type="button" class="ghost-button" :disabled="createPoolSubmitting || createPoolStep === 'basic'" @click="emit('prev-step')">Back</button>
+          <button type="button" class="ghost-button" :disabled="createPoolSubmitting || createPoolStep === 'basic'" @click="emit('prev-step')">{{ t("common.back") }}</button>
           <button
             v-if="createPoolStep !== 'review'"
             type="button"
@@ -363,7 +371,7 @@ function updatePropertyMap(path, value) {
             :disabled="createPoolSubmitting || !canAdvanceCreatePool"
             @click="emit('next-step')"
           >
-            Next
+            {{ t("common.next") }}
           </button>
           <label v-if="createPoolStep === 'review'" class="inline-checkbox">
             <input
@@ -371,7 +379,7 @@ function updatePropertyMap(path, value) {
               type="checkbox"
               @change="emit('update:create-pool-force', $event.target.checked)"
             />
-            <span>Force</span>
+            <span>{{ t("common.force") }}</span>
           </label>
           <button
             v-if="createPoolStep === 'review'"
@@ -380,7 +388,7 @@ function updatePropertyMap(path, value) {
             :disabled="createPoolSubmitting || !canSubmitCreatePool"
             @click="emit('open-confirm')"
           >
-            Create Pool
+            {{ t("pools.createPool") }}
           </button>
         </div>
       </section>

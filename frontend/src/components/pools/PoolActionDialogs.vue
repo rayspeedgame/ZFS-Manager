@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
 import ConfirmDialog from "../common/ConfirmDialog.vue";
 import CommandResultList from "../common/CommandResultList.vue";
 import CommandLogPanel from "../common/CommandLogPanel.vue";
@@ -49,6 +51,7 @@ defineProps({
   removeTerminalLogLines: { type: Array, default: () => [] },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   "update:confirmDialogOpen",
   "update:topologyConfirmDialogOpen",
@@ -69,18 +72,18 @@ const emit = defineEmits([
     :busy="submitting"
     :can-confirm="Boolean(changedItems.length)"
     :result-mode="dialogPhase === 'result'"
-    :confirm-text="dialogPhase === 'submitting' ? 'Updating...' : 'Confirm Update'"
-    title="Confirm Pool Property Changes"
-    :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
+    :confirm-text="dialogPhase === 'submitting' ? t('pools.dialogs.updating') : t('pools.dialogs.confirmUpdate')"
+    :title="t('pools.dialogs.confirmPoolPropertyChanges')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
     @update:modelValue="emit('update:confirmDialogOpen', $event)"
     @confirm="emit('confirm-save')"
   >
     <div v-if="dialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">These property changes will be sent to the host after confirmation.</p>
+      <p class="subtle-text">{{ t("pools.dialogs.propertyChangesWillBeSent") }}</p>
       <CommandResultList :items="changedItems" empty-text="">
         <template #item="{ item }">
           <strong>{{ item.property }}</strong>
-          <span class="subtle-text">{{ item.oldValue || "-" }} -> {{ item.newValue || "-" }}</span>
+          <span class="subtle-text">{{ t("common.valueTransition", { from: item.oldValue || "-", to: item.newValue || "-" }) }}</span>
         </template>
       </CommandResultList>
     </div>
@@ -88,8 +91,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Applying property changes...</strong>
-          <p class="subtle-text">Please wait while the backend sends SSH commands and refreshes the latest state.</p>
+          <strong>{{ t("pools.dialogs.applyingPropertyChanges") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.applyingPropertyChangesDescription") }}</p>
         </div>
       </div>
     </div>
@@ -97,22 +100,22 @@ const emit = defineEmits([
       <p v-if="dialogSummary" class="notice-text">{{ dialogSummary }}</p>
       <p v-if="dialogError" class="error-text">{{ dialogError }}</p>
       <section>
-        <h4 class="dialog-mini-heading">Result List</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.resultList") }}</h4>
         <CommandResultList :items="dialogResults">
           <template #item="{ item }">
             <div class="result-list-head">
               <strong>{{ item.property }}</strong>
               <span class="inline-status" :data-health="item.success ? 'ONLINE' : 'DEGRADED'">
-                {{ item.success ? "Success" : "Failed" }}
+                {{ item.success ? t("common.success") : t("common.failed") }}
               </span>
             </div>
-            <p class="subtle-text">{{ item.old_value || "-" }} -> {{ item.new_value || "-" }}</p>
+            <p class="subtle-text">{{ t("common.valueTransition", { from: item.old_value || "-", to: item.new_value || "-" }) }}</p>
             <p class="subtle-text">{{ item.message }}</p>
           </template>
         </CommandResultList>
       </section>
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="terminalLogLines" />
       </section>
     </div>
@@ -123,22 +126,22 @@ const emit = defineEmits([
     :busy="topologySubmitting"
     :can-confirm="Boolean(topologyPendingAdditions.length)"
     :result-mode="topologyDialogPhase === 'result'"
-    :confirm-text="topologyDialogPhase === 'submitting' ? 'Updating...' : 'Confirm Update'"
-    title="Confirm Pool Topology Changes"
-    :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
+    :confirm-text="topologyDialogPhase === 'submitting' ? t('pools.dialogs.updating') : t('pools.dialogs.confirmUpdate')"
+    :title="t('pools.dialogs.confirmPoolTopologyChanges')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
     @update:modelValue="emit('update:topologyConfirmDialogOpen', $event)"
     @confirm="emit('confirm-topology')"
   >
     <div v-if="topologyDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">These topology changes will be sent to the host after confirmation.</p>
+      <p class="subtle-text">{{ t("pools.dialogs.topologyChangesWillBeSent") }}</p>
       <ul class="result-list">
         <li class="result-list-item">
-          <strong>Force</strong>
+          <strong>{{ t("common.force") }}</strong>
           <span class="subtle-text">{{ topologyForce ? "on" : "off" }}</span>
         </li>
         <li v-for="item in topologyConfirmSummary" :key="item.category + ':' + item.layout" class="result-list-item">
           <strong>{{ item.category }}</strong>
-          <span class="subtle-text">Layout: {{ item.layout }}</span>
+          <span class="subtle-text">{{ t("pools.layoutValue", { value: item.layout }) }}</span>
           <span class="subtle-text">{{ item.deviceLabels.join(', ') }}</span>
         </li>
       </ul>
@@ -147,8 +150,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Applying topology changes...</strong>
-          <p class="subtle-text">Please wait while the backend updates the pool and refreshes the latest state.</p>
+          <strong>{{ t("pools.dialogs.applyingTopologyChanges") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.applyingTopologyChangesDescription") }}</p>
         </div>
       </div>
     </div>
@@ -156,23 +159,23 @@ const emit = defineEmits([
       <p v-if="topologyDialogSummary" class="notice-text">{{ topologyDialogSummary }}</p>
       <p v-if="topologyDialogError" class="error-text">{{ topologyDialogError }}</p>
       <section>
-        <h4 class="dialog-mini-heading">Result List</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.resultList") }}</h4>
         <CommandResultList :items="topologyDialogResults">
           <template #item="{ item }">
             <div class="result-list-head">
               <strong>{{ item.category }}</strong>
               <span class="inline-status" :data-health="item.success ? 'ONLINE' : 'DEGRADED'">
-                {{ item.success ? "Success" : "Failed" }}
+                {{ item.success ? t("common.success") : t("common.failed") }}
               </span>
             </div>
-            <p class="subtle-text">Layout: {{ item.layout }}</p>
+            <p class="subtle-text">{{ t("pools.layoutValue", { value: item.layout }) }}</p>
             <p class="subtle-text">{{ item.devices.join(', ') }}</p>
             <p class="subtle-text">{{ item.message }}</p>
           </template>
         </CommandResultList>
       </section>
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="topologyTerminalLogLines" />
       </section>
     </div>
@@ -183,34 +186,34 @@ const emit = defineEmits([
     :busy="createPoolSubmitting"
     :can-confirm="canSubmitCreatePool"
     :result-mode="createPoolDialogPhase === 'result'"
-    :confirm-text="createPoolDialogPhase === 'submitting' ? 'Creating...' : 'Confirm Create'"
-    title="Confirm Pool Creation"
-    :description="createPoolPayload.name ? 'Pool: ' + createPoolPayload.name : 'New pool'"
+    :confirm-text="createPoolDialogPhase === 'submitting' ? t('pools.dialogs.creating') : t('pools.dialogs.confirmCreate')"
+    :title="t('pools.dialogs.confirmPoolCreation')"
+    :description="createPoolPayload.name ? t('pools.dialogs.poolDescription', { name: createPoolPayload.name }) : t('pools.dialogs.newPool')"
     @update:modelValue="emit('update:createPoolConfirmDialogOpen', $event)"
     @confirm="emit('confirm-create-pool')"
   >
     <div v-if="createPoolDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">This will submit one atomic zpool create command with all selected properties and vdevs.</p>
+      <p class="subtle-text">{{ t("pools.dialogs.createConfirmationDescription") }}</p>
       <ul class="result-list">
         <li class="result-list-item">
-          <strong>Pool Name</strong>
+          <strong>{{ t("pools.poolName") }}</strong>
           <span class="subtle-text">{{ createPoolPayload.name }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Force</strong>
+          <strong>{{ t("common.force") }}</strong>
           <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Properties</strong>
-          <span class="subtle-text">{{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}</span>
+          <strong>{{ t("pools.properties") }}</strong>
+          <span class="subtle-text">{{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : t('pools.noExtraProperties') }}</span>
         </li>
         <li class="result-list-item">
-          <strong>Root Dataset Properties</strong>
-          <span class="subtle-text">{{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}</span>
+          <strong>{{ t("pools.rootDatasetProperties") }}</strong>
+          <span class="subtle-text">{{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : t('pools.defaultRootDatasetProperties') }}</span>
         </li>
         <li v-for="(vdev, index) in createPoolPayload.vdevs" :key="'create-confirm-' + index" class="result-list-item">
           <strong>{{ vdev.category }}</strong>
-          <span class="subtle-text">Layout: {{ vdev.layout }}</span>
+          <span class="subtle-text">{{ t("pools.layoutValue", { value: vdev.layout }) }}</span>
           <span class="subtle-text">{{ vdev.devices.join(', ') }}</span>
         </li>
       </ul>
@@ -219,8 +222,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Creating pool...</strong>
-          <p class="subtle-text">Please wait while the backend runs one zpool create command and refreshes the latest state.</p>
+          <strong>{{ t("pools.dialogs.creatingPool") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.creatingPoolDescription") }}</p>
         </div>
       </div>
     </div>
@@ -228,14 +231,14 @@ const emit = defineEmits([
       <p v-if="createPoolDialogSummary" class="notice-text">{{ createPoolDialogSummary }}</p>
       <p v-if="createPoolDialogError" class="error-text">{{ createPoolDialogError }}</p>
       <section>
-        <h4 class="dialog-mini-heading">Result</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
         <CommandResultList
           :items="createPoolDialogResult ? [{ ...createPoolDialogResult, label: createPoolDialogResult.pool, key: createPoolDialogResult.pool || 'pool' }] : []"
-          empty-text="No result was returned."
+          :empty-text="t('common.noResult')"
         />
       </section>
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="createPoolTerminalLogLines" />
       </section>
     </div>
@@ -246,17 +249,17 @@ const emit = defineEmits([
     :busy="destroySubmitting"
     :can-confirm="Boolean(selectedPool && selectedPool.name)"
     :result-mode="destroyDialogPhase === 'result'"
-    :confirm-text="destroyDialogPhase === 'submitting' ? 'Destroying...' : 'Confirm Destroy'"
-    title="Confirm Pool Destroy"
-    :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
+    :confirm-text="destroyDialogPhase === 'submitting' ? t('pools.dialogs.destroying') : t('pools.dialogs.confirmDestroy')"
+    :title="t('pools.dialogs.confirmPoolDestroy')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
     @update:modelValue="emit('update:destroyConfirmDialogOpen', $event)"
     @confirm="emit('confirm-destroy-pool')"
   >
     <div v-if="destroyDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="error-text">This will run zpool destroy on the selected pool.</p>
+      <p class="error-text">{{ t("pools.dialogs.destroyWarning") }}</p>
       <ul class="result-list">
         <li class="result-list-item">
-          <strong>Pool</strong>
+          <strong>{{ t("pools.poolName") }}</strong>
           <span class="subtle-text">{{ selectedPool ? selectedPool.name : '-' }}</span>
         </li>
       </ul>
@@ -265,8 +268,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Destroying pool...</strong>
-          <p class="subtle-text">Please wait while the backend runs zpool destroy and refreshes the latest state.</p>
+          <strong>{{ t("pools.dialogs.destroyingPool") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.destroyingPoolDescription") }}</p>
         </div>
       </div>
     </div>
@@ -274,14 +277,14 @@ const emit = defineEmits([
       <p v-if="destroyDialogSummary" class="notice-text">{{ destroyDialogSummary }}</p>
       <p v-if="destroyDialogError" class="error-text">{{ destroyDialogError }}</p>
       <section>
-        <h4 class="dialog-mini-heading">Result</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
         <CommandResultList
           :items="destroyDialogResult ? [{ ...destroyDialogResult, label: destroyDialogResult.pool, key: destroyDialogResult.pool || 'pool' }] : []"
-          empty-text="No result was returned."
+          :empty-text="t('common.noResult')"
         />
       </section>
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="destroyTerminalLogLines" />
       </section>
     </div>
@@ -292,14 +295,14 @@ const emit = defineEmits([
     :busy="removeSubmitting"
     :can-confirm="Boolean(selectedRemovalTarget && selectedRemovalTarget.commandTarget)"
     :result-mode="removeDialogPhase === 'result'"
-    :confirm-text="removeDialogPhase === 'submitting' ? 'Removing...' : 'Confirm Remove'"
-    title="Confirm Topology Removal"
-    :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
+    :confirm-text="removeDialogPhase === 'submitting' ? t('pools.dialogs.removing') : t('pools.dialogs.confirmRemove')"
+    :title="t('pools.dialogs.confirmTopologyRemoval')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
     @update:modelValue="emit('update:removeConfirmDialogOpen', $event)"
     @confirm="emit('confirm-remove-target')"
   >
     <div v-if="removeDialogPhase === 'confirm'" class="dialog-section-list">
-      <p class="subtle-text">This will remove the selected topology target from the pool.</p>
+      <p class="subtle-text">{{ t("pools.dialogs.removeWarning") }}</p>
       <ul class="result-list" v-if="selectedRemovalTarget">
         <li class="result-list-item">
           <strong>{{ selectedRemovalTarget.displayLabel }}</strong>
@@ -312,8 +315,8 @@ const emit = defineEmits([
       <div class="progress-shell">
         <div class="progress-spinner"></div>
         <div>
-          <strong>Removing topology target...</strong>
-          <p class="subtle-text">Please wait while the backend runs zpool remove and refreshes the latest state.</p>
+          <strong>{{ t("pools.dialogs.removingTarget") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.removingTargetDescription") }}</p>
         </div>
       </div>
     </div>
@@ -321,14 +324,14 @@ const emit = defineEmits([
       <p v-if="removeDialogSummary" class="notice-text">{{ removeDialogSummary }}</p>
       <p v-if="removeDialogError" class="error-text">{{ removeDialogError }}</p>
       <section>
-        <h4 class="dialog-mini-heading">Result</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
         <CommandResultList
           :items="removeDialogResult ? [{ ...removeDialogResult, label: removeDialogResult.display_label, key: removeDialogResult.display_label || 'target' }] : []"
-          empty-text="No result was returned."
+          :empty-text="t('common.noResult')"
         />
       </section>
       <section>
-        <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="removeTerminalLogLines" />
       </section>
     </div>

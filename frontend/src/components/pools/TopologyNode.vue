@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 
 defineOptions({
   name: "TopologyNode",
@@ -9,6 +10,7 @@ const props = defineProps({
   node: { type: Object, required: true },
 });
 
+const { t } = useI18n();
 const isLeaf = computed(() => !Array.isArray(props.node.children) || !props.node.children.length);
 const displayState = computed(() => resolveTopologyState(props.node));
 const displayRead = computed(() => resolveTopologyMetric(props.node, "read"));
@@ -82,7 +84,7 @@ function topologyStateSeverity(state) {
       </div>
       <div class="topology-meta-line">
         <span class="inline-status" :data-health="displayState">{{ displayState }}</span>
-        <span v-if="isLeaf" class="subtle-text">Pool status</span>
+        <span v-if="isLeaf" class="subtle-text">{{ t("pools.topologyNode.poolStatus") }}</span>
         <span>R {{ displayRead }}</span>
         <span>W {{ displayWrite }}</span>
         <span>C {{ displayCksum }}</span>

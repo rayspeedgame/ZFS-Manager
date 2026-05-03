@@ -22,6 +22,7 @@ ZFS-Manager/
 |   |   |   |-- common/
 |   |   |   |-- datasets/
 |   |   |   `-- pools/
+|   |   |-- i18n/
 |   |   |-- lib/
 |   |   |-- router/
 |   |   |-- services/
@@ -53,6 +54,8 @@ ZFS-Manager/
   - list panel, detail drawer, topology drawer, create wizard, dialog bundle, and config
 - `frontend/src/components/datasets/`
   - tree table, detail drawer, create drawer, dialog bundle, and config
+- `frontend/src/i18n/`
+  - locale selection logic and translation bundles for English and Simplified Chinese
 
 ## Related Hotspots
 
@@ -69,3 +72,8 @@ ZFS-Manager/
   - `frontend/src/stores/app.js`
   - `frontend/src/store/state.js`
   - `frontend/src/services/api.js`
+- Frontend internationalization
+  - `frontend/src/i18n/index.js`
+  - `frontend/src/i18n/messages.js`
+  - `frontend/src/router/routes.js`
+  - `frontend/src/components/app/AppTopbar.vue`

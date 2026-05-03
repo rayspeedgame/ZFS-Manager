@@ -1,5 +1,6 @@
 <script>
 import { computed, nextTick, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
 import CreatePoolDrawer from "../components/pools/CreatePoolDrawer.vue";
 import PoolActionDialogs from "../components/pools/PoolActionDialogs.vue";
@@ -32,6 +33,7 @@ export default {
     state: { type: Object, required: true },
   },
   setup(props) {
+    const { t } = useI18n();
     const { createPool, destroyPool, removePoolTarget, updatePoolProperties, updatePoolTopology, refreshStateOnce } = useAppState();
     const selectedPool = ref(null);
     const drawerOpen = ref(false);
@@ -103,7 +105,7 @@ export default {
         ...pool,
         immutableProperties: collectPoolProperties(pool, false),
         editableProperties: collectPoolProperties(pool, true),
-        quickFacts: buildPoolQuickFacts(pool),
+        quickFacts: buildPoolQuickFacts(pool, t),
       }))
     );
 
@@ -198,13 +200,14 @@ export default {
     const createPoolRootCommonFields = computed(() => CREATE_ROOT_DATASET_FIELDS.common);
     const createPoolRootAdvancedFields = computed(() => CREATE_ROOT_DATASET_FIELDS.advanced);
 
-    const createPoolStepItems = [
-      { key: "basic", label: "Basic" },
-      { key: "rootfs", label: "Root Dataset" },
-      { key: "data", label: "Data VDEVs" },
-      { key: "aux", label: "Extra Classes" },
-      { key: "review", label: "Review" },
-    ];
+    // Keep wizard step labels reactive so locale changes update the open drawer immediately.
+    const createPoolStepItems = computed(() => [
+      { key: "basic", label: t("pools.createSteps.basic") },
+      { key: "rootfs", label: t("pools.createSteps.rootfs") },
+      { key: "data", label: t("pools.createSteps.data") },
+      { key: "aux", label: t("pools.createSteps.aux") },
+      { key: "review", label: t("pools.createSteps.review") },
+    ]);
 
     const createPoolDataLayoutOptions = computed(() => CREATE_DATA_LAYOUT_OPTIONS);
     const createPoolAuxLayoutOptions = computed(() => TOPOLOGY_LAYOUT_OPTIONS[createPoolDraft.value.auxBuilder.category] || []);
@@ -252,8 +255,8 @@ export default {
     }));
 
     const createPoolReviewGroups = computed(() => [
-      { label: "Data VDEVs", items: createPoolDraft.value.dataVdevs },
-      { label: "Extra Classes", items: createPoolDraft.value.auxVdevs },
+      { label: t("pools.dataVdevs"), items: createPoolDraft.value.dataVdevs },
+      { label: t("pools.extraClasses"), items: createPoolDraft.value.auxVdevs },
     ]);
 
     const canAdvanceCreatePool = computed(() => {
@@ -545,7 +548,7 @@ export default {
     }
 
     function setCreatePoolStep(step) {
-      const steps = createPoolStepItems.map((item) => item.key);
+      const steps = createPoolStepItems.value.map((item) => item.key);
       const currentIndex = steps.indexOf(createPoolStep.value);
       const targetIndex = steps.indexOf(step);
       if (targetIndex >= 0 && currentIndex >= 0 && targetIndex < currentIndex) {
@@ -555,7 +558,7 @@ export default {
     }
 
     function nextCreatePoolStep() {
-      const steps = createPoolStepItems.map((item) => item.key);
+      const steps = createPoolStepItems.value.map((item) => item.key);
       const currentIndex = steps.indexOf(createPoolStep.value);
       if (currentIndex >= 0 && currentIndex < steps.length - 1 && canAdvanceCreatePool.value) {
         createPoolStep.value = steps[currentIndex + 1];
@@ -563,7 +566,7 @@ export default {
     }
 
     function previousCreatePoolStep() {
-      const steps = createPoolStepItems.map((item) => item.key);
+      const steps = createPoolStepItems.value.map((item) => item.key);
       const currentIndex = steps.indexOf(createPoolStep.value);
       if (currentIndex > 0) {
         resetCreatePoolBuilderSelections();
@@ -674,10 +677,14 @@ export default {
 
         const successCount = dialogResults.value.filter((item) => item.success).length;
         const failureCount = dialogResults.value.length - successCount;
-        dialogSummary.value = `Submitted ${dialogResults.value.length} changes. Success: ${successCount}. Failed: ${failureCount}.`;
+        dialogSummary.value = t("pools.summary.submittedChanges", {
+          total: dialogResults.value.length,
+          success: successCount,
+          failed: failureCount,
+        });
 
         if (response.refresh_error) {
-          dialogError.value = `State refresh failed: ${response.refresh_error}`;
+          dialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
         }
 
         await rebindSelectedPool();
@@ -712,10 +719,14 @@ export default {
 
         const successCount = topologyDialogResults.value.filter((item) => item.success).length;
         const failureCount = topologyDialogResults.value.length - successCount;
-        topologyDialogSummary.value = `Submitted ${topologyDialogResults.value.length} topology update. Success: ${successCount}. Failed: ${failureCount}.`;
+        topologyDialogSummary.value = t("pools.summary.submittedTopologyUpdate", {
+          total: topologyDialogResults.value.length,
+          success: successCount,
+          failed: failureCount,
+        });
 
         if (response.refresh_error) {
-          topologyDialogError.value = `State refresh failed: ${response.refresh_error}`;
+          topologyDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
         }
 
         await rebindSelectedPool();
@@ -749,11 +760,11 @@ export default {
         const response = await createPool(createPoolPayload.value);
         createPoolDialogResult.value = response;
         createPoolDialogSummary.value = response.success
-          ? "Pool creation command completed successfully."
-          : "Pool creation command failed.";
+          ? t("pools.summary.createCommandSucceeded")
+          : t("pools.summary.createCommandFailed");
 
         if (response.refresh_error) {
-          createPoolDialogError.value = `State refresh failed: ${response.refresh_error}`;
+          createPoolDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
         }
 
         try {
@@ -792,11 +803,11 @@ export default {
         const response = await destroyPool(selectedPool.value.name);
         destroyDialogResult.value = response;
         destroyDialogSummary.value = response.success
-          ? "Pool destroy command completed successfully."
-          : "Pool destroy command failed.";
+          ? t("pools.summary.destroyCommandSucceeded")
+          : t("pools.summary.destroyCommandFailed");
 
         if (response.refresh_error) {
-          destroyDialogError.value = `State refresh failed: ${response.refresh_error}`;
+          destroyDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
         }
 
         try {
@@ -834,11 +845,11 @@ export default {
         const response = await removePoolTarget(selectedPool.value.name, selectedRemovalTarget.value.commandTarget);
         removeDialogResult.value = response;
         removeDialogSummary.value = response.success
-          ? "Topology remove command completed successfully."
-          : "Topology remove command failed.";
+          ? t("pools.summary.removeSucceeded")
+          : t("pools.summary.removeFailed");
 
         if (response.refresh_error) {
-          removeDialogError.value = `State refresh failed: ${response.refresh_error}`;
+          removeDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
         }
 
         await rebindSelectedPool();
@@ -1023,10 +1034,10 @@ function isOverviewProperty(name) {
   ]).has(name);
 }
 
-function buildPoolQuickFacts(pool) {
+function buildPoolQuickFacts(pool, t) {
   const facts = [
-    { label: "Scan", value: pool?.status?.scan || "Not reported" },
-    { label: "Errors", value: pool?.status?.errors || "Not reported" },
+    { label: t("pools.quickFacts.scan"), value: pool?.status?.scan || t("pools.quickFacts.notReported") },
+    { label: t("pools.quickFacts.errors"), value: pool?.status?.errors || t("pools.quickFacts.notReported") },
   ];
 
   for (const name of ["ashift", "autoreplace", "autoexpand", "autotrim", "failmode", "comment"]) {
