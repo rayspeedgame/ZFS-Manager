@@ -4,6 +4,6 @@
 
 ## 当前内容
 
-- `routes.js`: Dashboard、Disks、Pools、Datasets 的路由定义
+- `routes.js`: `Dashboard`、`Disks`、`Pools`、`Datasets` 路由定义
 
-当前项目体量不大，路由保持扁平即可；若后续加入编辑页或设置页，再考虑分模块拆分。
+当前项目体量还不大，路由保持扁平即可。

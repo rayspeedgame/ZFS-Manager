@@ -4,13 +4,23 @@
 
 ## 文件说明
 
-- `rest.py`: HTTP 接口，提供状态读取、健康检查和池属性写回
-- `ws.py`: WebSocket 推送，适合前端实时更新
+- `rest.py`: HTTP 接口，提供状态读取、强制刷新和写操作入口
+- `ws.py`: WebSocket 推送，用于前端实时更新
 
-## 当前约定
+## 当前接口约定
 
-- `GET /api/state` 返回完整 JSON 快照
-- `POST /api/pools/{pool_name}/properties` 接收本次变更列表，并按属性逐项返回执行结果
-- `POST /api/pools/{pool_name}/topology` 接收本次拓扑新增列表，并按操作逐项返回执行结果
-- 属性写回完成后，后端会主动触发一次刷新，尽快把最新状态推回前端
-- WebSocket 使用 `send_json()` 推送完整快照
+- `GET /api/state`: 返回完整应用快照
+- `POST /api/state/refresh`: 触发一次全量后端刷新
+- `POST /api/pools/{pool_name}/properties`: 修改 pool 属性
+- `POST /api/pools/{pool_name}/topology`: 新增 topology 设备
+- `POST /api/pools`: 创建 pool
+- `POST /api/pools/{pool_name}/destroy`: 删除 pool
+- `POST /api/pools/{pool_name}/remove`: 移除可删除 topology 目标
+- `POST /api/datasets`: 创建 dataset / zvol
+- `POST /api/datasets/{dataset_name:path}/properties`: 修改 dataset 属性
+- `POST /api/datasets/{dataset_name:path}/destroy`: 删除 dataset
+
+## 当前约束
+
+- dataset 路由使用 `{dataset_name:path}`，以支持 `tank/data` 这类多级名称
+- 写操作完成后会主动刷新，尽快把真实主机状态推回前端

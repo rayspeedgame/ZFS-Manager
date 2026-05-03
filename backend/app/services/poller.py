@@ -604,23 +604,103 @@ def _build_pool_rows(zpool_data: dict, disks: list[dict]) -> list[dict]:
 def _build_dataset_rows(dataset_data: dict) -> list[dict]:
     datasets = dataset_data.get("datasets", [])
     properties = dataset_data.get("properties", {})
-    rows: list[dict] = []
+    by_name: dict[str, dict] = {}
 
     for dataset in datasets:
         name = str(dataset.get("name") or "")
         dataset_properties = properties.get(name, {})
-        rows.append(
-            {
-                **dataset,
-                "depth": max(0, len(name.split("/")) - 1) if name else 0,
-                "poolName": name.split("/")[0] if name else "-",
-                "shortName": name.split("/")[-1] if name else "-",
-                "properties": dataset_properties,
-                "sourceSummary": _get_property_source_summary(dataset_properties),
-            }
+        by_name[name] = {
+            **dataset,
+            "poolName": _derive_dataset_pool_name(name),
+            "parentName": _find_dataset_parent_name(name),
+            "depth": _derive_dataset_depth(name),
+            "shortName": _derive_dataset_short_name(name),
+            "properties": dataset_properties,
+            "sourceSummary": _get_property_source_summary(dataset_properties),
+            "children": [],
+        }
+
+    # Build the hierarchy once on the backend so the frontend can render a
+    # stable tree without re-deriving parent/child order from raw names.
+    root_rows: list[dict] = []
+    for row in by_name.values():
+        parent_name = str(row.get("parentName") or "")
+        parent = by_name.get(parent_name)
+        if parent:
+            parent.setdefault("children", []).append(row)
+        else:
+            root_rows.append(row)
+
+    def sort_rows(items: list[dict]) -> list[dict]:
+        return sorted(
+            items,
+            key=lambda item: (
+                str(item.get("poolName") or ""),
+                _dataset_type_rank(str(item.get("type") or "")),
+                str(item.get("name") or ""),
+            ),
         )
 
-    return rows
+    def flatten(row: dict) -> list[dict]:
+        # Keep each parent immediately followed by its descendants.
+        ordered = [{key: value for key, value in row.items() if key != "children"}]
+        for child in sort_rows(list(row.get("children") or [])):
+            ordered.extend(flatten(child))
+        return ordered
+
+    ordered_rows: list[dict] = []
+    for root in sort_rows(root_rows):
+        ordered_rows.extend(flatten(root))
+
+    return ordered_rows
+
+
+def _find_dataset_parent_name(name: str) -> str:
+    normalized = str(name or "")
+    if not normalized:
+        return ""
+    if "@" in normalized:
+        return normalized.split("@", 1)[0]
+    if "/" in normalized:
+        return normalized.rsplit("/", 1)[0]
+    return ""
+
+
+def _derive_dataset_pool_name(name: str) -> str:
+    normalized = str(name or "")
+    if not normalized:
+        return "-"
+    base_name = normalized.split("@", 1)[0]
+    return base_name.split("/", 1)[0]
+
+
+def _derive_dataset_short_name(name: str) -> str:
+    normalized = str(name or "")
+    if not normalized:
+        return "-"
+    if "@" in normalized:
+        return f"@{normalized.split('@', 1)[1]}"
+    return normalized.rsplit("/", 1)[-1]
+
+
+def _derive_dataset_depth(name: str) -> int:
+    normalized = str(name or "")
+    if not normalized:
+        return 0
+    if "@" in normalized:
+        return _derive_dataset_depth(normalized.split("@", 1)[0]) + 1
+    return max(0, normalized.count("/"))
+
+
+def _dataset_type_rank(dataset_type: str) -> int:
+    normalized = str(dataset_type or "")
+    if normalized == "filesystem":
+        return 0
+    if normalized == "volume":
+        return 1
+    if normalized == "snapshot":
+        return 2
+    return 3
 
 
 def _get_property_source_summary(properties: dict[str, dict]) -> str:

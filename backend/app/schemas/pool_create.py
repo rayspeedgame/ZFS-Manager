@@ -38,7 +38,9 @@ class PoolCreateVdevItem(BaseModel):
 
 class PoolCreateRequest(BaseModel):
     name: str = Field(min_length=1)
+    force: bool = False
     properties: list[PoolCreatePropertyItem] = Field(default_factory=list)
+    root_dataset_properties: list[PoolCreatePropertyItem] = Field(default_factory=list)
     vdevs: list[PoolCreateVdevItem] = Field(default_factory=list)
 
     @field_validator("name")

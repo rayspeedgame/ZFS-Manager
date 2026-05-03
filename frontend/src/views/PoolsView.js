@@ -41,6 +41,111 @@ const FAILMODE_OPTIONS = [
   { label: "panic", value: "panic" },
 ];
 
+const CANMOUNT_OPTIONS = [
+  { label: "on", value: "on" },
+  { label: "off", value: "off" },
+  { label: "noauto", value: "noauto" },
+];
+
+const CACHE_OPTIONS = [
+  { label: "all", value: "all" },
+  { label: "metadata", value: "metadata" },
+  { label: "none", value: "none" },
+];
+
+const SYNC_OPTIONS = [
+  { label: "standard", value: "standard" },
+  { label: "always", value: "always" },
+  { label: "disabled", value: "disabled" },
+];
+
+const LOGBIAS_OPTIONS = [
+  { label: "latency", value: "latency" },
+  { label: "throughput", value: "throughput" },
+];
+
+const SNAPDIR_OPTIONS = [
+  { label: "hidden", value: "hidden" },
+  { label: "visible", value: "visible" },
+];
+
+const ACLTYPE_OPTIONS = [
+  { label: "off", value: "off" },
+  { label: "posix", value: "posix" },
+  { label: "nfsv4", value: "nfsv4" },
+];
+
+const ACLINHERIT_OPTIONS = [
+  { label: "discard", value: "discard" },
+  { label: "noallow", value: "noallow" },
+  { label: "restricted", value: "restricted" },
+  { label: "passthrough", value: "passthrough" },
+  { label: "passthrough-x", value: "passthrough-x" },
+];
+
+const ACLMODE_OPTIONS = [
+  { label: "discard", value: "discard" },
+  { label: "groupmask", value: "groupmask" },
+  { label: "passthrough", value: "passthrough" },
+  { label: "restricted", value: "restricted" },
+];
+
+const CASESENSITIVITY_OPTIONS = [
+  { label: "sensitive", value: "sensitive" },
+  { label: "insensitive", value: "insensitive" },
+  { label: "mixed", value: "mixed" },
+];
+
+const NORMALIZATION_OPTIONS = [
+  { label: "none", value: "none" },
+  { label: "formC", value: "formC" },
+  { label: "formD", value: "formD" },
+  { label: "formKC", value: "formKC" },
+  { label: "formKD", value: "formKD" },
+];
+
+const DEDUP_OPTIONS = [
+  { label: "off", value: "off" },
+  { label: "on", value: "on" },
+  { label: "verify", value: "verify" },
+];
+
+const CHECKSUM_OPTIONS = [
+  { label: "on", value: "on" },
+  { label: "off", value: "off" },
+  { label: "fletcher2", value: "fletcher2" },
+  { label: "fletcher4", value: "fletcher4" },
+  { label: "sha256", value: "sha256" },
+  { label: "sha512", value: "sha512" },
+  { label: "skein", value: "skein" },
+  { label: "edonr", value: "edonr" },
+];
+
+const COPIES_OPTIONS = [
+  { label: "1", value: "1" },
+  { label: "2", value: "2" },
+  { label: "3", value: "3" },
+];
+
+const DNODESIZE_OPTIONS = [
+  { label: "legacy", value: "legacy" },
+  { label: "auto", value: "auto" },
+  { label: "1K", value: "1k" },
+  { label: "2K", value: "2k" },
+  { label: "4K", value: "4k" },
+  { label: "8K", value: "8k" },
+  { label: "16K", value: "16k" },
+];
+
+const REDUNDANT_METADATA_OPTIONS = [
+  { label: "all", value: "all" },
+  { label: "most", value: "most" },
+  { label: "some", value: "some" },
+  { label: "none", value: "none" },
+];
+
+const RECORD_SIZE_OPTIONS = buildPowerOfTwoSizeOptions(512, 1024 * 1024);
+
 const CREATE_POOL_PROPERTY_OPTIONS = {
   ashift: {
     label: "ashift",
@@ -101,6 +206,90 @@ const PROPERTY_INPUTS = {
   failmode: { type: "select", options: FAILMODE_OPTIONS },
   listsnapshots: { type: "select", options: BOOLEAN_OPTIONS },
   multihost: { type: "select", options: BOOLEAN_OPTIONS },
+};
+
+const ROOT_DATASET_PROPERTY_INPUTS = {
+  aclinherit: { type: "select", options: ACLINHERIT_OPTIONS },
+  aclmode: { type: "select", options: ACLMODE_OPTIONS },
+  acltype: { type: "select", options: ACLTYPE_OPTIONS },
+  atime: { type: "select", options: BOOLEAN_OPTIONS },
+  canmount: { type: "select", options: CANMOUNT_OPTIONS },
+  casesensitivity: { type: "select", options: CASESENSITIVITY_OPTIONS },
+  checksum: { type: "select", options: CHECKSUM_OPTIONS },
+  compression: { type: "select", options: buildCompressionCreateOptions() },
+  copies: { type: "select", options: COPIES_OPTIONS },
+  dedup: { type: "select", options: DEDUP_OPTIONS },
+  devices: { type: "select", options: BOOLEAN_OPTIONS },
+  dnodesize: { type: "select", options: DNODESIZE_OPTIONS },
+  exec: { type: "select", options: BOOLEAN_OPTIONS },
+  logbias: { type: "select", options: LOGBIAS_OPTIONS },
+  mountpoint: { type: "text", placeholder: "/tank/data" },
+  nbmand: { type: "select", options: BOOLEAN_OPTIONS },
+  normalization: { type: "select", options: NORMALIZATION_OPTIONS },
+  overlay: { type: "select", options: BOOLEAN_OPTIONS },
+  primarycache: { type: "select", options: CACHE_OPTIONS },
+  quota: { type: "text", placeholder: "none, 100G, 1T" },
+  readonly: { type: "select", options: BOOLEAN_OPTIONS },
+  recordsize: { type: "select", options: RECORD_SIZE_OPTIONS },
+  redundant_metadata: { type: "select", options: REDUNDANT_METADATA_OPTIONS },
+  refquota: { type: "text", placeholder: "none, 100G, 1T" },
+  refreservation: { type: "text", placeholder: "none, 50G" },
+  relatime: { type: "select", options: BOOLEAN_OPTIONS },
+  reservation: { type: "text", placeholder: "none, 50G" },
+  secondarycache: { type: "select", options: CACHE_OPTIONS },
+  setuid: { type: "select", options: BOOLEAN_OPTIONS },
+  snapdir: { type: "select", options: SNAPDIR_OPTIONS },
+  sync: { type: "select", options: SYNC_OPTIONS },
+  utf8only: { type: "select", options: BOOLEAN_OPTIONS },
+  xattr: {
+    type: "select",
+    options: [
+      { label: "on", value: "on" },
+      { label: "off", value: "off" },
+      { label: "dir", value: "dir" },
+      { label: "sa", value: "sa" },
+    ],
+  },
+};
+
+const CREATE_ROOT_DATASET_FIELDS = {
+  common: [
+    "canmount",
+    "compression",
+    "mountpoint",
+    "readonly",
+    "recordsize",
+    "quota",
+    "reservation",
+    "sync",
+  ],
+  advanced: [
+    "aclinherit",
+    "aclmode",
+    "acltype",
+    "atime",
+    "casesensitivity",
+    "checksum",
+    "copies",
+    "dedup",
+    "devices",
+    "dnodesize",
+    "exec",
+    "logbias",
+    "nbmand",
+    "normalization",
+    "overlay",
+    "primarycache",
+    "redundant_metadata",
+    "refquota",
+    "refreservation",
+    "relatime",
+    "secondarycache",
+    "setuid",
+    "snapdir",
+    "utf8only",
+    "xattr",
+  ],
 };
 
 const TopologyNode = {
@@ -173,6 +362,10 @@ export default {
     const topologyDraft = ref(createTopologyDraft());
     const createPoolStep = ref("basic");
     const createPoolDraft = ref(createPoolWizardDraft());
+    const createPoolRootAdvancedOpen = ref(false);
+    const poolPropertyForce = ref(false);
+    const topologyForce = ref(false);
+    const createPoolForce = ref(false);
     const dialogPhase = ref("confirm");
     const dialogError = ref("");
     const dialogResults = ref([]);
@@ -314,9 +507,12 @@ export default {
     );
 
     const createPoolPropertyFields = computed(() => Object.entries(CREATE_POOL_PROPERTY_OPTIONS));
+    const createPoolRootCommonFields = computed(() => CREATE_ROOT_DATASET_FIELDS.common);
+    const createPoolRootAdvancedFields = computed(() => CREATE_ROOT_DATASET_FIELDS.advanced);
 
     const createPoolStepItems = [
       { key: "basic", label: "Basic" },
+      { key: "rootfs", label: "Root Dataset" },
       { key: "data", label: "Data VDEVs" },
       { key: "aux", label: "Extra Classes" },
       { key: "review", label: "Review" },
@@ -358,7 +554,9 @@ export default {
 
     const createPoolPayload = computed(() => ({
       name: createPoolDraft.value.name.trim(),
+      force: createPoolForce.value,
       properties: buildCreatePoolProperties(createPoolDraft.value.properties),
+      root_dataset_properties: buildCreatePoolProperties(createPoolDraft.value.rootDatasetProperties),
       vdevs: [
         ...createPoolDraft.value.dataVdevs.map((vdev) => ({ ...vdev })),
         ...createPoolDraft.value.auxVdevs.map((vdev) => ({ ...vdev })),
@@ -373,6 +571,9 @@ export default {
     const canAdvanceCreatePool = computed(() => {
       if (createPoolStep.value === "basic") {
         return Boolean(createPoolDraft.value.name.trim());
+      }
+      if (createPoolStep.value === "rootfs") {
+        return true;
       }
       if (createPoolStep.value === "data") {
         return Boolean(createPoolDraft.value.dataVdevs.length);
@@ -448,6 +649,7 @@ export default {
     function openPool(pool) {
       selectedPool.value = pool;
       advancedReadonlyOpen.value = false;
+      poolPropertyForce.value = false;
       initializeDraft(pool);
       resetDialogState();
       drawerOpen.value = true;
@@ -455,6 +657,7 @@ export default {
 
     function openTopologyEditor(pool) {
       selectedPool.value = pool;
+      topologyForce.value = false;
       initializeTopologyDraft(pool);
       resetTopologyDialogState();
       topologyDrawerOpen.value = true;
@@ -464,6 +667,8 @@ export default {
       initializeCreatePoolDraft();
       resetCreatePoolDialogState();
       createPoolStep.value = "basic";
+      createPoolRootAdvancedOpen.value = false;
+      createPoolForce.value = false;
       createPoolDrawerOpen.value = true;
     }
 
@@ -563,6 +768,10 @@ export default {
         };
       }
       return PROPERTY_INPUTS[propertyName] || { type: "text" };
+    }
+
+    function rootDatasetPropertyInput(propertyName) {
+      return ROOT_DATASET_PROPERTY_INPUTS[propertyName] || { type: "text" };
     }
 
     function openConfirmDialog() {
@@ -775,7 +984,7 @@ export default {
       topologySubmitting.value = true;
 
       try {
-        const response = await updatePoolTopology(selectedPool.value.name, topologyPendingAdditions.value);
+        const response = await updatePoolTopology(selectedPool.value.name, topologyPendingAdditions.value, topologyForce.value);
         topologyDialogResults.value = Array.isArray(response.results) ? response.results : [];
 
         const successCount = topologyDialogResults.value.filter((item) => item.success).length;
@@ -972,8 +1181,12 @@ export default {
       createPoolDialogSummary,
       createPoolDrawerOpen,
       createPoolDraft,
+      createPoolForce,
       createPoolPayload,
       createPoolPropertyFields,
+      createPoolRootAdvancedFields,
+      createPoolRootAdvancedOpen,
+      createPoolRootCommonFields,
       createPoolReviewGroups,
       createPoolStep,
       createPoolStepItems,
@@ -1004,8 +1217,10 @@ export default {
       openTopologyConfirmDialog,
       openTopologyEditor,
       pools,
+      poolPropertyForce,
       previousCreatePoolStep,
       propertyInput,
+      rootDatasetPropertyInput,
       selectedPool,
       setCreatePoolStep,
       submitting,
@@ -1022,6 +1237,7 @@ export default {
       topologyDialogSummary,
       topologyDrawerOpen,
       topologyDraft,
+      topologyForce,
       topologyGroupSummary,
       topologyLayoutOptions,
       topologyPendingAdditions,
@@ -1184,14 +1400,24 @@ export default {
                 <h4>Editable Properties</h4>
                 <p class="subtle-text">Adjust supported pool settings and save the changed fields together.</p>
               </div>
-              <button
-                type="button"
-                class="primary-button"
-                :disabled="!changedItems.length || submitting"
-                @click="openConfirmDialog"
-              >
-                {{ submitting ? "Saving..." : "Save" }}
-              </button>
+              <div class="inline-action-controls">
+                <label
+                  class="inline-checkbox"
+                  data-disabled="true"
+                  title="zpool set does not provide a force flag."
+                >
+                  <input v-model="poolPropertyForce" type="checkbox" disabled />
+                  <span>Force</span>
+                </label>
+                <button
+                  type="button"
+                  class="primary-button"
+                  :disabled="!changedItems.length || submitting"
+                  @click="openConfirmDialog"
+                >
+                  {{ submitting ? "Saving..." : "Save" }}
+                </button>
+              </div>
             </div>
 
             <dl class="detail-grid editable-detail-grid">
@@ -1314,14 +1540,20 @@ export default {
                 <h4>Add Devices</h4>
                 <p class="subtle-text">Select the topology role, layout, and exact devices before saving.</p>
               </div>
-              <button
-                type="button"
-                class="primary-button"
-                :disabled="!topologyPendingAdditions.length || topologySubmitting"
-                @click="openTopologyConfirmDialog"
-              >
-                {{ topologySubmitting ? "Saving..." : "Save" }}
-              </button>
+              <div class="inline-action-controls">
+                <label class="inline-checkbox">
+                  <input v-model="topologyForce" type="checkbox" />
+                  <span>Force</span>
+                </label>
+                <button
+                  type="button"
+                  class="primary-button"
+                  :disabled="!topologyPendingAdditions.length || topologySubmitting"
+                  @click="openTopologyConfirmDialog"
+                >
+                  {{ topologySubmitting ? "Saving..." : "Save" }}
+                </button>
+              </div>
             </div>
 
             <div class="topology-form-grid">
@@ -1438,6 +1670,83 @@ export default {
                     type="text"
                     class="property-field"
                     :placeholder="config.placeholder || ''"
+                    :disabled="createPoolSubmitting"
+                  />
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section v-if="createPoolStep === 'rootfs'" class="drawer-section">
+            <div class="drawer-section-header">
+              <div>
+                <h4>Root Dataset</h4>
+                <p class="subtle-text">Optional properties for the pool's root filesystem dataset, submitted as part of the initial create command.</p>
+              </div>
+            </div>
+
+            <dl class="detail-grid editable-detail-grid">
+              <div v-for="name in createPoolRootCommonFields" :key="'pool-root:' + name" class="editable-property-card">
+                <dt>{{ name }}</dt>
+                <dd>
+                  <select
+                    v-if="rootDatasetPropertyInput(name).type === 'select'"
+                    v-model="createPoolDraft.rootDatasetProperties[name]"
+                    class="property-field"
+                    :disabled="createPoolSubmitting"
+                  >
+                    <option value="">Default</option>
+                    <option
+                      v-for="option in rootDatasetPropertyInput(name).options"
+                      :key="'pool-root:' + name + ':' + option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <input
+                    v-else
+                    v-model="createPoolDraft.rootDatasetProperties[name]"
+                    type="text"
+                    class="property-field"
+                    :placeholder="rootDatasetPropertyInput(name).placeholder || ''"
+                    :disabled="createPoolSubmitting"
+                  />
+                </dd>
+              </div>
+            </dl>
+
+            <div class="advanced-toggle-row">
+              <button type="button" class="ghost-button" @click="createPoolRootAdvancedOpen = !createPoolRootAdvancedOpen">
+                {{ createPoolRootAdvancedOpen ? "Hide Advanced" : "Advanced" }}
+              </button>
+            </div>
+
+            <dl v-if="createPoolRootAdvancedOpen" class="detail-grid editable-detail-grid advanced-detail-grid">
+              <div v-for="name in createPoolRootAdvancedFields" :key="'pool-root-advanced:' + name" class="editable-property-card">
+                <dt>{{ name }}</dt>
+                <dd>
+                  <select
+                    v-if="rootDatasetPropertyInput(name).type === 'select'"
+                    v-model="createPoolDraft.rootDatasetProperties[name]"
+                    class="property-field"
+                    :disabled="createPoolSubmitting"
+                  >
+                    <option value="">Default</option>
+                    <option
+                      v-for="option in rootDatasetPropertyInput(name).options"
+                      :key="'pool-root-advanced:' + name + ':' + option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <input
+                    v-else
+                    v-model="createPoolDraft.rootDatasetProperties[name]"
+                    type="text"
+                    class="property-field"
+                    :placeholder="rootDatasetPropertyInput(name).placeholder || ''"
                     :disabled="createPoolSubmitting"
                   />
                 </dd>
@@ -1589,9 +1898,19 @@ export default {
                 <span class="subtle-text">{{ createPoolPayload.name || "-" }}</span>
               </li>
               <li class="result-list-item">
+                <strong>Force</strong>
+                <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
+              </li>
+              <li class="result-list-item">
                 <strong>Properties</strong>
                 <span class="subtle-text">
                   {{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}
+                </span>
+              </li>
+              <li class="result-list-item">
+                <strong>Root Dataset Properties</strong>
+                <span class="subtle-text">
+                  {{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}
                 </span>
               </li>
             </ul>
@@ -1625,8 +1944,15 @@ export default {
               >
                 Next
               </button>
+              <label
+                v-if="createPoolStep === 'review'"
+                class="inline-checkbox"
+              >
+                <input v-model="createPoolForce" type="checkbox" />
+                <span>Force</span>
+              </label>
               <button
-                v-else
+                v-if="createPoolStep === 'review'"
                 type="button"
                 class="primary-button"
                 :disabled="createPoolSubmitting || !canSubmitCreatePool"
@@ -1721,6 +2047,10 @@ export default {
         <div v-if="topologyDialogPhase === 'confirm'" class="dialog-section-list">
           <p class="subtle-text">These topology changes will be sent to the host after confirmation.</p>
           <ul class="result-list">
+            <li class="result-list-item">
+              <strong>Force</strong>
+              <span class="subtle-text">{{ topologyForce ? "on" : "off" }}</span>
+            </li>
             <li v-for="item in topologyConfirmSummary" :key="item.category + ':' + item.layout" class="result-list-item">
               <strong>{{ item.category }}</strong>
               <span class="subtle-text">Layout: {{ item.layout }}</span>
@@ -1799,8 +2129,16 @@ export default {
               <span class="subtle-text">{{ createPoolPayload.name }}</span>
             </li>
             <li class="result-list-item">
+              <strong>Force</strong>
+              <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
+            </li>
+            <li class="result-list-item">
               <strong>Properties</strong>
               <span class="subtle-text">{{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}</span>
+            </li>
+            <li class="result-list-item">
+              <strong>Root Dataset Properties</strong>
+              <span class="subtle-text">{{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}</span>
             </li>
             <li v-for="(vdev, index) in createPoolPayload.vdevs" :key="'create-confirm-' + index" class="result-list-item">
               <strong>{{ vdev.category }}</strong>
@@ -2084,6 +2422,41 @@ function createPoolWizardDraft() {
       failmode: "wait",
       comment: "",
     },
+    rootDatasetProperties: {
+      aclinherit: "",
+      aclmode: "",
+      acltype: "",
+      compression: "",
+      mountpoint: "",
+      readonly: "",
+      recordsize: "",
+      canmount: "",
+      casesensitivity: "",
+      quota: "",
+      reservation: "",
+      sync: "",
+      atime: "",
+      checksum: "",
+      copies: "",
+      dedup: "",
+      devices: "",
+      dnodesize: "",
+      exec: "",
+      logbias: "",
+      nbmand: "",
+      normalization: "",
+      overlay: "",
+      primarycache: "",
+      redundant_metadata: "",
+      refquota: "",
+      refreservation: "",
+      relatime: "",
+      secondarycache: "",
+      setuid: "",
+      snapdir: "",
+      utf8only: "",
+      xattr: "",
+    },
     dataBuilder: {
       category: "data",
       layout: "mirror",
@@ -2108,6 +2481,42 @@ function buildCreatePoolProperties(properties) {
     items.push({ name, value: String(value) });
   }
   return items;
+}
+
+function buildCompressionCreateOptions() {
+  return [
+    { label: "Use default algorithm", value: "on" },
+    { label: "off", value: "off" },
+    { label: "lz4", value: "lz4" },
+    { label: "lzjb", value: "lzjb" },
+    { label: "zstd", value: "zstd" },
+    { label: "zstd-fast", value: "zstd-fast" },
+    { label: "gzip", value: "gzip" },
+    { label: "gzip-1", value: "gzip-1" },
+    { label: "gzip-9", value: "gzip-9" },
+    { label: "zle", value: "zle" },
+  ];
+}
+
+function buildPowerOfTwoSizeOptions(min, max) {
+  const options = [];
+  for (let value = min; value <= max; value *= 2) {
+    options.push({
+      label: formatPowerOfTwoSize(value),
+      value: formatPowerOfTwoSize(value),
+    });
+  }
+  return options;
+}
+
+function formatPowerOfTwoSize(bytes) {
+  if (bytes < 1024) {
+    return `${bytes}B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${bytes / 1024}K`;
+  }
+  return `${bytes / (1024 * 1024)}M`;
 }
 
 function isDiskAvailableForCreate(disk) {

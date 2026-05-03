@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.rest import router as rest_router
 from app.api.ws import router as ws_router
 from app.runtime import (
+    dataset_creator,
+    dataset_destroyer,
+    dataset_property_updater,
     poller,
     pool_creator,
     pool_destroyer,
@@ -25,11 +28,14 @@ async def lifespan(_: FastAPI):
     try:
         yield
     finally:
+        await dataset_creator.close()
+        await dataset_destroyer.close()
         await pool_creator.close()
         await pool_destroyer.close()
         await pool_remover.close()
         await pool_topology_updater.close()
         await pool_property_updater.close()
+        await dataset_property_updater.close()
         await poller.stop()
 
 

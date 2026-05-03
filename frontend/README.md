@@ -1,6 +1,6 @@
 # Frontend
 
-前端基于 Vue 3 + Vite，核心职责是消费后端快照、组织交互流程，并把 pool 写操作做成可确认、可回显、可追踪的 UI。
+前端基于 Vue 3 + Vite，核心职责是消费后端快照、组织交互流程，并把高风险写操作做成可确认、可回显、可追踪的 UI。
 
 ## 主要视图
 
@@ -13,38 +13,34 @@
   - pool 总览
   - 拓扑展开区
   - 属性编辑抽屉
-  - 拓扑编辑抽屉
+  - topology 编辑抽屉
   - 新建 pool 向导
   - 删除 pool / 移除设备确认流
 - `Datasets`
-  - dataset 快照与属性展示
+  - dataset / zvol inventory
+  - 可选显示 snapshot
+  - 管理抽屉
+  - 创建 / 修改 / 删除
 
-## 与 pool 新功能相关的实现点
+## 当前实现重点
 
 - `src/views/PoolsView.js`
-  - pool 总览与展开区
-  - pool 属性修改
-  - pool 拓扑设备添加
-  - 新建 pool 分步向导
-  - 删除 pool
-  - 移除拓扑目标
+  - pool 属性、topology、新建、删除、remove
+- `src/views/DatasetsView.js`
+  - dataset 树形 inventory、snapshot 开关、属性分组、创建/删除流
 - `src/store/state.js`
-  - REST 写接口调用
-  - `refreshStateOnce()` 主动同步
+  - WebSocket 状态
+  - REST 写接口
+  - 普通刷新与全量强制刷新
 - `src/styles.css`
-  - 拓扑卡片
-  - 危险按钮
-  - 等待态 spinner
+  - 全局布局、状态面板、表格、抽屉、确认弹窗
 
 ## 交互约定
 
-- 所有 pool 写操作都先弹出确认框
-- 提交后展示 loading 状态
-- 完成后展示：
-  - 成功/失败摘要
-  - SSH 命令日志
-  - 刷新错误（如果有）
-- 前端在写操作完成后会再请求一次 `/api/state`，减少 WebSocket 延迟带来的旧状态残留
+- 所有高风险写操作都先弹出确认框
+- 提交后显示 loading 状态
+- 完成后展示结果摘要、SSH 日志和刷新错误
+- 前端在写操作完成后会再请求一次 `/api/state` 或 `/api/state/refresh`
 
 ## 启动
 

@@ -36,14 +36,13 @@ ZFS-Manager/
 └─ README.md
 ```
 
-## 与 pool 功能直接相关的文件
+## 当前与 dataset 功能直接相关的关键文件
 
 - `backend/app/api/rest.py`
 - `backend/app/services/poller.py`
-- `backend/app/services/pool_creator.py`
-- `backend/app/services/pool_destroyer.py`
-- `backend/app/services/pool_remover.py`
-- `backend/app/services/topology_updater.py`
-- `frontend/src/views/PoolsView.js`
+- `backend/app/services/dataset_creator.py`
+- `backend/app/services/dataset_property_updater.py`
+- `backend/app/services/dataset_destroyer.py`
+- `frontend/src/views/DatasetsView.js`
 - `frontend/src/store/state.js`
 - `frontend/src/styles.css`

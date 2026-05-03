@@ -7,7 +7,8 @@
 - 维护浏览器到后端的连接状态
 - 接收 WebSocket 推送的最新快照
 - 提供 `refreshStateOnce()` 主动拉取最新状态
-- 提供 `updatePoolProperties()` 提交 pool 属性修改
+- 提供 `forceRefreshState()` 触发后端全量刷新
+- 提供 pool / dataset 相关 REST 写接口
 
 ## 关键区分
 

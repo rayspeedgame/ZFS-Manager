@@ -5,14 +5,10 @@
 ## 文件说明
 
 - `AppSidebar.js`: 左侧导航
-- `AppTopbar.js`: 顶栏状态和全局信息
+- `AppTopbar.js`: 顶栏状态与全局操作
 - `StatusBadge.js`: 小型状态徽标
 
 ## 当前重点
 
-`AppTopbar.js` 现在会展示两种状态：
-
-- WebSocket 状态
-- 后端 `meta.app_status` / `meta.source_status`
-
-其中来源状态会使用绿色、橙色、红色做明确反馈。
+- `AppTopbar.js` 展示 WebSocket、SSH source、last success、data age 等状态
+- 顶栏中的 `Force Refresh` 会调用后端全量刷新接口，而不是只读缓存

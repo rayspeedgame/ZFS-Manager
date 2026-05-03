@@ -4,29 +4,20 @@ from dataclasses import dataclass, field
 from shlex import quote
 
 from app.core.config import AppConfig
-from app.schemas.topology_update import PoolTopologyAddItem, PoolTopologyUpdateResult
+from app.schemas.dataset_property_update import (
+    DatasetPropertyUpdateItem,
+    DatasetPropertyUpdateResult,
+)
 from app.ssh.client import SSHClient, SSHConfig
 
 
-def build_zpool_add_command(*, pool: str, addition: PoolTopologyAddItem, force: bool = False) -> str:
-    parts = ["zpool", "add"]
-    if force:
-        parts.append("-f")
-    parts.append(quote(pool))
-    category_token = _category_token(addition.category)
-    layout_token = _layout_token(addition.layout)
-
-    if category_token:
-        parts.append(category_token)
-    if layout_token:
-        parts.append(layout_token)
-
-    parts.extend(quote(device) for device in addition.devices)
-    return " ".join(parts)
+def build_zfs_set_command(*, dataset: str, property_name: str, value: str) -> str:
+    assignment = f"{property_name}={value}"
+    return f"zfs set {quote(assignment)} {quote(dataset)}"
 
 
 @dataclass(slots=True)
-class PoolTopologyUpdater:
+class DatasetPropertyUpdater:
     config: AppConfig
     _ssh_client: SSHClient = field(init=False)
 
@@ -48,17 +39,20 @@ class PoolTopologyUpdater:
     async def close(self) -> None:
         await self._ssh_client.close()
 
-    async def apply_pool_additions(
+    async def apply_dataset_changes(
         self,
         *,
-        pool: str,
-        additions: list[PoolTopologyAddItem],
-        force: bool = False,
-    ) -> list[PoolTopologyUpdateResult]:
-        results: list[PoolTopologyUpdateResult] = []
+        dataset: str,
+        changes: list[DatasetPropertyUpdateItem],
+    ) -> list[DatasetPropertyUpdateResult]:
+        results: list[DatasetPropertyUpdateResult] = []
 
-        for addition in additions:
-            command = build_zpool_add_command(pool=pool, addition=addition, force=force)
+        for change in changes:
+            command = build_zfs_set_command(
+                dataset=dataset,
+                property_name=change.property,
+                value=change.value,
+            )
             try:
                 result = await self._ssh_client.run_detailed(
                     command,
@@ -67,10 +61,10 @@ class PoolTopologyUpdater:
                 )
                 success = result.success
                 results.append(
-                    PoolTopologyUpdateResult(
-                        category=addition.category,
-                        layout=addition.layout,
-                        devices=addition.devices,
+                    DatasetPropertyUpdateResult(
+                        property=change.property,
+                        old_value=change.old_value,
+                        new_value=change.value,
                         success=success,
                         message="Applied successfully." if success else _build_failure_message(result.stderr),
                         command=command,
@@ -81,10 +75,10 @@ class PoolTopologyUpdater:
                 )
             except Exception as exc:
                 results.append(
-                    PoolTopologyUpdateResult(
-                        category=addition.category,
-                        layout=addition.layout,
-                        devices=addition.devices,
+                    DatasetPropertyUpdateResult(
+                        property=change.property,
+                        old_value=change.old_value,
+                        new_value=change.value,
                         success=False,
                         message=str(exc),
                         command=command,
@@ -95,23 +89,8 @@ class PoolTopologyUpdater:
         return results
 
 
-def _category_token(category: str) -> str:
-    return {
-        "data": "",
-        "log": "log",
-        "cache": "cache",
-        "special": "special",
-        "dedup": "dedup",
-        "spare": "spare",
-    }[category]
-
-
-def _layout_token(layout: str) -> str:
-    return "" if layout == "stripe" else layout
-
-
 def _build_failure_message(stderr: str) -> str:
     cleaned = stderr.strip()
     if cleaned:
         return cleaned
-    return "The remote host rejected the topology update."
+    return "The remote host rejected the dataset property update."

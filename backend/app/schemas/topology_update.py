@@ -35,6 +35,7 @@ class PoolTopologyAddItem(BaseModel):
 
 class PoolTopologyUpdateRequest(BaseModel):
     additions: list[PoolTopologyAddItem] = Field(default_factory=list)
+    force: bool = False
 
 
 class PoolTopologyUpdateResult(BaseModel):

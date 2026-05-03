@@ -4,51 +4,29 @@ from dataclasses import dataclass, field
 from shlex import quote
 
 from app.core.config import AppConfig
-from app.schemas.pool_create import PoolCreateRequest, PoolCreateResponse
+from app.schemas.dataset_create import DatasetCreateRequest, DatasetCreateResponse
 from app.ssh.client import SSHClient, SSHConfig
 
 
-def build_zpool_create_command(payload: PoolCreateRequest) -> str:
-    parts = ["zpool", "create"]
+def build_zfs_create_command(payload: DatasetCreateRequest) -> str:
+    parts = ["zfs", "create"]
+    properties = {property_item.name: property_item.value for property_item in payload.properties}
 
-    if payload.force:
-        parts.append("-f")
+    if payload.type == "volume":
+        volsize = properties.pop("volsize")
+        for name, value in properties.items():
+            parts.extend(["-o", quote(f"{name}={value}")])
+        parts.extend(["-V", quote(volsize), quote(payload.full_name)])
+        return " ".join(parts)
 
-    for prop in payload.properties:
-        parts.extend(["-o", quote(f"{prop.name}={prop.value}")])
-
-    for prop in payload.root_dataset_properties:
-        parts.extend(["-O", quote(f"{prop.name}={prop.value}")])
-
-    parts.append(quote(payload.name))
-
-    data_vdevs = [vdev for vdev in payload.vdevs if vdev.category == "data"]
-    aux_vdevs = [vdev for vdev in payload.vdevs if vdev.category != "data"]
-
-    for vdev in data_vdevs:
-        parts.extend(_serialize_vdev(vdev))
-
-    for category in ("log", "cache", "special", "dedup", "spare"):
-        category_vdevs = [vdev for vdev in aux_vdevs if vdev.category == category]
-        if not category_vdevs:
-            continue
-        parts.append(category)
-        for vdev in category_vdevs:
-            parts.extend(_serialize_vdev(vdev))
-
+    for name, value in properties.items():
+        parts.extend(["-o", quote(f"{name}={value}")])
+    parts.append(quote(payload.full_name))
     return " ".join(parts)
 
 
-def _serialize_vdev(vdev) -> list[str]:
-    parts: list[str] = []
-    if vdev.layout != "stripe":
-        parts.append(vdev.layout)
-    parts.extend(quote(device) for device in vdev.devices)
-    return parts
-
-
 @dataclass(slots=True)
-class PoolCreator:
+class DatasetCreator:
     config: AppConfig
     _ssh_client: SSHClient = field(init=False)
 
@@ -70,8 +48,8 @@ class PoolCreator:
     async def close(self) -> None:
         await self._ssh_client.close()
 
-    async def create_pool(self, payload: PoolCreateRequest) -> PoolCreateResponse:
-        command = build_zpool_create_command(payload)
+    async def create_dataset(self, payload: DatasetCreateRequest) -> DatasetCreateResponse:
+        command = build_zfs_create_command(payload)
         try:
             result = await self._ssh_client.run_detailed(
                 command,
@@ -79,18 +57,18 @@ class PoolCreator:
                 timeout=self.config.ssh.command_timeout,
             )
             success = result.success
-            return PoolCreateResponse(
-                pool=payload.name,
+            return DatasetCreateResponse(
+                dataset=payload.full_name,
                 success=success,
-                message="Pool created successfully." if success else _build_failure_message(result.stderr),
+                message="Dataset created successfully." if success else _build_failure_message(result.stderr),
                 command=command,
                 exit_status=result.exit_status,
                 stdout=result.stdout.strip() or None,
                 stderr=result.stderr.strip() or None,
             )
         except Exception as exc:
-            return PoolCreateResponse(
-                pool=payload.name,
+            return DatasetCreateResponse(
+                dataset=payload.full_name,
                 success=False,
                 message=str(exc),
                 command=command,
@@ -102,4 +80,4 @@ def _build_failure_message(stderr: str) -> str:
     cleaned = stderr.strip()
     if cleaned:
         return cleaned
-    return "The remote host rejected the pool creation command."
+    return "The remote host rejected the dataset creation command."

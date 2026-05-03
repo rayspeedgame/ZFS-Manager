@@ -84,6 +84,19 @@ async function refreshStateOnce() {
   return snapshot;
 }
 
+async function forceRefreshState() {
+  const response = await fetch(`${buildApiBaseUrl()}/state/refresh`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to force refresh state: ${response.status}`);
+  }
+  const snapshot = await response.json();
+  state.snapshot = snapshot;
+  state.statusMessage = snapshot.message || "Forced a full backend refresh.";
+  return snapshot;
+}
+
 async function updatePoolProperties(poolName, changes) {
   const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/properties`, {
     method: "POST",
@@ -100,13 +113,13 @@ async function updatePoolProperties(poolName, changes) {
   return payload;
 }
 
-async function updatePoolTopology(poolName, additions) {
+async function updatePoolTopology(poolName, additions, force = false) {
   const response = await fetch(`${buildApiBaseUrl()}/pools/${encodeURIComponent(poolName)}/topology`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ additions }),
+    body: JSON.stringify({ additions, force }),
   });
 
   const payload = await response.json().catch(() => null);
@@ -114,6 +127,50 @@ async function updatePoolTopology(poolName, additions) {
     throw new Error(payload?.detail || `Failed to update pool topology: ${response.status}`);
   }
   return payload;
+}
+
+async function updateDatasetProperties(datasetName, changes) {
+  const response = await fetch(`${buildApiBaseUrl()}/datasets/${encodeURIComponent(datasetName)}/properties`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ changes }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.detail || `Failed to update dataset properties: ${response.status}`);
+  }
+  return payload;
+}
+
+async function createDataset(payload) {
+  const response = await fetch(`${buildApiBaseUrl()}/datasets`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || `Failed to create dataset: ${response.status}`);
+  }
+  return result;
+}
+
+async function destroyDataset(datasetName) {
+  const response = await fetch(`${buildApiBaseUrl()}/datasets/${encodeURIComponent(datasetName)}/destroy`, {
+    method: "POST",
+  });
+
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || `Failed to destroy dataset: ${response.status}`);
+  }
+  return result;
 }
 
 async function createPool(payload) {
@@ -170,11 +227,15 @@ export function useAppState() {
       apiBaseUrl: computed(() => state.apiBaseUrl),
     },
     connect,
+    createDataset,
+    destroyDataset,
     disconnect,
+    forceRefreshState,
     createPool,
     destroyPool,
     removePoolTarget,
     refreshStateOnce,
+    updateDatasetProperties,
     updatePoolProperties,
     updatePoolTopology,
   };
