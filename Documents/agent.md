@@ -1,67 +1,59 @@
 # Agent Guide
 
-这份文档面向后续接手项目的开发者或智能体，目标是让新成员快速理解“状态从哪里来、写操作怎么落下去、哪些地方最容易出错”。
+This note helps a new contributor understand where data comes from, where writes go, and which areas are easiest to break.
 
-## 技术栈
+## Stack
 
-- 后端：FastAPI + Pydantic + async SSH
-- 前端：Vue 3 + Vite
-- 传输：REST + WebSocket
+- Backend: FastAPI + Pydantic + async SSH
+- Frontend: Vue 3 + Vite + `vue-router` + Pinia
+- Transport: REST for writes, WebSocket for live snapshots
 
-## 三个核心概念
+## Core Concepts
 
-### 1. 快照是唯一页面数据源
+### Snapshot-first UI
 
-前端主要消费：
+- The frontend should prefer `snapshot.data.*` from the backend instead of rebuilding ZFS state locally.
+- Dataset depth, parentage, short names, and ordering should come from backend-prepared fields whenever possible.
 
-- `snapshot.meta`
-- `snapshot.data.summary`
-- `snapshot.data.disks`
-- `snapshot.data.pools`
-- `snapshot.data.datasets`
+### Write flow contract
 
-不要让前端自己推导 ZFS 真实状态，优先让后端把结构整理好再传。
+Most pool and dataset mutations follow the same lifecycle:
 
-### 2. 写操作遵循“执行命令 + 强制刷新”
+1. Validate user input in the frontend.
+2. Submit a REST write request.
+3. Execute the command through backend SSH services.
+4. Trigger an immediate refresh on success or partial success.
+5. Show both a summary and detailed command results.
 
-pool 和 dataset 写接口都遵循同一模式：
+### View containers after the refactor
 
-1. 校验输入
-2. 通过 SSH 执行命令
-3. 立即 `refresh_once(force_all=True)`
-4. 返回结果与刷新错误
+- `frontend/src/views/PoolsView.vue`
+  - owns selected pool state, dialog state, live snapshot rebinding, and dirty-draft guards
+- `frontend/src/views/DatasetsView.vue`
+  - owns selected dataset state, tree expansion, create/destroy flows, and dirty-draft guards
+- `frontend/src/components/common/`
+  - hosts shared property editors, command result rendering, and log presentation
+- `frontend/src/components/pools/` and `frontend/src/components/datasets/`
+  - host UI-only workflow pieces that emit events back to the page containers
 
-### 3. dataset 结构现在优先在后端整理
+## Key Maintenance Entry Points
 
-`snapshot.data.datasets` 已经带有：
-
-- `poolName`
-- `parentName`
-- `depth`
-- `shortName`
-
-前端只负责展示、折叠和 snapshot 显示开关，不再自己重建树顺序。
-
-## 维护重点入口
-
-- 读链路
+- Read path
   - `backend/app/services/poller.py`
   - `backend/app/ssh/parser.py`
-- 写链路
+  - `frontend/src/stores/app.js`
+- Write path
   - `backend/app/api/rest.py`
   - `backend/app/services/pool_creator.py`
   - `backend/app/services/topology_updater.py`
   - `backend/app/services/dataset_creator.py`
   - `backend/app/services/dataset_property_updater.py`
   - `backend/app/services/dataset_destroyer.py`
-- 前端
-  - `frontend/src/views/PoolsView.js`
-  - `frontend/src/views/DatasetsView.js`
-  - `frontend/src/store/state.js`
+  - `frontend/src/services/api.js`
 
-## 常见易错点
+## Common Footguns
 
-- `zpool destroy` 后磁盘仍可能保留 `zfs_member` 标签
-- 顶栏普通状态读取不等于后端已经重新采集，真正全量刷新要走 `/api/state/refresh`
-- dataset 名称可能包含 `/`，REST 路由必须使用 `{dataset_name:path}`
-- snapshot 数量多时主列表可能噪声较大，所以前端默认关闭 `Show snapshots`
+- A live snapshot can arrive while the user is editing a form, so the page containers must guard dirty drafts before rebinding new snapshot data.
+- Dataset names may contain `/`, so REST routes must keep using `{dataset_name:path}`.
+- `Show snapshots` stays opt-in because large snapshot sets add a lot of UI noise.
+- `frontend/src/store/state.js` is still a compatibility layer; new state work should prefer the Pinia store in `frontend/src/stores/app.js`.

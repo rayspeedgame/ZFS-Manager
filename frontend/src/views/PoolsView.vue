@@ -1,305 +1,32 @@
 <script>
 import { computed, nextTick, ref, watch } from "vue";
 
-import ConfirmDialog from "../components/common/ConfirmDialog.vue";
-import DetailDrawer from "../components/common/DetailDrawer.vue";
-import EmptyState from "../components/common/EmptyState.vue";
-import TopologyNode from "../components/pools/TopologyNode.vue";
+import CreatePoolDrawer from "../components/pools/CreatePoolDrawer.vue";
+import PoolActionDialogs from "../components/pools/PoolActionDialogs.vue";
+import PoolDetailDrawer from "../components/pools/PoolDetailDrawer.vue";
+import PoolListPanel from "../components/pools/PoolListPanel.vue";
+import PoolTopologyDrawer from "../components/pools/PoolTopologyDrawer.vue";
+import {
+  COMMON_READONLY_POOL_PROPERTIES,
+  CREATE_DATA_LAYOUT_OPTIONS,
+  CREATE_POOL_PROPERTY_OPTIONS,
+  CREATE_ROOT_DATASET_FIELDS,
+  EDITABLE_POOL_PROPERTIES,
+  PROPERTY_INPUTS,
+  ROOT_DATASET_PROPERTY_INPUTS,
+  TOPOLOGY_CATEGORY_OPTIONS,
+  TOPOLOGY_LAYOUT_OPTIONS,
+} from "../components/pools/pool-form-config.js";
 import { formatBytes, formatPercent } from "../lib/formatters.js";
 import { useAppState } from "../store/state.js";
 
-const EDITABLE_POOL_PROPERTIES = new Set([
-  "autoexpand",
-  "autoreplace",
-  "autotrim",
-  "bootfs",
-  "cachefile",
-  "comment",
-  "delegation",
-  "failmode",
-  "listsnapshots",
-  "multihost",
-]);
-
-const COMMON_READONLY_POOL_PROPERTIES = new Set([
-  "ashift",
-  "altroot",
-  "bootsize",
-  "checkpoint",
-  "expandsize",
-  "guid",
-  "readonly",
-  "version",
-]);
-
-const BOOLEAN_OPTIONS = [
-  { label: "on", value: "on" },
-  { label: "off", value: "off" },
-];
-
-const FAILMODE_OPTIONS = [
-  { label: "wait", value: "wait" },
-  { label: "continue", value: "continue" },
-  { label: "panic", value: "panic" },
-];
-
-const CANMOUNT_OPTIONS = [
-  { label: "on", value: "on" },
-  { label: "off", value: "off" },
-  { label: "noauto", value: "noauto" },
-];
-
-const CACHE_OPTIONS = [
-  { label: "all", value: "all" },
-  { label: "metadata", value: "metadata" },
-  { label: "none", value: "none" },
-];
-
-const SYNC_OPTIONS = [
-  { label: "standard", value: "standard" },
-  { label: "always", value: "always" },
-  { label: "disabled", value: "disabled" },
-];
-
-const LOGBIAS_OPTIONS = [
-  { label: "latency", value: "latency" },
-  { label: "throughput", value: "throughput" },
-];
-
-const SNAPDIR_OPTIONS = [
-  { label: "hidden", value: "hidden" },
-  { label: "visible", value: "visible" },
-];
-
-const ACLTYPE_OPTIONS = [
-  { label: "off", value: "off" },
-  { label: "posix", value: "posix" },
-  { label: "nfsv4", value: "nfsv4" },
-];
-
-const ACLINHERIT_OPTIONS = [
-  { label: "discard", value: "discard" },
-  { label: "noallow", value: "noallow" },
-  { label: "restricted", value: "restricted" },
-  { label: "passthrough", value: "passthrough" },
-  { label: "passthrough-x", value: "passthrough-x" },
-];
-
-const ACLMODE_OPTIONS = [
-  { label: "discard", value: "discard" },
-  { label: "groupmask", value: "groupmask" },
-  { label: "passthrough", value: "passthrough" },
-  { label: "restricted", value: "restricted" },
-];
-
-const CASESENSITIVITY_OPTIONS = [
-  { label: "sensitive", value: "sensitive" },
-  { label: "insensitive", value: "insensitive" },
-  { label: "mixed", value: "mixed" },
-];
-
-const NORMALIZATION_OPTIONS = [
-  { label: "none", value: "none" },
-  { label: "formC", value: "formC" },
-  { label: "formD", value: "formD" },
-  { label: "formKC", value: "formKC" },
-  { label: "formKD", value: "formKD" },
-];
-
-const DEDUP_OPTIONS = [
-  { label: "off", value: "off" },
-  { label: "on", value: "on" },
-  { label: "verify", value: "verify" },
-];
-
-const CHECKSUM_OPTIONS = [
-  { label: "on", value: "on" },
-  { label: "off", value: "off" },
-  { label: "fletcher2", value: "fletcher2" },
-  { label: "fletcher4", value: "fletcher4" },
-  { label: "sha256", value: "sha256" },
-  { label: "sha512", value: "sha512" },
-  { label: "skein", value: "skein" },
-  { label: "edonr", value: "edonr" },
-];
-
-const COPIES_OPTIONS = [
-  { label: "1", value: "1" },
-  { label: "2", value: "2" },
-  { label: "3", value: "3" },
-];
-
-const DNODESIZE_OPTIONS = [
-  { label: "legacy", value: "legacy" },
-  { label: "auto", value: "auto" },
-  { label: "1K", value: "1k" },
-  { label: "2K", value: "2k" },
-  { label: "4K", value: "4k" },
-  { label: "8K", value: "8k" },
-  { label: "16K", value: "16k" },
-];
-
-const REDUNDANT_METADATA_OPTIONS = [
-  { label: "all", value: "all" },
-  { label: "most", value: "most" },
-  { label: "some", value: "some" },
-  { label: "none", value: "none" },
-];
-
-const RECORD_SIZE_OPTIONS = buildPowerOfTwoSizeOptions(512, 1024 * 1024);
-
-const CREATE_POOL_PROPERTY_OPTIONS = {
-  ashift: {
-    label: "ashift",
-    type: "select",
-    options: [
-      { label: "12", value: "12" },
-      { label: "13", value: "13" },
-    ],
-  },
-  autoexpand: { label: "autoexpand", type: "select", options: BOOLEAN_OPTIONS },
-  autoreplace: { label: "autoreplace", type: "select", options: BOOLEAN_OPTIONS },
-  autotrim: { label: "autotrim", type: "select", options: BOOLEAN_OPTIONS },
-  failmode: { label: "failmode", type: "select", options: FAILMODE_OPTIONS },
-  comment: { label: "comment", type: "text", placeholder: "Optional pool comment" },
-};
-
-const CREATE_DATA_LAYOUT_OPTIONS = [
-  { label: "Stripe", value: "stripe" },
-  { label: "Mirror", value: "mirror" },
-  { label: "RAIDZ", value: "raidz" },
-  { label: "RAIDZ2", value: "raidz2" },
-  { label: "RAIDZ3", value: "raidz3" },
-];
-
-const TOPOLOGY_CATEGORY_OPTIONS = [
-  { label: "Log / ZIL", value: "log" },
-  { label: "Cache / L2ARC", value: "cache" },
-  { label: "Special", value: "special" },
-  { label: "Dedup", value: "dedup" },
-  { label: "Spare", value: "spare" },
-];
-
-const TOPOLOGY_LAYOUT_OPTIONS = {
-  log: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
-  ],
-  cache: [{ label: "Stripe", value: "stripe" }],
-  special: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
-  ],
-  dedup: [
-    { label: "Stripe", value: "stripe" },
-    { label: "Mirror", value: "mirror" },
-  ],
-  spare: [{ label: "Stripe", value: "stripe" }],
-};
-
-const PROPERTY_INPUTS = {
-  autoexpand: { type: "select", options: BOOLEAN_OPTIONS },
-  autoreplace: { type: "select", options: BOOLEAN_OPTIONS },
-  autotrim: { type: "select", options: BOOLEAN_OPTIONS },
-  bootfs: { type: "select", options: [] },
-  cachefile: { type: "text", placeholder: "Enter cachefile path or none" },
-  comment: { type: "text", placeholder: "Enter pool comment" },
-  delegation: { type: "select", options: BOOLEAN_OPTIONS },
-  failmode: { type: "select", options: FAILMODE_OPTIONS },
-  listsnapshots: { type: "select", options: BOOLEAN_OPTIONS },
-  multihost: { type: "select", options: BOOLEAN_OPTIONS },
-};
-
-const ROOT_DATASET_PROPERTY_INPUTS = {
-  aclinherit: { type: "select", options: ACLINHERIT_OPTIONS },
-  aclmode: { type: "select", options: ACLMODE_OPTIONS },
-  acltype: { type: "select", options: ACLTYPE_OPTIONS },
-  atime: { type: "select", options: BOOLEAN_OPTIONS },
-  canmount: { type: "select", options: CANMOUNT_OPTIONS },
-  casesensitivity: { type: "select", options: CASESENSITIVITY_OPTIONS },
-  checksum: { type: "select", options: CHECKSUM_OPTIONS },
-  compression: { type: "select", options: buildCompressionCreateOptions() },
-  copies: { type: "select", options: COPIES_OPTIONS },
-  dedup: { type: "select", options: DEDUP_OPTIONS },
-  devices: { type: "select", options: BOOLEAN_OPTIONS },
-  dnodesize: { type: "select", options: DNODESIZE_OPTIONS },
-  exec: { type: "select", options: BOOLEAN_OPTIONS },
-  logbias: { type: "select", options: LOGBIAS_OPTIONS },
-  mountpoint: { type: "text", placeholder: "/tank/data" },
-  nbmand: { type: "select", options: BOOLEAN_OPTIONS },
-  normalization: { type: "select", options: NORMALIZATION_OPTIONS },
-  overlay: { type: "select", options: BOOLEAN_OPTIONS },
-  primarycache: { type: "select", options: CACHE_OPTIONS },
-  quota: { type: "text", placeholder: "none, 100G, 1T" },
-  readonly: { type: "select", options: BOOLEAN_OPTIONS },
-  recordsize: { type: "select", options: RECORD_SIZE_OPTIONS },
-  redundant_metadata: { type: "select", options: REDUNDANT_METADATA_OPTIONS },
-  refquota: { type: "text", placeholder: "none, 100G, 1T" },
-  refreservation: { type: "text", placeholder: "none, 50G" },
-  relatime: { type: "select", options: BOOLEAN_OPTIONS },
-  reservation: { type: "text", placeholder: "none, 50G" },
-  secondarycache: { type: "select", options: CACHE_OPTIONS },
-  setuid: { type: "select", options: BOOLEAN_OPTIONS },
-  snapdir: { type: "select", options: SNAPDIR_OPTIONS },
-  sync: { type: "select", options: SYNC_OPTIONS },
-  utf8only: { type: "select", options: BOOLEAN_OPTIONS },
-  xattr: {
-    type: "select",
-    options: [
-      { label: "on", value: "on" },
-      { label: "off", value: "off" },
-      { label: "dir", value: "dir" },
-      { label: "sa", value: "sa" },
-    ],
-  },
-};
-
-const CREATE_ROOT_DATASET_FIELDS = {
-  common: [
-    "canmount",
-    "compression",
-    "mountpoint",
-    "readonly",
-    "recordsize",
-    "quota",
-    "reservation",
-    "sync",
-  ],
-  advanced: [
-    "aclinherit",
-    "aclmode",
-    "acltype",
-    "atime",
-    "casesensitivity",
-    "checksum",
-    "copies",
-    "dedup",
-    "devices",
-    "dnodesize",
-    "exec",
-    "logbias",
-    "nbmand",
-    "normalization",
-    "overlay",
-    "primarycache",
-    "redundant_metadata",
-    "refquota",
-    "refreservation",
-    "relatime",
-    "secondarycache",
-    "setuid",
-    "snapdir",
-    "utf8only",
-    "xattr",
-  ],
-};
-
 export default {
   components: {
-    ConfirmDialog,
-    DetailDrawer,
-    EmptyState,
-    TopologyNode,
+    CreatePoolDrawer,
+    PoolActionDialogs,
+    PoolDetailDrawer,
+    PoolListPanel,
+    PoolTopologyDrawer,
   },
   props: {
     state: { type: Object, required: true },
@@ -316,9 +43,13 @@ export default {
     const topologyConfirmDialogOpen = ref(false);
     const createPoolConfirmDialogOpen = ref(false);
     const draftValues = ref({});
+    // Keep live snapshot rebinding from wiping user edits mid-typing.
+    const detailDraftDirty = ref(false);
     const topologyDraft = ref(createTopologyDraft());
+    const topologyDraftDirty = ref(false);
     const createPoolStep = ref("basic");
     const createPoolDraft = ref(createPoolWizardDraft());
+    const createPoolDraftDirty = ref(false);
     const createPoolRootAdvancedOpen = ref(false);
     const poolPropertyForce = ref(false);
     const topologyForce = ref(false);
@@ -563,13 +294,19 @@ export default {
           topologyDrawerOpen.value = false;
           selectedPool.value = null;
           draftValues.value = {};
-          topologyDraft.value = createTopologyDraft();
+          if (!topologyDraftDirty.value) {
+            topologyDraft.value = createTopologyDraft();
+          }
           return;
         }
 
         selectedPool.value = updated;
-        if (!submitting.value && !changedItems.value.length) {
+        // Rebind live data for the selected pool, but leave any in-progress drafts alone.
+        if (!submitting.value && !detailDraftDirty.value) {
           initializeDraft(updated);
+        }
+        if (!topologySubmitting.value && !removeSubmitting.value && !topologyDraftDirty.value) {
+          initializeTopologyDraft(updated);
         }
       }
     );
@@ -636,9 +373,11 @@ export default {
         nextDraft[property.name] = normalizeEditableValue(property.name, property.rawValue);
       }
       draftValues.value = nextDraft;
+      detailDraftDirty.value = false;
     }
 
     function initializeTopologyDraft(pool) {
+      // Preserve the current builder choices when they still match the latest device inventory.
       const currentCategory = topologyDraft.value.category;
       const currentLayout = topologyDraft.value.layout;
       const currentDevices = Array.isArray(topologyDraft.value.devices) ? topologyDraft.value.devices : [];
@@ -659,10 +398,12 @@ export default {
         layout,
         devices: currentDevices.filter((path) => availablePaths.has(path)),
       };
+      topologyDraftDirty.value = false;
     }
 
     function initializeCreatePoolDraft() {
       createPoolDraft.value = createPoolWizardDraft();
+      createPoolDraftDirty.value = false;
     }
 
     function resetDialogState() {
@@ -728,6 +469,12 @@ export default {
     }
 
     function rootDatasetPropertyInput(propertyName) {
+      if (propertyName === "compression") {
+        return {
+          type: "select",
+          options: buildCompressionCreateOptions(),
+        };
+      }
       return ROOT_DATASET_PROPERTY_INPUTS[propertyName] || { type: "text" };
     }
 
@@ -775,6 +522,7 @@ export default {
         ...topologyDraft.value,
         devices: Array.from(current).sort(),
       };
+      topologyDraftDirty.value = true;
     }
 
     function topologyDeviceSelected(path) {
@@ -782,8 +530,6 @@ export default {
     }
 
     function resetCreatePoolBuilderSelections() {
-      // Clear transient builder selections when the user walks backwards in the
-      // wizard so temporary picks do not silently overlap with later steps.
       createPoolDraft.value = {
         ...createPoolDraft.value,
         dataBuilder: {
@@ -795,6 +541,7 @@ export default {
           devices: [],
         },
       };
+      createPoolDraftDirty.value = true;
     }
 
     function setCreatePoolStep(step) {
@@ -839,6 +586,7 @@ export default {
           devices: Array.from(current).sort(),
         },
       };
+      createPoolDraftDirty.value = true;
     }
 
     function createPoolDeviceSelected(builderKey, path) {
@@ -875,6 +623,7 @@ export default {
           devices: [],
         },
       };
+      createPoolDraftDirty.value = true;
     }
 
     function removeCreatePoolVdev(targetKey, index) {
@@ -882,6 +631,7 @@ export default {
         ...createPoolDraft.value,
         [targetKey]: createPoolDraft.value[targetKey].filter((_, itemIndex) => itemIndex !== index),
       };
+      createPoolDraftDirty.value = true;
     }
 
     function openCreatePoolConfirmDialog() {
@@ -890,6 +640,21 @@ export default {
       }
       resetCreatePoolDialogState();
       createPoolConfirmDialogOpen.value = true;
+    }
+
+    function setDraftValues(value) {
+      draftValues.value = value;
+      detailDraftDirty.value = true;
+    }
+
+    function setTopologyDraft(value) {
+      topologyDraft.value = value;
+      topologyDraftDirty.value = true;
+    }
+
+    function setCreatePoolDraft(value) {
+      createPoolDraft.value = value;
+      createPoolDraftDirty.value = true;
     }
 
     async function confirmSave() {
@@ -916,6 +681,7 @@ export default {
         }
 
         await rebindSelectedPool();
+        detailDraftDirty.value = false;
       } catch (error) {
         dialogError.value = error instanceof Error ? error.message : String(error);
         try {
@@ -954,6 +720,7 @@ export default {
 
         await rebindSelectedPool();
         initializeTopologyDraft(selectedPool.value);
+        topologyDraftDirty.value = false;
       } catch (error) {
         topologyDialogError.value = error instanceof Error ? error.message : String(error);
         try {
@@ -996,6 +763,7 @@ export default {
             createPoolDialogError.value = refreshError instanceof Error ? refreshError.message : String(refreshError);
           }
         }
+        createPoolDraftDirty.value = false;
       } catch (error) {
         createPoolDialogError.value = error instanceof Error ? error.message : String(error);
         try {
@@ -1077,6 +845,7 @@ export default {
         if (selectedPool.value) {
           initializeTopologyDraft(selectedPool.value);
         }
+        topologyDraftDirty.value = false;
       } catch (error) {
         removeDialogError.value = error instanceof Error ? error.message : String(error);
         try {
@@ -1092,9 +861,6 @@ export default {
 
     async function rebindSelectedPool() {
       try {
-        // After a write completes we re-fetch once over REST, then rebind the
-        // selected row from the normalized pool list. This avoids waiting for
-        // WebSocket timing and keeps the drawer aligned with the new snapshot.
         await refreshStateOnce();
         await nextTick();
         const updatedPool = normalizedPools.value.find((pool) => pool.name === selectedPool.value?.name);
@@ -1128,6 +894,7 @@ export default {
       createPoolAuxLayoutOptions,
       createPoolAvailableAuxDevices,
       createPoolAvailableDataDevices,
+      createPoolAuxSelectionSummary,
       createPoolConfirmDialogOpen,
       createPoolDataLayoutOptions,
       createPoolDataSelectionSummary,
@@ -1141,15 +908,14 @@ export default {
       createPoolForce,
       createPoolPayload,
       createPoolPropertyFields,
+      createPoolReviewGroups,
       createPoolRootAdvancedFields,
       createPoolRootAdvancedOpen,
       createPoolRootCommonFields,
-      createPoolReviewGroups,
       createPoolStep,
       createPoolStepItems,
       createPoolSubmitting,
       createPoolTerminalLogLines,
-      createPoolAuxSelectionSummary,
       destroyConfirmDialogOpen,
       destroyDialogError,
       destroyDialogPhase,
@@ -1165,6 +931,7 @@ export default {
       drawerOpen,
       isExpanded,
       normalizedPools,
+      nextCreatePoolStep,
       openConfirmDialog,
       openCreatePoolConfirmDialog,
       openCreatePoolWizard,
@@ -1173,17 +940,30 @@ export default {
       openRemoveTargetConfirmDialog,
       openTopologyConfirmDialog,
       openTopologyEditor,
-      pools,
       poolPropertyForce,
+      pools,
       previousCreatePoolStep,
       propertyInput,
+      removeConfirmDialogOpen,
+      removeCreatePoolVdev,
+      removeDialogError,
+      removeDialogPhase,
+      removeDialogResult,
+      removeDialogSummary,
+      removeSubmitting,
+      removeTerminalLogLines,
       rootDatasetPropertyInput,
       selectedPool,
+      selectedRemovalTarget,
+      setCreatePoolDraft,
       setCreatePoolStep,
+      setDraftValues,
+      setTopologyDraft,
       submitting,
       terminalLogLines,
       toggleCreatePoolDevice,
       toggleRow,
+      toggleTopologyDevice,
       topologyCategoryOptions: TOPOLOGY_CATEGORY_OPTIONS,
       topologyConfirmDialogOpen,
       topologyConfirmSummary,
@@ -1201,25 +981,12 @@ export default {
       topologySelectionSummary,
       topologySubmitting,
       topologyTerminalLogLines,
-      toggleTopologyDevice,
       addCreatePoolVdev,
-      removeCreatePoolVdev,
-      removeConfirmDialogOpen,
-      removeDialogError,
-      removeDialogPhase,
-      removeDialogResult,
-      removeDialogSummary,
-      removeSubmitting,
-      removeTerminalLogLines,
-      selectedRemovalTarget,
-      nextCreatePoolStep,
       formatTopologyDeviceLabel,
       getRemovalTarget,
-      formatBytes,
-      formatPercent,
     };
   },
-  };
+};
 
 function collectPoolProperties(pool, editable) {
   const properties = pool && typeof pool.properties === "object" && pool.properties ? pool.properties : {};
@@ -1384,27 +1151,6 @@ function buildCompressionCreateOptions() {
   ];
 }
 
-function buildPowerOfTwoSizeOptions(min, max) {
-  const options = [];
-  for (let value = min; value <= max; value *= 2) {
-    options.push({
-      label: formatPowerOfTwoSize(value),
-      value: formatPowerOfTwoSize(value),
-    });
-  }
-  return options;
-}
-
-function formatPowerOfTwoSize(bytes) {
-  if (bytes < 1024) {
-    return `${bytes}B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${bytes / 1024}K`;
-  }
-  return `${bytes / (1024 * 1024)}M`;
-}
-
 function isDiskAvailableForCreate(disk) {
   if (!disk?.path) {
     return false;
@@ -1437,61 +1183,6 @@ function allowPathForBuilder(path, usedPaths, currentBuilderPaths) {
 
 function formatTopologyDeviceLabel(device) {
   return `${device.path} [${device.diskId}]`;
-}
-
-function resolveTopologyState(node) {
-  const states = collectTopologyStates(node);
-  if (!states.length) {
-    return "UNKNOWN";
-  }
-  return states.reduce((worst, current) => (
-    topologyStateSeverity(current) > topologyStateSeverity(worst) ? current : worst
-  ));
-}
-
-function collectTopologyStates(node) {
-  const current = node?.state ? [node.state] : [];
-  const children = Array.isArray(node?.children) ? node.children : [];
-  return children.reduce((states, child) => states.concat(collectTopologyStates(child)), current);
-}
-
-function resolveTopologyMetric(node, key) {
-  const total = aggregateTopologyMetric(node, key);
-  if (total === null) {
-    return "-";
-  }
-  return total;
-}
-
-function aggregateTopologyMetric(node, key) {
-  const children = Array.isArray(node?.children) ? node.children : [];
-  if (children.length) {
-    const totals = children
-      .map((child) => aggregateTopologyMetric(child, key))
-      .filter((value) => value !== null);
-    if (!totals.length) {
-      return null;
-    }
-    return totals.reduce((sum, value) => sum + value, 0);
-  }
-  if (node?.[key] === null || node?.[key] === undefined) {
-    return null;
-  }
-  return Number(node[key]) || 0;
-}
-
-function topologyStateSeverity(state) {
-  return {
-    ONLINE: 1,
-    AVAIL: 1,
-    DEGRADED: 2,
-    SUSPENDED: 3,
-    OFFLINE: 4,
-    REMOVED: 4,
-    FAULTED: 5,
-    UNAVAIL: 5,
-    UNKNOWN: 6,
-  }[state || "UNKNOWN"] || 6;
 }
 
 function buildCommandLogLines(results, primaryKey) {
@@ -1535,1073 +1226,149 @@ function buildSingleCommandLogLines(result, label) {
 </script>
 
 <template>
-<section class="view-grid">
-      <article class="surface-panel">
-        <div class="section-header">
-          <div>
-            <h3>Pool Overview</h3>
-            <p>Capacity, health, and topology details for each storage pool.</p>
-          </div>
-          <button type="button" class="primary-button" @click="openCreatePoolWizard">Create Pool</button>
-        </div>
+  <section class="view-grid">
+    <PoolListPanel
+      :pools="pools"
+      :normalized-pools="normalizedPools"
+      :is-expanded="isExpanded"
+      :destroy-submitting="destroySubmitting"
+      @create-pool="openCreatePoolWizard"
+      @toggle-row="toggleRow"
+      @open-pool="openPool"
+      @open-topology="openTopologyEditor"
+      @destroy-pool="selectedPool = $event; openDestroyPoolConfirmDialog()"
+    />
 
-        <EmptyState
-          v-if="!pools.length"
-          title="No pools discovered"
-          description="The current snapshot did not report any ZFS pools."
-        />
+    <PoolDetailDrawer
+      v-model="drawerOpen"
+      :selected-pool="selectedPool"
+      :advanced-readonly-open="advancedReadonlyOpen"
+      :pool-property-force="poolPropertyForce"
+      :changed-items="changedItems"
+      :draft-values="draftValues"
+      :submitting="submitting"
+      :destroy-submitting="destroySubmitting"
+      :property-input="propertyInput"
+      @update:draft-values="setDraftValues"
+      @toggle-advanced="advancedReadonlyOpen = !advancedReadonlyOpen"
+      @open-confirm="openConfirmDialog"
+      @open-destroy="openDestroyPoolConfirmDialog"
+    />
 
-        <div v-else class="table-shell">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Name</th>
-                <th>Health</th>
-                <th>Size</th>
-                <th>Allocated</th>
-                <th>Free</th>
-                <th>Capacity</th>
-                <th>Fragmentation</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="pool in normalizedPools" :key="pool.name">
-                <tr>
-                  <td>
-                    <button
-                      type="button"
-                      class="row-toggle"
-                      :data-expanded="isExpanded(pool)"
-                      @click="toggleRow(pool)"
-                    >
-                      ▸
-                    </button>
-                  </td>
-                  <td><strong>{{ pool.name }}</strong></td>
-                  <td><span class="inline-status" :data-health="pool.health">{{ pool.health }}</span></td>
-                  <td>{{ formatBytes(pool.size) }}</td>
-                  <td>{{ formatBytes(pool.allocated) }}</td>
-                  <td>{{ formatBytes(pool.free) }}</td>
-                  <td>{{ formatPercent(pool.capacity) }}</td>
-                  <td>{{ formatPercent(pool.fragmentation) }}</td>
-                  <td class="action-cell">
-                    <button type="button" class="ghost-button" @click="openPool(pool)">View</button>
-                  </td>
-                </tr>
-                <tr v-if="isExpanded(pool)" class="pool-expand-row">
-                  <td colspan="9">
-                    <div class="pool-expand-shell">
-                      <section class="pool-expand-panel">
-                        <div class="pool-panel-header">
-                          <h4>Topology</h4>
-                          <button type="button" class="ghost-button" @click="openTopologyEditor(pool)">Edit Topology</button>
-                        </div>
-                        <ul class="topology-list" v-if="pool.status && Array.isArray(pool.status.config) && pool.status.config.length">
-                          <TopologyNode v-for="node in pool.status.config" :key="node.name" :node="node" />
-                        </ul>
-                        <p v-else class="subtle-text">No topology reported for this pool.</p>
-                      </section>
+    <PoolTopologyDrawer
+      v-model="topologyDrawerOpen"
+      :selected-pool="selectedPool"
+      :topology-group-summary="topologyGroupSummary"
+      :topology-draft="topologyDraft"
+      :topology-category-options="topologyCategoryOptions"
+      :topology-layout-options="topologyLayoutOptions"
+      :available-topology-devices="availableTopologyDevices"
+      :topology-pending-additions="topologyPendingAdditions"
+      :topology-selection-summary="topologySelectionSummary"
+      :topology-force="topologyForce"
+      :topology-submitting="topologySubmitting"
+      :remove-submitting="removeSubmitting"
+      :topology-device-selected="topologyDeviceSelected"
+      :format-topology-device-label="formatTopologyDeviceLabel"
+      :get-removal-target="getRemovalTarget"
+      @update:topology-draft="setTopologyDraft"
+      @update:topology-force="topologyForce = $event"
+      @toggle-device="toggleTopologyDevice"
+      @open-confirm="openTopologyConfirmDialog"
+      @remove-target="openRemoveTargetConfirmDialog"
+    />
 
-                      <section class="pool-expand-panel">
-                        <div class="pool-panel-header">
-                          <h4>Quick Facts</h4>
-                          <button
-                            type="button"
-                            class="danger-button"
-                            :disabled="destroySubmitting"
-                            @click="selectedPool = pool; openDestroyPoolConfirmDialog()"
-                          >
-                            Destroy Pool
-                          </button>
-                        </div>
-                        <dl class="pool-quick-grid">
-                          <div v-for="fact in pool.quickFacts" :key="fact.label">
-                            <dt>{{ fact.label }}</dt>
-                            <dd>{{ fact.value }}</dd>
-                          </div>
-                        </dl>
-                      </section>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-      </article>
+    <CreatePoolDrawer
+      v-model="createPoolDrawerOpen"
+      :create-pool-step-items="createPoolStepItems"
+      :create-pool-step="createPoolStep"
+      :create-pool-draft="createPoolDraft"
+      :create-pool-property-fields="createPoolPropertyFields"
+      :create-pool-root-common-fields="createPoolRootCommonFields"
+      :create-pool-root-advanced-fields="createPoolRootAdvancedFields"
+      :create-pool-root-advanced-open="createPoolRootAdvancedOpen"
+      :create-pool-data-layout-options="createPoolDataLayoutOptions"
+      :create-pool-aux-layout-options="createPoolAuxLayoutOptions"
+      :create-pool-available-data-devices="createPoolAvailableDataDevices"
+      :create-pool-available-aux-devices="createPoolAvailableAuxDevices"
+      :create-pool-data-selection-summary="createPoolDataSelectionSummary"
+      :create-pool-aux-selection-summary="createPoolAuxSelectionSummary"
+      :create-pool-review-groups="createPoolReviewGroups"
+      :create-pool-payload="createPoolPayload"
+      :create-pool-submitting="createPoolSubmitting"
+      :create-pool-force="createPoolForce"
+      :can-advance-create-pool="canAdvanceCreatePool"
+      :can-submit-create-pool="canSubmitCreatePool"
+      :create-pool-device-selected="createPoolDeviceSelected"
+      :root-dataset-property-input="rootDatasetPropertyInput"
+      :topology-category-options="topologyCategoryOptions"
+      :format-topology-device-label="formatTopologyDeviceLabel"
+      @set-step="setCreatePoolStep"
+      @prev-step="previousCreatePoolStep"
+      @next-step="nextCreatePoolStep"
+      @update:create-pool-draft="setCreatePoolDraft"
+      @toggle-root-advanced="createPoolRootAdvancedOpen = !createPoolRootAdvancedOpen"
+      @toggle-device="toggleCreatePoolDevice"
+      @add-vdev="addCreatePoolVdev"
+      @remove-vdev="removeCreatePoolVdev"
+      @update:create-pool-force="createPoolForce = $event"
+      @open-confirm="openCreatePoolConfirmDialog"
+    />
 
-      <DetailDrawer
-        v-model="drawerOpen"
-        title="Pool Details"
-        :description="selectedPool ? selectedPool.name : ''"
-      >
-        <div v-if="selectedPool" class="drawer-section-list">
-          <section class="drawer-section">
-            <h4>Read-only Properties</h4>
-            <dl class="detail-grid">
-              <div v-for="property in selectedPool.immutableProperties.common" :key="property.name">
-                <dt>{{ property.name }}</dt>
-                <dd>{{ property.value }} <span class="subtle-text">({{ property.source }})</span></dd>
-              </div>
-            </dl>
-            <p v-if="!selectedPool.immutableProperties.common.length" class="subtle-text">
-              No additional read-only properties were reported.
-            </p>
-            <div v-if="selectedPool.immutableProperties.advanced.length" class="advanced-toggle-row">
-              <button
-                type="button"
-                class="ghost-button"
-                @click="advancedReadonlyOpen = !advancedReadonlyOpen"
-              >
-                {{ advancedReadonlyOpen ? "Hide Advanced" : "Advanced" }}
-              </button>
-            </div>
-            <dl v-if="advancedReadonlyOpen" class="detail-grid advanced-detail-grid">
-              <div v-for="property in selectedPool.immutableProperties.advanced" :key="property.name">
-                <dt>{{ property.name }}</dt>
-                <dd>{{ property.value }} <span class="subtle-text">({{ property.source }})</span></dd>
-              </div>
-            </dl>
-          </section>
-
-          <section class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Editable Properties</h4>
-                <p class="subtle-text">Adjust supported pool settings and save the changed fields together.</p>
-              </div>
-              <div class="inline-action-controls">
-                <label
-                  class="inline-checkbox"
-                  data-disabled="true"
-                  title="zpool set does not provide a force flag."
-                >
-                  <input v-model="poolPropertyForce" type="checkbox" disabled />
-                  <span>Force</span>
-                </label>
-                <button
-                  type="button"
-                  class="primary-button"
-                  :disabled="!changedItems.length || submitting"
-                  @click="openConfirmDialog"
-                >
-                  {{ submitting ? "Saving..." : "Save" }}
-                </button>
-              </div>
-            </div>
-
-            <dl class="detail-grid editable-detail-grid">
-              <div v-for="property in selectedPool.editableProperties" :key="property.name" class="editable-property-card">
-                <dt>{{ property.name }}</dt>
-                <dd>
-                  <select
-                    v-if="propertyInput(property.name).type === 'select'"
-                    v-model="draftValues[property.name]"
-                    class="property-field"
-                    :disabled="submitting"
-                  >
-                    <option
-                      v-for="option in propertyInput(property.name).options"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                  <input
-                    v-else
-                    v-model="draftValues[property.name]"
-                    type="text"
-                    class="property-field"
-                    :placeholder="propertyInput(property.name).placeholder || ''"
-                    :disabled="submitting"
-                  />
-                  <span class="property-meta">
-                    Current: {{ property.value }} <span class="subtle-text">({{ property.source }})</span>
-                  </span>
-                </dd>
-              </div>
-            </dl>
-            <p v-if="!selectedPool.editableProperties.length" class="subtle-text">
-              No editable properties were reported in the current snapshot.
-            </p>
-          </section>
-
-          <section v-if="changedItems.length" class="drawer-section">
-            <h4>Pending Changes</h4>
-            <ul class="result-list">
-              <li v-for="item in changedItems" :key="item.property" class="result-list-item">
-                <strong>{{ item.property }}</strong>
-                <span class="subtle-text">{{ item.oldValue || "-" }} -> {{ item.newValue || "-" }}</span>
-              </li>
-            </ul>
-          </section>
-          <section class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Danger Zone</h4>
-                <p class="subtle-text">Destroying a pool removes the whole pool from the host.</p>
-              </div>
-              <button
-                type="button"
-                class="danger-button"
-                :disabled="destroySubmitting"
-                @click="openDestroyPoolConfirmDialog"
-              >
-                Destroy Pool
-              </button>
-            </div>
-          </section>
-        </div>
-      </DetailDrawer>
-
-      <DetailDrawer
-        v-model="topologyDrawerOpen"
-        title="Edit Pool Topology"
-        :description="selectedPool ? selectedPool.name : ''"
-      >
-        <div v-if="selectedPool" class="drawer-section-list">
-          <section class="drawer-section">
-            <h4>Current Topology</h4>
-            <div class="topology-group-list" v-if="topologyGroupSummary.length">
-              <article v-for="group in topologyGroupSummary" :key="group.name" class="topology-group-card">
-                <div class="result-list-head">
-                  <strong>{{ group.label }}</strong>
-                  <span class="subtle-text">{{ group.items.length }} group{{ group.items.length === 1 ? "" : "s" }}</span>
-                </div>
-                <ul class="simple-detail-list" v-if="group.items.length">
-                  <li v-for="item in group.items" :key="group.name + ':' + item.name">
-                    <div class="result-list-head">
-                      <strong>{{ item.name }}</strong>
-                      <button
-                        v-if="getRemovalTarget(item)"
-                        type="button"
-                        class="danger-button"
-                        :disabled="removeSubmitting"
-                        @click="openRemoveTargetConfirmDialog(getRemovalTarget(item))"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <span class="subtle-text">Layout: {{ item.layout }} · State: {{ item.state || "UNKNOWN" }}</span>
-                    <div class="topology-member-card-list">
-                      <article v-for="member in item.members" :key="member.path + ':' + member.diskId" class="topology-member-card">
-                        <strong>{{ member.path }}</strong>
-                        <div class="subtle-text">{{ member.diskId }}</div>
-                        <div class="subtle-text">{{ member.model || "Unknown model" }}</div>
-                        <div class="topology-member-meta">
-                          <span class="inline-status" :data-health="member.state || 'UNKNOWN'">{{ member.state || "UNKNOWN" }}</span>
-                          <span class="subtle-text">R {{ member.read ?? 0 }}</span>
-                          <span class="subtle-text">W {{ member.write ?? 0 }}</span>
-                          <span class="subtle-text">C {{ member.cksum ?? 0 }}</span>
-                        </div>
-                      </article>
-                    </div>
-                  </li>
-                </ul>
-                <p v-else class="subtle-text">No {{ group.label.toLowerCase() }} reported.</p>
-              </article>
-            </div>
-          </section>
-
-          <section class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Add Devices</h4>
-                <p class="subtle-text">Select the topology role, layout, and exact devices before saving.</p>
-              </div>
-              <div class="inline-action-controls">
-                <label class="inline-checkbox">
-                  <input v-model="topologyForce" type="checkbox" />
-                  <span>Force</span>
-                </label>
-                <button
-                  type="button"
-                  class="primary-button"
-                  :disabled="!topologyPendingAdditions.length || topologySubmitting"
-                  @click="openTopologyConfirmDialog"
-                >
-                  {{ topologySubmitting ? "Saving..." : "Save" }}
-                </button>
-              </div>
-            </div>
-
-            <div class="topology-form-grid">
-              <label class="form-field">
-                <span>Category</span>
-                <select v-model="topologyDraft.category" class="property-field" :disabled="topologySubmitting">
-                  <option v-for="option in topologyCategoryOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="form-field">
-                <span>Layout</span>
-                <select v-model="topologyDraft.layout" class="property-field" :disabled="topologySubmitting">
-                  <option v-for="option in topologyLayoutOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-            </div>
-
-            <div class="topology-device-picker">
-              <div class="result-list-head">
-                <strong>Available Devices</strong>
-                <span class="subtle-text">{{ availableTopologyDevices.length }} selectable</span>
-              </div>
-              <div v-if="availableTopologyDevices.length" class="topology-device-list">
-                <label
-                  v-for="device in availableTopologyDevices"
-                  :key="device.path"
-                  class="topology-device-option"
-                  :data-selected="topologyDeviceSelected(device.path)"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="topologyDeviceSelected(device.path)"
-                    :disabled="topologySubmitting"
-                    @change="toggleTopologyDevice(device.path)"
-                  />
-                  <div>
-                    <strong>{{ device.path }}</strong>
-                    <div class="subtle-text">{{ device.diskId }}</div>
-                    <div class="subtle-text">{{ device.model || "Unknown model" }}</div>
-                    <div class="subtle-text">{{ formatBytes(device.size) }}</div>
-                  </div>
-                </label>
-              </div>
-              <p v-else class="subtle-text">No unused disks are currently available for topology changes.</p>
-            </div>
-          </section>
-
-          <section v-if="topologySelectionSummary.length" class="drawer-section">
-            <h4>Pending Topology Addition</h4>
-            <ul class="result-list">
-              <li class="result-list-item">
-                <strong>{{ topologyDraft.category }}</strong>
-                <span class="subtle-text">Layout: {{ topologyDraft.layout }}</span>
-                <span class="subtle-text">
-                  {{ topologySelectionSummary.map(formatTopologyDeviceLabel).join(', ') }}
-                </span>
-              </li>
-            </ul>
-          </section>
-        </div>
-      </DetailDrawer>
-
-      <DetailDrawer
-        v-model="createPoolDrawerOpen"
-        title="Create Pool"
-        description="Build the pool definition step by step, then submit one atomic zpool create command."
-      >
-        <div class="drawer-section-list">
-          <section class="drawer-section">
-            <div class="wizard-step-list">
-              <button
-                v-for="item in createPoolStepItems"
-                :key="item.key"
-                type="button"
-                class="ghost-button"
-                :data-active="createPoolStep === item.key"
-                @click="setCreatePoolStep(item.key)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
-          </section>
-
-          <section v-if="createPoolStep === 'basic'" class="drawer-section">
-            <h4>Basic</h4>
-            <div class="topology-form-grid">
-              <label class="form-field">
-                <span>Pool Name</span>
-                <input v-model="createPoolDraft.name" type="text" class="property-field" placeholder="tank2" :disabled="createPoolSubmitting" />
-              </label>
-            </div>
-            <dl class="detail-grid editable-detail-grid">
-              <div v-for="[name, config] in createPoolPropertyFields" :key="name" class="editable-property-card">
-                <dt>{{ config.label }}</dt>
-                <dd>
-                  <select
-                    v-if="config.type === 'select'"
-                    v-model="createPoolDraft.properties[name]"
-                    class="property-field"
-                    :disabled="createPoolSubmitting"
-                  >
-                    <option v-for="option in config.options" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                  <input
-                    v-else
-                    v-model="createPoolDraft.properties[name]"
-                    type="text"
-                    class="property-field"
-                    :placeholder="config.placeholder || ''"
-                    :disabled="createPoolSubmitting"
-                  />
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          <section v-if="createPoolStep === 'rootfs'" class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Root Dataset</h4>
-                <p class="subtle-text">Optional properties for the pool's root filesystem dataset, submitted as part of the initial create command.</p>
-              </div>
-            </div>
-
-            <dl class="detail-grid editable-detail-grid">
-              <div v-for="name in createPoolRootCommonFields" :key="'pool-root:' + name" class="editable-property-card">
-                <dt>{{ name }}</dt>
-                <dd>
-                  <select
-                    v-if="rootDatasetPropertyInput(name).type === 'select'"
-                    v-model="createPoolDraft.rootDatasetProperties[name]"
-                    class="property-field"
-                    :disabled="createPoolSubmitting"
-                  >
-                    <option value="">Default</option>
-                    <option
-                      v-for="option in rootDatasetPropertyInput(name).options"
-                      :key="'pool-root:' + name + ':' + option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                  <input
-                    v-else
-                    v-model="createPoolDraft.rootDatasetProperties[name]"
-                    type="text"
-                    class="property-field"
-                    :placeholder="rootDatasetPropertyInput(name).placeholder || ''"
-                    :disabled="createPoolSubmitting"
-                  />
-                </dd>
-              </div>
-            </dl>
-
-            <div class="advanced-toggle-row">
-              <button type="button" class="ghost-button" @click="createPoolRootAdvancedOpen = !createPoolRootAdvancedOpen">
-                {{ createPoolRootAdvancedOpen ? "Hide Advanced" : "Advanced" }}
-              </button>
-            </div>
-
-            <dl v-if="createPoolRootAdvancedOpen" class="detail-grid editable-detail-grid advanced-detail-grid">
-              <div v-for="name in createPoolRootAdvancedFields" :key="'pool-root-advanced:' + name" class="editable-property-card">
-                <dt>{{ name }}</dt>
-                <dd>
-                  <select
-                    v-if="rootDatasetPropertyInput(name).type === 'select'"
-                    v-model="createPoolDraft.rootDatasetProperties[name]"
-                    class="property-field"
-                    :disabled="createPoolSubmitting"
-                  >
-                    <option value="">Default</option>
-                    <option
-                      v-for="option in rootDatasetPropertyInput(name).options"
-                      :key="'pool-root-advanced:' + name + ':' + option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                  <input
-                    v-else
-                    v-model="createPoolDraft.rootDatasetProperties[name]"
-                    type="text"
-                    class="property-field"
-                    :placeholder="rootDatasetPropertyInput(name).placeholder || ''"
-                    :disabled="createPoolSubmitting"
-                  />
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          <section v-if="createPoolStep === 'data'" class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Data VDEVs</h4>
-                <p class="subtle-text">Add one or more required data vdevs before creating the pool.</p>
-              </div>
-              <button type="button" class="primary-button" :disabled="!createPoolDraft.dataBuilder.devices.length || createPoolSubmitting" @click="addCreatePoolVdev('dataBuilder')">
-                Add Data VDEV
-              </button>
-            </div>
-            <div class="topology-form-grid">
-              <label class="form-field">
-                <span>Layout</span>
-                <select v-model="createPoolDraft.dataBuilder.layout" class="property-field" :disabled="createPoolSubmitting">
-                  <option v-for="option in createPoolDataLayoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
-              </label>
-            </div>
-            <div class="topology-device-picker">
-              <div class="result-list-head">
-                <strong>Available Data Devices</strong>
-                <span class="subtle-text">{{ createPoolAvailableDataDevices.length }} selectable</span>
-              </div>
-              <div v-if="createPoolAvailableDataDevices.length" class="topology-device-list">
-                <label
-                  v-for="device in createPoolAvailableDataDevices"
-                  :key="'data-' + device.path"
-                  class="topology-device-option"
-                  :data-selected="createPoolDeviceSelected('dataBuilder', device.path)"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="createPoolDeviceSelected('dataBuilder', device.path)"
-                    :disabled="createPoolSubmitting"
-                    @change="toggleCreatePoolDevice('dataBuilder', device.path)"
-                  />
-                  <div>
-                    <strong>{{ device.path }}</strong>
-                    <div class="subtle-text">{{ device.diskId }}</div>
-                    <div class="subtle-text">{{ device.model || "Unknown model" }}</div>
-                    <div class="subtle-text">{{ formatBytes(device.size) }}</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <section v-if="createPoolDataSelectionSummary.length || createPoolDraft.dataVdevs.length" class="drawer-section">
-              <h4>Planned Data VDEVs</h4>
-              <ul class="result-list">
-                <li v-for="(item, index) in createPoolDraft.dataVdevs" :key="'data-vdev-' + index" class="result-list-item">
-                  <div class="result-list-head">
-                    <strong>data</strong>
-                    <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="removeCreatePoolVdev('dataVdevs', index)">Remove</button>
-                  </div>
-                  <span class="subtle-text">Layout: {{ item.layout }}</span>
-                  <span class="subtle-text">{{ item.devices.join(', ') }}</span>
-                </li>
-                <li v-if="createPoolDataSelectionSummary.length" class="result-list-item">
-                  <strong>Pending builder</strong>
-                  <span class="subtle-text">Layout: {{ createPoolDraft.dataBuilder.layout }}</span>
-                  <span class="subtle-text">{{ createPoolDataSelectionSummary.map(formatTopologyDeviceLabel).join(', ') }}</span>
-                </li>
-              </ul>
-            </section>
-          </section>
-
-          <section v-if="createPoolStep === 'aux'" class="drawer-section">
-            <div class="drawer-section-header">
-              <div>
-                <h4>Extra Classes</h4>
-                <p class="subtle-text">Optionally add log, cache, special, dedup, or spare devices.</p>
-              </div>
-              <button type="button" class="primary-button" :disabled="!createPoolDraft.auxBuilder.devices.length || createPoolSubmitting" @click="addCreatePoolVdev('auxBuilder')">
-                Add Class
-              </button>
-            </div>
-            <div class="topology-form-grid">
-              <label class="form-field">
-                <span>Category</span>
-                <select v-model="createPoolDraft.auxBuilder.category" class="property-field" :disabled="createPoolSubmitting">
-                  <option v-for="option in topologyCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
-              </label>
-              <label class="form-field">
-                <span>Layout</span>
-                <select v-model="createPoolDraft.auxBuilder.layout" class="property-field" :disabled="createPoolSubmitting">
-                  <option v-for="option in createPoolAuxLayoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
-              </label>
-            </div>
-            <div class="topology-device-picker">
-              <div class="result-list-head">
-                <strong>Available Devices</strong>
-                <span class="subtle-text">{{ createPoolAvailableAuxDevices.length }} selectable</span>
-              </div>
-              <div v-if="createPoolAvailableAuxDevices.length" class="topology-device-list">
-                <label
-                  v-for="device in createPoolAvailableAuxDevices"
-                  :key="'aux-' + device.path"
-                  class="topology-device-option"
-                  :data-selected="createPoolDeviceSelected('auxBuilder', device.path)"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="createPoolDeviceSelected('auxBuilder', device.path)"
-                    :disabled="createPoolSubmitting"
-                    @change="toggleCreatePoolDevice('auxBuilder', device.path)"
-                  />
-                  <div>
-                    <strong>{{ device.path }}</strong>
-                    <div class="subtle-text">{{ device.diskId }}</div>
-                    <div class="subtle-text">{{ device.model || "Unknown model" }}</div>
-                    <div class="subtle-text">{{ formatBytes(device.size) }}</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <section v-if="createPoolAuxSelectionSummary.length || createPoolDraft.auxVdevs.length" class="drawer-section">
-              <h4>Planned Extra Classes</h4>
-              <ul class="result-list">
-                <li v-for="(item, index) in createPoolDraft.auxVdevs" :key="'aux-vdev-' + index" class="result-list-item">
-                  <div class="result-list-head">
-                    <strong>{{ item.category }}</strong>
-                    <button type="button" class="ghost-button" :disabled="createPoolSubmitting" @click="removeCreatePoolVdev('auxVdevs', index)">Remove</button>
-                  </div>
-                  <span class="subtle-text">Layout: {{ item.layout }}</span>
-                  <span class="subtle-text">{{ item.devices.join(', ') }}</span>
-                </li>
-                <li v-if="createPoolAuxSelectionSummary.length" class="result-list-item">
-                  <strong>Pending builder</strong>
-                  <span class="subtle-text">{{ createPoolDraft.auxBuilder.category }} · {{ createPoolDraft.auxBuilder.layout }}</span>
-                  <span class="subtle-text">{{ createPoolAuxSelectionSummary.map(formatTopologyDeviceLabel).join(', ') }}</span>
-                </li>
-              </ul>
-            </section>
-          </section>
-
-          <section v-if="createPoolStep === 'review'" class="drawer-section">
-            <h4>Review</h4>
-            <ul class="result-list">
-              <li class="result-list-item">
-                <strong>Pool Name</strong>
-                <span class="subtle-text">{{ createPoolPayload.name || "-" }}</span>
-              </li>
-              <li class="result-list-item">
-                <strong>Force</strong>
-                <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
-              </li>
-              <li class="result-list-item">
-                <strong>Properties</strong>
-                <span class="subtle-text">
-                  {{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}
-                </span>
-              </li>
-              <li class="result-list-item">
-                <strong>Root Dataset Properties</strong>
-                <span class="subtle-text">
-                  {{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}
-                </span>
-              </li>
-            </ul>
-            <div class="topology-group-list">
-              <article v-for="group in createPoolReviewGroups" :key="group.label" class="topology-group-card">
-                <div class="result-list-head">
-                  <strong>{{ group.label }}</strong>
-                  <span class="subtle-text">{{ group.items.length }} item{{ group.items.length === 1 ? '' : 's' }}</span>
-                </div>
-                <ul class="simple-detail-list" v-if="group.items.length">
-                  <li v-for="(item, index) in group.items" :key="group.label + ':' + index">
-                    <strong>{{ item.category }}</strong>
-                    <span class="subtle-text">{{ item.layout }}</span>
-                    <span class="subtle-text">{{ item.devices.join(', ') }}</span>
-                  </li>
-                </ul>
-                <p v-else class="subtle-text">No items configured.</p>
-              </article>
-            </div>
-          </section>
-
-          <section class="drawer-section">
-            <div class="dialog-actions create-pool-actions">
-              <button type="button" class="ghost-button" :disabled="createPoolSubmitting || createPoolStep === 'basic'" @click="previousCreatePoolStep">Back</button>
-              <button
-                v-if="createPoolStep !== 'review'"
-                type="button"
-                class="primary-button"
-                :disabled="createPoolSubmitting || !canAdvanceCreatePool"
-                @click="nextCreatePoolStep"
-              >
-                Next
-              </button>
-              <label
-                v-if="createPoolStep === 'review'"
-                class="inline-checkbox"
-              >
-                <input v-model="createPoolForce" type="checkbox" />
-                <span>Force</span>
-              </label>
-              <button
-                v-if="createPoolStep === 'review'"
-                type="button"
-                class="primary-button"
-                :disabled="createPoolSubmitting || !canSubmitCreatePool"
-                @click="openCreatePoolConfirmDialog"
-              >
-                Create Pool
-              </button>
-            </div>
-          </section>
-        </div>
-      </DetailDrawer>
-
-      <ConfirmDialog
-        v-model="confirmDialogOpen"
-        :busy="submitting"
-        :can-confirm="Boolean(changedItems.length)"
-        :result-mode="dialogPhase === 'result'"
-        :confirm-text="dialogPhase === 'submitting' ? 'Updating...' : 'Confirm Update'"
-        title="Confirm Pool Property Changes"
-        :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
-        @confirm="confirmSave"
-      >
-        <div v-if="dialogPhase === 'confirm'" class="dialog-section-list">
-          <p class="subtle-text">These property changes will be sent to the host after confirmation.</p>
-          <ul class="result-list">
-            <li v-for="item in changedItems" :key="item.property" class="result-list-item">
-              <strong>{{ item.property }}</strong>
-              <span class="subtle-text">{{ item.oldValue || "-" }} -> {{ item.newValue || "-" }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-else-if="dialogPhase === 'submitting'" class="dialog-section-list">
-          <div class="progress-shell">
-            <div class="progress-spinner"></div>
-            <div>
-              <strong>Applying property changes...</strong>
-              <p class="subtle-text">Please wait while the backend sends SSH commands and refreshes the latest state.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="dialog-section-list">
-          <p v-if="dialogSummary" class="notice-text">{{ dialogSummary }}</p>
-          <p v-if="dialogError" class="error-text">{{ dialogError }}</p>
-
-          <section>
-            <h4 class="dialog-mini-heading">Result List</h4>
-            <ul class="result-list" v-if="dialogResults.length">
-              <li v-for="item in dialogResults" :key="item.property" class="result-list-item">
-                <div class="result-list-head">
-                  <strong>{{ item.property }}</strong>
-                  <span class="inline-status" :data-health="item.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ item.success ? "Success" : "Failed" }}
-                  </span>
-                </div>
-                <p class="subtle-text">{{ item.old_value || "-" }} -> {{ item.new_value || "-" }}</p>
-                <p class="subtle-text">{{ item.message }}</p>
-              </li>
-            </ul>
-            <p v-else class="subtle-text">No result rows were returned.</p>
-          </section>
-
-          <section>
-            <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
-            <div v-if="terminalLogLines.length" class="terminal-log-list">
-              <article v-for="entry in terminalLogLines" :key="entry.key" class="terminal-log-card">
-                <div class="result-list-head">
-                  <strong>{{ entry.label }}</strong>
-                  <span class="inline-status" :data-health="entry.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ entry.success ? "OK" : "Error" }}
-                  </span>
-                </div>
-<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
-              </article>
-            </div>
-            <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
-          </section>
-        </div>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        v-model="topologyConfirmDialogOpen"
-        :busy="topologySubmitting"
-        :can-confirm="Boolean(topologyPendingAdditions.length)"
-        :result-mode="topologyDialogPhase === 'result'"
-        :confirm-text="topologyDialogPhase === 'submitting' ? 'Updating...' : 'Confirm Update'"
-        title="Confirm Pool Topology Changes"
-        :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
-        @confirm="confirmTopologySave"
-      >
-        <div v-if="topologyDialogPhase === 'confirm'" class="dialog-section-list">
-          <p class="subtle-text">These topology changes will be sent to the host after confirmation.</p>
-          <ul class="result-list">
-            <li class="result-list-item">
-              <strong>Force</strong>
-              <span class="subtle-text">{{ topologyForce ? "on" : "off" }}</span>
-            </li>
-            <li v-for="item in topologyConfirmSummary" :key="item.category + ':' + item.layout" class="result-list-item">
-              <strong>{{ item.category }}</strong>
-              <span class="subtle-text">Layout: {{ item.layout }}</span>
-              <span class="subtle-text">
-                {{ item.deviceLabels.join(', ') }}
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-else-if="topologyDialogPhase === 'submitting'" class="dialog-section-list">
-          <div class="progress-shell">
-            <div class="progress-spinner"></div>
-            <div>
-              <strong>Applying topology changes...</strong>
-              <p class="subtle-text">Please wait while the backend updates the pool and refreshes the latest state.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="dialog-section-list">
-          <p v-if="topologyDialogSummary" class="notice-text">{{ topologyDialogSummary }}</p>
-          <p v-if="topologyDialogError" class="error-text">{{ topologyDialogError }}</p>
-
-          <section>
-            <h4 class="dialog-mini-heading">Result List</h4>
-            <ul class="result-list" v-if="topologyDialogResults.length">
-              <li v-for="item in topologyDialogResults" :key="item.category + ':' + item.layout + ':' + item.devices.join(',')" class="result-list-item">
-                <div class="result-list-head">
-                  <strong>{{ item.category }}</strong>
-                  <span class="inline-status" :data-health="item.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ item.success ? "Success" : "Failed" }}
-                  </span>
-                </div>
-                <p class="subtle-text">Layout: {{ item.layout }}</p>
-                <p class="subtle-text">{{ item.devices.join(', ') }}</p>
-                <p class="subtle-text">{{ item.message }}</p>
-              </li>
-            </ul>
-            <p v-else class="subtle-text">No result rows were returned.</p>
-          </section>
-
-          <section>
-            <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
-            <div v-if="topologyTerminalLogLines.length" class="terminal-log-list">
-              <article v-for="entry in topologyTerminalLogLines" :key="entry.key" class="terminal-log-card">
-                <div class="result-list-head">
-                  <strong>{{ entry.label }}</strong>
-                  <span class="inline-status" :data-health="entry.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ entry.success ? "OK" : "Error" }}
-                  </span>
-                </div>
-<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
-              </article>
-            </div>
-            <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
-          </section>
-        </div>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        v-model="createPoolConfirmDialogOpen"
-        :busy="createPoolSubmitting"
-        :can-confirm="canSubmitCreatePool"
-        :result-mode="createPoolDialogPhase === 'result'"
-        :confirm-text="createPoolDialogPhase === 'submitting' ? 'Creating...' : 'Confirm Create'"
-        title="Confirm Pool Creation"
-        :description="createPoolPayload.name ? 'Pool: ' + createPoolPayload.name : 'New pool'"
-        @confirm="confirmCreatePool"
-      >
-        <div v-if="createPoolDialogPhase === 'confirm'" class="dialog-section-list">
-          <p class="subtle-text">This will submit one atomic zpool create command with all selected properties and vdevs.</p>
-          <ul class="result-list">
-            <li class="result-list-item">
-              <strong>Pool Name</strong>
-              <span class="subtle-text">{{ createPoolPayload.name }}</span>
-            </li>
-            <li class="result-list-item">
-              <strong>Force</strong>
-              <span class="subtle-text">{{ createPoolPayload.force ? "on" : "off" }}</span>
-            </li>
-            <li class="result-list-item">
-              <strong>Properties</strong>
-              <span class="subtle-text">{{ createPoolPayload.properties.length ? createPoolPayload.properties.map((item) => item.name + '=' + item.value).join(', ') : 'No extra properties' }}</span>
-            </li>
-            <li class="result-list-item">
-              <strong>Root Dataset Properties</strong>
-              <span class="subtle-text">{{ createPoolPayload.root_dataset_properties.length ? createPoolPayload.root_dataset_properties.map((item) => item.name + '=' + item.value).join(', ') : 'Default root dataset properties' }}</span>
-            </li>
-            <li v-for="(vdev, index) in createPoolPayload.vdevs" :key="'create-confirm-' + index" class="result-list-item">
-              <strong>{{ vdev.category }}</strong>
-              <span class="subtle-text">Layout: {{ vdev.layout }}</span>
-              <span class="subtle-text">{{ vdev.devices.join(', ') }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-else-if="createPoolDialogPhase === 'submitting'" class="dialog-section-list">
-          <div class="progress-shell">
-            <div class="progress-spinner"></div>
-            <div>
-              <strong>Creating pool...</strong>
-              <p class="subtle-text">Please wait while the backend runs one zpool create command and refreshes the latest state.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="dialog-section-list">
-          <p v-if="createPoolDialogSummary" class="notice-text">{{ createPoolDialogSummary }}</p>
-          <p v-if="createPoolDialogError" class="error-text">{{ createPoolDialogError }}</p>
-
-          <section>
-            <h4 class="dialog-mini-heading">Result</h4>
-            <ul class="result-list" v-if="createPoolDialogResult">
-              <li class="result-list-item">
-                <div class="result-list-head">
-                  <strong>{{ createPoolDialogResult.pool }}</strong>
-                  <span class="inline-status" :data-health="createPoolDialogResult.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ createPoolDialogResult.success ? "Success" : "Failed" }}
-                  </span>
-                </div>
-                <p class="subtle-text">{{ createPoolDialogResult.message }}</p>
-              </li>
-            </ul>
-            <p v-else class="subtle-text">No result was returned.</p>
-          </section>
-
-          <section>
-            <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
-            <div v-if="createPoolTerminalLogLines.length" class="terminal-log-list">
-              <article v-for="entry in createPoolTerminalLogLines" :key="entry.key" class="terminal-log-card">
-                <div class="result-list-head">
-                  <strong>{{ entry.label }}</strong>
-                  <span class="inline-status" :data-health="entry.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ entry.success ? "OK" : "Error" }}
-                  </span>
-                </div>
-<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
-              </article>
-            </div>
-            <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
-          </section>
-        </div>
-      </ConfirmDialog>
-      <ConfirmDialog
-        v-model="destroyConfirmDialogOpen"
-        :busy="destroySubmitting"
-        :can-confirm="Boolean(selectedPool && selectedPool.name)"
-        :result-mode="destroyDialogPhase === 'result'"
-        :confirm-text="destroyDialogPhase === 'submitting' ? 'Destroying...' : 'Confirm Destroy'"
-        title="Confirm Pool Destroy"
-        :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
-        @confirm="confirmDestroyPool"
-      >
-        <div v-if="destroyDialogPhase === 'confirm'" class="dialog-section-list">
-          <p class="error-text">This will run zpool destroy on the selected pool.</p>
-          <ul class="result-list">
-            <li class="result-list-item">
-              <strong>Pool</strong>
-              <span class="subtle-text">{{ selectedPool ? selectedPool.name : '-' }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-else-if="destroyDialogPhase === 'submitting'" class="dialog-section-list">
-          <div class="progress-shell">
-            <div class="progress-spinner"></div>
-            <div>
-              <strong>Destroying pool...</strong>
-              <p class="subtle-text">Please wait while the backend runs zpool destroy and refreshes the latest state.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="dialog-section-list">
-          <p v-if="destroyDialogSummary" class="notice-text">{{ destroyDialogSummary }}</p>
-          <p v-if="destroyDialogError" class="error-text">{{ destroyDialogError }}</p>
-
-          <section>
-            <h4 class="dialog-mini-heading">Result</h4>
-            <ul class="result-list" v-if="destroyDialogResult">
-              <li class="result-list-item">
-                <div class="result-list-head">
-                  <strong>{{ destroyDialogResult.pool }}</strong>
-                  <span class="inline-status" :data-health="destroyDialogResult.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ destroyDialogResult.success ? "Success" : "Failed" }}
-                  </span>
-                </div>
-                <p class="subtle-text">{{ destroyDialogResult.message }}</p>
-              </li>
-            </ul>
-            <p v-else class="subtle-text">No result was returned.</p>
-          </section>
-
-          <section>
-            <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
-            <div v-if="destroyTerminalLogLines.length" class="terminal-log-list">
-              <article v-for="entry in destroyTerminalLogLines" :key="entry.key" class="terminal-log-card">
-                <div class="result-list-head">
-                  <strong>{{ entry.label }}</strong>
-                  <span class="inline-status" :data-health="entry.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ entry.success ? "OK" : "Error" }}
-                  </span>
-                </div>
-<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
-              </article>
-            </div>
-            <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
-          </section>
-        </div>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        v-model="removeConfirmDialogOpen"
-        :busy="removeSubmitting"
-        :can-confirm="Boolean(selectedRemovalTarget && selectedRemovalTarget.commandTarget)"
-        :result-mode="removeDialogPhase === 'result'"
-        :confirm-text="removeDialogPhase === 'submitting' ? 'Removing...' : 'Confirm Remove'"
-        title="Confirm Topology Removal"
-        :description="selectedPool ? 'Pool: ' + selectedPool.name : ''"
-        @confirm="confirmRemoveTarget"
-      >
-        <div v-if="removeDialogPhase === 'confirm'" class="dialog-section-list">
-          <p class="subtle-text">This will remove the selected topology target from the pool.</p>
-          <ul class="result-list" v-if="selectedRemovalTarget">
-            <li class="result-list-item">
-              <strong>{{ selectedRemovalTarget.displayLabel }}</strong>
-              <span class="subtle-text">{{ selectedRemovalTarget.vdevClass }} / {{ selectedRemovalTarget.layout }}</span>
-              <span class="subtle-text">{{ selectedRemovalTarget.targetType }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-else-if="removeDialogPhase === 'submitting'" class="dialog-section-list">
-          <div class="progress-shell">
-            <div class="progress-spinner"></div>
-            <div>
-              <strong>Removing topology target...</strong>
-              <p class="subtle-text">Please wait while the backend runs zpool remove and refreshes the latest state.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="dialog-section-list">
-          <p v-if="removeDialogSummary" class="notice-text">{{ removeDialogSummary }}</p>
-          <p v-if="removeDialogError" class="error-text">{{ removeDialogError }}</p>
-
-          <section>
-            <h4 class="dialog-mini-heading">Result</h4>
-            <ul class="result-list" v-if="removeDialogResult">
-              <li class="result-list-item">
-                <div class="result-list-head">
-                  <strong>{{ removeDialogResult.display_label }}</strong>
-                  <span class="inline-status" :data-health="removeDialogResult.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ removeDialogResult.success ? "Success" : "Failed" }}
-                  </span>
-                </div>
-                <p class="subtle-text">{{ removeDialogResult.message }}</p>
-              </li>
-            </ul>
-            <p v-else class="subtle-text">No result was returned.</p>
-          </section>
-
-          <section>
-            <h4 class="dialog-mini-heading">SSH Terminal Log</h4>
-            <div v-if="removeTerminalLogLines.length" class="terminal-log-list">
-              <article v-for="entry in removeTerminalLogLines" :key="entry.key" class="terminal-log-card">
-                <div class="result-list-head">
-                  <strong>{{ entry.label }}</strong>
-                  <span class="inline-status" :data-health="entry.success ? 'ONLINE' : 'DEGRADED'">
-                    {{ entry.success ? "OK" : "Error" }}
-                  </span>
-                </div>
-<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
-              </article>
-            </div>
-            <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
-          </section>
-        </div>
-      </ConfirmDialog>
-    </section>
+    <PoolActionDialogs
+      :selected-pool="selectedPool"
+      :selected-removal-target="selectedRemovalTarget"
+      :changed-items="changedItems"
+      :confirm-dialog-open="confirmDialogOpen"
+      :submitting="submitting"
+      :dialog-phase="dialogPhase"
+      :dialog-summary="dialogSummary"
+      :dialog-error="dialogError"
+      :dialog-results="dialogResults"
+      :terminal-log-lines="terminalLogLines"
+      :topology-confirm-dialog-open="topologyConfirmDialogOpen"
+      :topology-submitting="topologySubmitting"
+      :topology-dialog-phase="topologyDialogPhase"
+      :topology-dialog-summary="topologyDialogSummary"
+      :topology-dialog-error="topologyDialogError"
+      :topology-dialog-results="topologyDialogResults"
+      :topology-terminal-log-lines="topologyTerminalLogLines"
+      :topology-pending-additions="topologyPendingAdditions"
+      :topology-force="topologyForce"
+      :topology-confirm-summary="topologyConfirmSummary"
+      :create-pool-confirm-dialog-open="createPoolConfirmDialogOpen"
+      :create-pool-submitting="createPoolSubmitting"
+      :create-pool-dialog-phase="createPoolDialogPhase"
+      :create-pool-dialog-summary="createPoolDialogSummary"
+      :create-pool-dialog-error="createPoolDialogError"
+      :create-pool-dialog-result="createPoolDialogResult"
+      :create-pool-terminal-log-lines="createPoolTerminalLogLines"
+      :create-pool-payload="createPoolPayload"
+      :can-submit-create-pool="canSubmitCreatePool"
+      :destroy-confirm-dialog-open="destroyConfirmDialogOpen"
+      :destroy-submitting="destroySubmitting"
+      :destroy-dialog-phase="destroyDialogPhase"
+      :destroy-dialog-summary="destroyDialogSummary"
+      :destroy-dialog-error="destroyDialogError"
+      :destroy-dialog-result="destroyDialogResult"
+      :destroy-terminal-log-lines="destroyTerminalLogLines"
+      :remove-confirm-dialog-open="removeConfirmDialogOpen"
+      :remove-submitting="removeSubmitting"
+      :remove-dialog-phase="removeDialogPhase"
+      :remove-dialog-summary="removeDialogSummary"
+      :remove-dialog-error="removeDialogError"
+      :remove-dialog-result="removeDialogResult"
+      :remove-terminal-log-lines="removeTerminalLogLines"
+      @update:confirmDialogOpen="confirmDialogOpen = $event"
+      @update:topologyConfirmDialogOpen="topologyConfirmDialogOpen = $event"
+      @update:createPoolConfirmDialogOpen="createPoolConfirmDialogOpen = $event"
+      @update:destroyConfirmDialogOpen="destroyConfirmDialogOpen = $event"
+      @update:removeConfirmDialogOpen="removeConfirmDialogOpen = $event"
+      @confirm-save="confirmSave"
+      @confirm-topology="confirmTopologySave"
+      @confirm-create-pool="confirmCreatePool"
+      @confirm-destroy-pool="confirmDestroyPool"
+      @confirm-remove-target="confirmRemoveTarget"
+    />
+  </section>
 </template>

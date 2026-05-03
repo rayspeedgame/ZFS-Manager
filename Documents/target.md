@@ -1,53 +1,45 @@
 # Target
 
-## 当前目标
+## Current Product Goal
 
-把 ZFS Manager 打造成一个面向单机或小规模主机的 ZFS Web 管理界面，让维护者在不直接敲命令的情况下完成大部分常见 pool 和 dataset 操作。
+Build ZFS Manager into a practical web UI for a single host or small home-lab deployment, so an operator can complete common pool and dataset workflows without dropping to the shell for every task.
 
-## 已完成能力
+## Shipped Capabilities
 
-### pool
+### Pool workflows
 
-- pool 状态查看
-- pool 属性修改
-- pool 拓扑展示
-- pool 附加设备添加
-  - `log`
-  - `cache`
-  - `special`
-  - `dedup`
-  - `spare`
-- 新建 pool
-  - 属性设置
-  - root dataset 属性设置
-  - `data vdev` 分步选择
-  - 附加设备分步选择
-  - 单条原子化 `zpool create`
-- 删除 pool
-- 移除可删除的 topology 目标
-- by-id 展示与 inactive `zfs_member` 识别
+- Pool status and health overview
+- Editable pool properties
+- Topology visualization
+- Add devices to `log`, `cache`, `special`, `dedup`, and `spare`
+- Create a new pool with:
+  - pool properties
+  - root dataset properties
+  - staged data vdev planning
+  - staged auxiliary vdev planning
+- Destroy a pool
+- Remove supported topology targets
+- Prefer stable by-id presentation when available
 
-### dataset
+### Dataset workflows
 
-- dataset / zvol inventory
-- dataset 树形展示
-- snapshot 可选显示
-- dataset / zvol 创建
-- dataset 属性修改
-- dataset 删除
+- Dataset and zvol inventory
+- Expandable dataset tree
+- Optional snapshot display
+- Create dataset and zvol children
+- Edit dataset properties
+- Destroy dataset and zvol entries
 
-## 当前交互目标
+## Frontend Direction
 
-- 高风险操作必须有确认弹窗
-- 操作结果必须可回显
-- SSH 命令日志必须可查看
-- 写操作完成后必须刷新到最新状态
+- `PoolsView` and `DatasetsView` are now page containers instead of giant all-in-one templates.
+- Shared property editors, command results, and command logs are centralized under `frontend/src/components/common/`.
+- Pool-specific and dataset-specific workflow UIs live under their own component folders.
+- Live snapshot refreshes should update visible data without wiping in-progress edits.
 
-## 下一阶段方向
+## Next Steps
 
-- snapshot 专用管理流
-- `replace`
-- `detach`
-- `offline / online`
-- 更完整的 SMART 联动
-- 更细粒度的权限控制
+- Add more topology actions such as `replace`, `detach`, and `offline/online`
+- Expand SMART and disk-health integration
+- Add finer-grained permission handling
+- Continue splitting large workflow logic into smaller composable units where it improves clarity

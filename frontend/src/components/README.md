@@ -1,10 +1,16 @@
 # components
 
-这里存放前端复用组件。
+Reusable Vue components live here.
 
-## 子目录
+## Structure
 
-- `app/`: 应用骨架级组件，如顶栏和侧栏
-- `common/`: 页面间共享的基础组件
+- `app/`: application shell pieces such as navigation and top status UI
+- `common/`: view-agnostic building blocks shared by multiple workflows
+- `datasets/`: dataset-specific drawers, tables, dialogs, and config
+- `pools/`: pool-specific drawers, topology UI, dialogs, and config
 
-当前阶段组件层的主要目标是抽离状态展示和通用交互，减少各 view 的重复代码。
+## Layering
+
+- `common/` should stay free of pool- or dataset-specific field names.
+- `datasets/` and `pools/` can depend on `common/`, but should keep backend calls in the routed views.
+- Routed views should assemble these components and own page-level state.

@@ -2,47 +2,70 @@
 
 ```text
 ZFS-Manager/
-├─ backend/
-│  ├─ app/
-│  │  ├─ api/
-│  │  ├─ core/
-│  │  ├─ schemas/
-│  │  ├─ services/
-│  │  └─ ssh/
-│  ├─ scripts/
-│  ├─ tests/
-│  │  └─ fixtures/
-│  ├─ config.example.json
-│  ├─ config.json
-│  ├─ README.md
-│  └─ requirements.txt
-├─ frontend/
-│  ├─ src/
-│  │  ├─ components/
-│  │  ├─ lib/
-│  │  ├─ router/
-│  │  ├─ store/
-│  │  └─ views/
-│  ├─ README.md
-│  ├─ index.html
-│  ├─ package.json
-│  └─ vite.config.js
-├─ Documents/
-│  ├─ README.md
-│  ├─ agent.md
-│  ├─ target.md
-│  ├─ ProjectStruction.md
-│  └─ ProjectDirectoryStructure.md
-└─ README.md
+|-- backend/
+|   |-- app/
+|   |   |-- api/
+|   |   |-- core/
+|   |   |-- schemas/
+|   |   |-- services/
+|   |   `-- ssh/
+|   |-- scripts/
+|   |-- tests/
+|   |   `-- fixtures/
+|   |-- config.example.json
+|   |-- README.md
+|   `-- requirements.txt
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |   |-- app/
+|   |   |   |-- common/
+|   |   |   |-- datasets/
+|   |   |   `-- pools/
+|   |   |-- lib/
+|   |   |-- router/
+|   |   |-- services/
+|   |   |-- store/
+|   |   |-- stores/
+|   |   `-- views/
+|   |-- README.md
+|   |-- index.html
+|   |-- package.json
+|   `-- vite.config.js
+|-- Documents/
+|   |-- README.md
+|   |-- agent.md
+|   |-- target.md
+|   |-- ProjectStruction.md
+|   `-- ProjectDirectoryStructure.md
+`-- README.md
 ```
 
-## 当前与 dataset 功能直接相关的关键文件
+## Frontend Refactor Notes
 
-- `backend/app/api/rest.py`
-- `backend/app/services/poller.py`
-- `backend/app/services/dataset_creator.py`
-- `backend/app/services/dataset_property_updater.py`
-- `backend/app/services/dataset_destroyer.py`
-- `frontend/src/views/DatasetsView.js`
-- `frontend/src/store/state.js`
-- `frontend/src/styles.css`
+- `frontend/src/views/PoolsView.vue`
+  - page container for pool selection, dialog state, live snapshot rebinding, and API calls
+- `frontend/src/views/DatasetsView.vue`
+  - page container for dataset selection, tree expansion, dialog state, and API calls
+- `frontend/src/components/common/`
+  - reusable property editors, result lists, command logs, plus shared drawer/dialog shells
+- `frontend/src/components/pools/`
+  - list panel, detail drawer, topology drawer, create wizard, dialog bundle, and config
+- `frontend/src/components/datasets/`
+  - tree table, detail drawer, create drawer, dialog bundle, and config
+
+## Related Hotspots
+
+- Pool writes
+  - `backend/app/services/pool_creator.py`
+  - `backend/app/services/topology_updater.py`
+  - `backend/app/services/pool_destroyer.py`
+  - `backend/app/services/pool_remover.py`
+- Dataset writes
+  - `backend/app/services/dataset_creator.py`
+  - `backend/app/services/dataset_property_updater.py`
+  - `backend/app/services/dataset_destroyer.py`
+- Frontend state and API
+  - `frontend/src/stores/app.js`
+  - `frontend/src/store/state.js`
+  - `frontend/src/services/api.js`

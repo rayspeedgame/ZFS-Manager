@@ -1,22 +1,16 @@
 # Documents
 
-这个目录存放项目补充说明，重点是帮助后续维护者快速理解项目目标、目录结构和当前实现边界。
+This folder keeps project-facing reference notes for maintainers and future contributors.
 
-## 文件说明
+## Files
 
-- `agent.md`
-  - 面向接手项目的开发者说明
-- `target.md`
-  - 当前产品目标和阶段性能力
-- `ProjectStruction.md`
-  - 模块分工和职责说明
-- `ProjectDirectoryStructure.md`
-  - 目录树概览
+- `agent.md`: quick onboarding notes for a new contributor or coding agent
+- `target.md`: current product goals, shipped capabilities, and next steps
+- `ProjectStruction.md`: high-level architecture and responsibility split
+- `ProjectDirectoryStructure.md`: directory map with the current frontend component split
 
-## 本轮已同步重点
+## Current Focus
 
-- pool root dataset 属性设置
-- dataset / zvol 创建、修改、删除
-- dataset inventory 树形展示
-- snapshot 可选显示
-- 顶栏全量强制刷新
+- The frontend now uses a container-plus-components layout for `Pools` and `Datasets`.
+- Shared property editors, command results, and command log UI now live under `frontend/src/components/common/`.
+- Page containers in `frontend/src/views/` own API calls and protect in-progress drafts from live snapshot refreshes.

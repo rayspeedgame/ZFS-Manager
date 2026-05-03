@@ -18,6 +18,12 @@ It consumes backend snapshots, renders the storage UI, and keeps dangerous write
 
 - `src/App.vue`
   - application shell, sidebar, topbar, and routed page outlet
+- `src/components/common`
+  - shared drawer, dialog, property, and command-result primitives
+- `src/components/pools`
+  - pool-only list, drawer, topology, and create workflow components
+- `src/components/datasets`
+  - dataset-only tree, drawer, and create workflow components
 - `src/router/index.js`
   - router bootstrap using `createWebHashHistory()`
 - `src/router/routes.js`
@@ -29,9 +35,9 @@ It consumes backend snapshots, renders the storage UI, and keeps dangerous write
 - `src/store/state.js`
   - compatibility adapter that exposes the old `useAppState()` shape while delegating to Pinia and the API service
 - `src/views/PoolsView.vue`
-  - pool-heavy workflows and topology management
+  - pool page container, live snapshot rebinding, and write orchestration
 - `src/views/DatasetsView.vue`
-  - dataset-heavy workflows and tree presentation
+  - dataset page container, live snapshot rebinding, and write orchestration
 - `src/styles.css`
   - shared layout, table, drawer, dialog, and responsive styles
 
@@ -41,6 +47,7 @@ It consumes backend snapshots, renders the storage UI, and keeps dangerous write
 - Submissions should show a clear loading state.
 - Results should include both a human summary and SSH command log details when available.
 - After write actions, the frontend should re-sync using `/api/state` or `/api/state/refresh`.
+- Live snapshot updates must not overwrite in-progress form edits; page containers keep dirty-draft guards for this.
 
 ## Development
 
