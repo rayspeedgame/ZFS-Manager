@@ -1,19 +1,21 @@
 # src
 
-`src/` 是前端主代码目录。
+`src/` contains the Vue frontend source.
 
-## 文件与目录
+## Structure
 
-- `App.js`: 应用框架
-- `main.js`: 入口
-- `styles.css`: 全局样式
-- `components/`: 复用组件
-- `lib/`: 格式化工具
-- `router/`: 路由定义
-- `store/`: 前端状态与请求管理
-- `views/`: 页面级视图
+- `App.vue`: root application shell
+- `main.js`: app bootstrap
+- `styles.css`: global shared styles
+- `components/`: reusable UI pieces
+- `lib/`: formatting helpers
+- `router/`: route metadata and router creation
+- `services/`: REST API calls
+- `store/`: compatibility adapter layer
+- `stores/`: Pinia stores
+- `views/`: routed page components
 
-## 当前实现重点
+## Current Notes
 
-- 前端尽量只负责展示和交互，不重复推导后端已经整理好的业务结构
-- dataset 的父子顺序、深度和短名称优先使用后端提供的数据
+- The frontend should prefer rendering backend-prepared structures instead of reconstructing business state on its own.
+- Dataset depth, parentage, short names, and tree order should continue to come from backend snapshot data whenever available.

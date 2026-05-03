@@ -1,8 +1,10 @@
+<script>
 import { computed, nextTick, ref, watch } from "vue";
 
-import ConfirmDialog from "../components/common/ConfirmDialog.js";
-import DetailDrawer from "../components/common/DetailDrawer.js";
-import EmptyState from "../components/common/EmptyState.js";
+import ConfirmDialog from "../components/common/ConfirmDialog.vue";
+import DetailDrawer from "../components/common/DetailDrawer.vue";
+import EmptyState from "../components/common/EmptyState.vue";
+import TopologyNode from "../components/pools/TopologyNode.vue";
 import { formatBytes, formatPercent } from "../lib/formatters.js";
 import { useAppState } from "../store/state.js";
 
@@ -291,51 +293,6 @@ const CREATE_ROOT_DATASET_FIELDS = {
     "xattr",
   ],
 };
-
-const TopologyNode = {
-  name: "TopologyNode",
-  props: {
-    node: { type: Object, required: true },
-  },
-  computed: {
-    isLeaf() {
-      return !Array.isArray(this.node.children) || !this.node.children.length;
-    },
-    displayState() {
-      return resolveTopologyState(this.node);
-    },
-    displayRead() {
-      return resolveTopologyMetric(this.node, "read");
-    },
-    displayWrite() {
-      return resolveTopologyMetric(this.node, "write");
-    },
-    displayCksum() {
-      return resolveTopologyMetric(this.node, "cksum");
-    },
-  },
-  template: `
-    <li class="topology-node">
-      <div class="topology-line">
-        <div class="topology-main-line">
-          <strong>{{ node.displayName || node.name }}</strong>
-          <span v-if="isLeaf && node.diskId" class="topology-disk-id">{{ node.diskId }}</span>
-        </div>
-        <div class="topology-meta-line">
-          <span class="inline-status" :data-health="displayState">{{ displayState }}</span>
-          <span v-if="isLeaf" class="subtle-text">Pool status</span>
-          <span>R {{ displayRead }}</span>
-          <span>W {{ displayWrite }}</span>
-          <span>C {{ displayCksum }}</span>
-        </div>
-      </div>
-      <ul v-if="Array.isArray(node.children) && node.children.length" class="topology-children">
-        <TopologyNode v-for="child in node.children" :key="child.name + ':' + (child.diskId || '')" :node="child" />
-      </ul>
-    </li>
-  `,
-};
-TopologyNode.components = { TopologyNode };
 
 export default {
   components: {
@@ -1262,8 +1219,323 @@ export default {
       formatPercent,
     };
   },
-  template: `
-    <section class="view-grid">
+  };
+
+function collectPoolProperties(pool, editable) {
+  const properties = pool && typeof pool.properties === "object" && pool.properties ? pool.properties : {};
+  const entries = Object.entries(properties)
+    .filter(([name]) => !isOverviewProperty(name))
+    .filter(([name]) => EDITABLE_POOL_PROPERTIES.has(name) === editable)
+    .map(([name, property]) => ({
+      name,
+      value: formatPropertyValue(property?.value),
+      rawValue: property?.value ?? "",
+      source: property?.source ?? "unknown",
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  if (editable) {
+    return entries;
+  }
+
+  return {
+    common: entries.filter((property) => COMMON_READONLY_POOL_PROPERTIES.has(property.name)),
+    advanced: entries.filter((property) => !COMMON_READONLY_POOL_PROPERTIES.has(property.name)),
+  };
+}
+
+function isOverviewProperty(name) {
+  return new Set([
+    "allocated",
+    "capacity",
+    "dedupratio",
+    "fragmentation",
+    "free",
+    "health",
+    "size",
+  ]).has(name);
+}
+
+function buildPoolQuickFacts(pool) {
+  const facts = [
+    { label: "Scan", value: pool?.status?.scan || "Not reported" },
+    { label: "Errors", value: pool?.status?.errors || "Not reported" },
+  ];
+
+  for (const name of ["ashift", "autoreplace", "autoexpand", "autotrim", "failmode", "comment"]) {
+    const property = pool?.properties?.[name];
+    if (property?.value !== undefined && property?.value !== null) {
+      facts.push({
+        label: name,
+        value: `${property.value}${property.source ? ` (${property.source})` : ""}`,
+      });
+    }
+  }
+
+  return facts;
+}
+
+function formatPropertyValue(value) {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+  return String(value);
+}
+
+function normalizeEditableValue(propertyName, value) {
+  if (value === undefined || value === null) {
+    return propertyName === "bootfs" || propertyName === "cachefile" ? "none" : "";
+  }
+  return String(value);
+}
+
+function createTopologyDraft() {
+  return {
+    category: "log",
+    layout: "stripe",
+    devices: [],
+  };
+}
+
+function createPoolWizardDraft() {
+  return {
+    name: "",
+    properties: {
+      ashift: "12",
+      autoexpand: "off",
+      autoreplace: "off",
+      autotrim: "off",
+      failmode: "wait",
+      comment: "",
+    },
+    rootDatasetProperties: {
+      aclinherit: "",
+      aclmode: "",
+      acltype: "",
+      compression: "",
+      mountpoint: "",
+      readonly: "",
+      recordsize: "",
+      canmount: "",
+      casesensitivity: "",
+      quota: "",
+      reservation: "",
+      sync: "",
+      atime: "",
+      checksum: "",
+      copies: "",
+      dedup: "",
+      devices: "",
+      dnodesize: "",
+      exec: "",
+      logbias: "",
+      nbmand: "",
+      normalization: "",
+      overlay: "",
+      primarycache: "",
+      redundant_metadata: "",
+      refquota: "",
+      refreservation: "",
+      relatime: "",
+      secondarycache: "",
+      setuid: "",
+      snapdir: "",
+      utf8only: "",
+      xattr: "",
+    },
+    dataBuilder: {
+      category: "data",
+      layout: "mirror",
+      devices: [],
+    },
+    auxBuilder: {
+      category: "log",
+      layout: "stripe",
+      devices: [],
+    },
+    dataVdevs: [],
+    auxVdevs: [],
+  };
+}
+
+function buildCreatePoolProperties(properties) {
+  const items = [];
+  for (const [name, value] of Object.entries(properties || {})) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    items.push({ name, value: String(value) });
+  }
+  return items;
+}
+
+function buildCompressionCreateOptions() {
+  return [
+    { label: "Use default algorithm", value: "on" },
+    { label: "off", value: "off" },
+    { label: "lz4", value: "lz4" },
+    { label: "lzjb", value: "lzjb" },
+    { label: "zstd", value: "zstd" },
+    { label: "zstd-fast", value: "zstd-fast" },
+    { label: "gzip", value: "gzip" },
+    { label: "gzip-1", value: "gzip-1" },
+    { label: "gzip-9", value: "gzip-9" },
+    { label: "zle", value: "zle" },
+  ];
+}
+
+function buildPowerOfTwoSizeOptions(min, max) {
+  const options = [];
+  for (let value = min; value <= max; value *= 2) {
+    options.push({
+      label: formatPowerOfTwoSize(value),
+      value: formatPowerOfTwoSize(value),
+    });
+  }
+  return options;
+}
+
+function formatPowerOfTwoSize(bytes) {
+  if (bytes < 1024) {
+    return `${bytes}B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${bytes / 1024}K`;
+  }
+  return `${bytes / (1024 * 1024)}M`;
+}
+
+function isDiskAvailableForCreate(disk) {
+  if (!disk?.path) {
+    return false;
+  }
+  if (disk.poolName && disk.poolName !== "-") {
+    return false;
+  }
+  const filesystem = String(disk.filesystem || "-").toLowerCase();
+  if (!isReusableFilesystem(filesystem, disk.poolName)) {
+    return false;
+  }
+  const partitions = Array.isArray(disk.partitions) ? disk.partitions : [];
+  return partitions.every((partition) => {
+    const partitionPool = partition.poolName;
+    const partitionFilesystem = String(partition.filesystem || "-").toLowerCase();
+    return (!partitionPool || partitionPool === "-") && isReusableFilesystem(partitionFilesystem, partitionPool);
+  });
+}
+
+function isReusableFilesystem(filesystem, poolName) {
+  if (["-", "", "none", "unknown"].includes(String(filesystem || "-").toLowerCase())) {
+    return true;
+  }
+  return String(filesystem || "-").toLowerCase() === "zfs_member" && (!poolName || poolName === "-");
+}
+
+function allowPathForBuilder(path, usedPaths, currentBuilderPaths) {
+  return !usedPaths.has(path) || currentBuilderPaths.includes(path);
+}
+
+function formatTopologyDeviceLabel(device) {
+  return `${device.path} [${device.diskId}]`;
+}
+
+function resolveTopologyState(node) {
+  const states = collectTopologyStates(node);
+  if (!states.length) {
+    return "UNKNOWN";
+  }
+  return states.reduce((worst, current) => (
+    topologyStateSeverity(current) > topologyStateSeverity(worst) ? current : worst
+  ));
+}
+
+function collectTopologyStates(node) {
+  const current = node?.state ? [node.state] : [];
+  const children = Array.isArray(node?.children) ? node.children : [];
+  return children.reduce((states, child) => states.concat(collectTopologyStates(child)), current);
+}
+
+function resolveTopologyMetric(node, key) {
+  const total = aggregateTopologyMetric(node, key);
+  if (total === null) {
+    return "-";
+  }
+  return total;
+}
+
+function aggregateTopologyMetric(node, key) {
+  const children = Array.isArray(node?.children) ? node.children : [];
+  if (children.length) {
+    const totals = children
+      .map((child) => aggregateTopologyMetric(child, key))
+      .filter((value) => value !== null);
+    if (!totals.length) {
+      return null;
+    }
+    return totals.reduce((sum, value) => sum + value, 0);
+  }
+  if (node?.[key] === null || node?.[key] === undefined) {
+    return null;
+  }
+  return Number(node[key]) || 0;
+}
+
+function topologyStateSeverity(state) {
+  return {
+    ONLINE: 1,
+    AVAIL: 1,
+    DEGRADED: 2,
+    SUSPENDED: 3,
+    OFFLINE: 4,
+    REMOVED: 4,
+    FAULTED: 5,
+    UNAVAIL: 5,
+    UNKNOWN: 6,
+  }[state || "UNKNOWN"] || 6;
+}
+
+function buildCommandLogLines(results, primaryKey) {
+  if (!Array.isArray(results) || !results.length) {
+    return [];
+  }
+
+  return results.map((item, index) => ({
+    key: `${item[primaryKey] || "item"}:${index}`,
+    label: item[primaryKey] || "item",
+    success: item.success,
+    lines: [
+      `$ ${item.command || "N/A"}`,
+      item.exit_status !== null && item.exit_status !== undefined ? `exit_status: ${item.exit_status}` : null,
+      item.stdout ? `stdout: ${item.stdout}` : null,
+      item.stderr ? `stderr: ${item.stderr}` : null,
+      !item.stdout && !item.stderr ? item.message : null,
+    ].filter(Boolean),
+  }));
+}
+
+function buildSingleCommandLogLines(result, label) {
+  if (!result) {
+    return [];
+  }
+  return [
+    {
+      key: `single:${label}`,
+      label,
+      success: result.success,
+      lines: [
+        `$ ${result.command || "N/A"}`,
+        result.exit_status !== null && result.exit_status !== undefined ? `exit_status: ${result.exit_status}` : null,
+        result.stdout ? `stdout: ${result.stdout}` : null,
+        result.stderr ? `stderr: ${result.stderr}` : null,
+        !result.stdout && !result.stderr ? result.message : null,
+      ].filter(Boolean),
+    },
+  ];
+}
+</script>
+
+<template>
+<section class="view-grid">
       <article class="surface-panel">
         <div class="section-header">
           <div>
@@ -2026,7 +2298,7 @@ export default {
                     {{ entry.success ? "OK" : "Error" }}
                   </span>
                 </div>
-                <pre class="terminal-log-block">{{ entry.lines.join('\\n') }}</pre>
+<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
               </article>
             </div>
             <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
@@ -2103,7 +2375,7 @@ export default {
                     {{ entry.success ? "OK" : "Error" }}
                   </span>
                 </div>
-                <pre class="terminal-log-block">{{ entry.lines.join('\\n') }}</pre>
+<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
               </article>
             </div>
             <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
@@ -2188,7 +2460,7 @@ export default {
                     {{ entry.success ? "OK" : "Error" }}
                   </span>
                 </div>
-                <pre class="terminal-log-block">{{ entry.lines.join('\\n') }}</pre>
+<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
               </article>
             </div>
             <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
@@ -2255,7 +2527,7 @@ export default {
                     {{ entry.success ? "OK" : "Error" }}
                   </span>
                 </div>
-                <pre class="terminal-log-block">{{ entry.lines.join('\\n') }}</pre>
+<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
               </article>
             </div>
             <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
@@ -2324,7 +2596,7 @@ export default {
                     {{ entry.success ? "OK" : "Error" }}
                   </span>
                 </div>
-                <pre class="terminal-log-block">{{ entry.lines.join('\\n') }}</pre>
+<pre class="terminal-log-block">{{ entry.lines.join('\n') }}</pre>
               </article>
             </div>
             <p v-else class="subtle-text">No SSH logs are available for this submission.</p>
@@ -2332,317 +2604,4 @@ export default {
         </div>
       </ConfirmDialog>
     </section>
-  `,
-};
-
-function collectPoolProperties(pool, editable) {
-  const properties = pool && typeof pool.properties === "object" && pool.properties ? pool.properties : {};
-  const entries = Object.entries(properties)
-    .filter(([name]) => !isOverviewProperty(name))
-    .filter(([name]) => EDITABLE_POOL_PROPERTIES.has(name) === editable)
-    .map(([name, property]) => ({
-      name,
-      value: formatPropertyValue(property?.value),
-      rawValue: property?.value ?? "",
-      source: property?.source ?? "unknown",
-    }))
-    .sort((left, right) => left.name.localeCompare(right.name));
-
-  if (editable) {
-    return entries;
-  }
-
-  return {
-    common: entries.filter((property) => COMMON_READONLY_POOL_PROPERTIES.has(property.name)),
-    advanced: entries.filter((property) => !COMMON_READONLY_POOL_PROPERTIES.has(property.name)),
-  };
-}
-
-function isOverviewProperty(name) {
-  return new Set([
-    "allocated",
-    "capacity",
-    "dedupratio",
-    "fragmentation",
-    "free",
-    "health",
-    "size",
-  ]).has(name);
-}
-
-function buildPoolQuickFacts(pool) {
-  const facts = [
-    { label: "Scan", value: pool?.status?.scan || "Not reported" },
-    { label: "Errors", value: pool?.status?.errors || "Not reported" },
-  ];
-
-  for (const name of ["ashift", "autoreplace", "autoexpand", "autotrim", "failmode", "comment"]) {
-    const property = pool?.properties?.[name];
-    if (property?.value !== undefined && property?.value !== null) {
-      facts.push({
-        label: name,
-        value: `${property.value}${property.source ? ` (${property.source})` : ""}`,
-      });
-    }
-  }
-
-  return facts;
-}
-
-function formatPropertyValue(value) {
-  if (value === undefined || value === null || value === "") {
-    return "-";
-  }
-  return String(value);
-}
-
-function normalizeEditableValue(propertyName, value) {
-  if (value === undefined || value === null) {
-    return propertyName === "bootfs" || propertyName === "cachefile" ? "none" : "";
-  }
-  return String(value);
-}
-
-function createTopologyDraft() {
-  return {
-    category: "log",
-    layout: "stripe",
-    devices: [],
-  };
-}
-
-function createPoolWizardDraft() {
-  return {
-    name: "",
-    properties: {
-      ashift: "12",
-      autoexpand: "off",
-      autoreplace: "off",
-      autotrim: "off",
-      failmode: "wait",
-      comment: "",
-    },
-    rootDatasetProperties: {
-      aclinherit: "",
-      aclmode: "",
-      acltype: "",
-      compression: "",
-      mountpoint: "",
-      readonly: "",
-      recordsize: "",
-      canmount: "",
-      casesensitivity: "",
-      quota: "",
-      reservation: "",
-      sync: "",
-      atime: "",
-      checksum: "",
-      copies: "",
-      dedup: "",
-      devices: "",
-      dnodesize: "",
-      exec: "",
-      logbias: "",
-      nbmand: "",
-      normalization: "",
-      overlay: "",
-      primarycache: "",
-      redundant_metadata: "",
-      refquota: "",
-      refreservation: "",
-      relatime: "",
-      secondarycache: "",
-      setuid: "",
-      snapdir: "",
-      utf8only: "",
-      xattr: "",
-    },
-    dataBuilder: {
-      category: "data",
-      layout: "mirror",
-      devices: [],
-    },
-    auxBuilder: {
-      category: "log",
-      layout: "stripe",
-      devices: [],
-    },
-    dataVdevs: [],
-    auxVdevs: [],
-  };
-}
-
-function buildCreatePoolProperties(properties) {
-  const items = [];
-  for (const [name, value] of Object.entries(properties || {})) {
-    if (value === undefined || value === null || value === "") {
-      continue;
-    }
-    items.push({ name, value: String(value) });
-  }
-  return items;
-}
-
-function buildCompressionCreateOptions() {
-  return [
-    { label: "Use default algorithm", value: "on" },
-    { label: "off", value: "off" },
-    { label: "lz4", value: "lz4" },
-    { label: "lzjb", value: "lzjb" },
-    { label: "zstd", value: "zstd" },
-    { label: "zstd-fast", value: "zstd-fast" },
-    { label: "gzip", value: "gzip" },
-    { label: "gzip-1", value: "gzip-1" },
-    { label: "gzip-9", value: "gzip-9" },
-    { label: "zle", value: "zle" },
-  ];
-}
-
-function buildPowerOfTwoSizeOptions(min, max) {
-  const options = [];
-  for (let value = min; value <= max; value *= 2) {
-    options.push({
-      label: formatPowerOfTwoSize(value),
-      value: formatPowerOfTwoSize(value),
-    });
-  }
-  return options;
-}
-
-function formatPowerOfTwoSize(bytes) {
-  if (bytes < 1024) {
-    return `${bytes}B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${bytes / 1024}K`;
-  }
-  return `${bytes / (1024 * 1024)}M`;
-}
-
-function isDiskAvailableForCreate(disk) {
-  if (!disk?.path) {
-    return false;
-  }
-  if (disk.poolName && disk.poolName !== "-") {
-    return false;
-  }
-  const filesystem = String(disk.filesystem || "-").toLowerCase();
-  if (!isReusableFilesystem(filesystem, disk.poolName)) {
-    return false;
-  }
-  const partitions = Array.isArray(disk.partitions) ? disk.partitions : [];
-  return partitions.every((partition) => {
-    const partitionPool = partition.poolName;
-    const partitionFilesystem = String(partition.filesystem || "-").toLowerCase();
-    return (!partitionPool || partitionPool === "-") && isReusableFilesystem(partitionFilesystem, partitionPool);
-  });
-}
-
-function isReusableFilesystem(filesystem, poolName) {
-  if (["-", "", "none", "unknown"].includes(String(filesystem || "-").toLowerCase())) {
-    return true;
-  }
-  return String(filesystem || "-").toLowerCase() === "zfs_member" && (!poolName || poolName === "-");
-}
-
-function allowPathForBuilder(path, usedPaths, currentBuilderPaths) {
-  return !usedPaths.has(path) || currentBuilderPaths.includes(path);
-}
-
-function formatTopologyDeviceLabel(device) {
-  return `${device.path} [${device.diskId}]`;
-}
-
-function resolveTopologyState(node) {
-  const states = collectTopologyStates(node);
-  if (!states.length) {
-    return "UNKNOWN";
-  }
-  return states.reduce((worst, current) => (
-    topologyStateSeverity(current) > topologyStateSeverity(worst) ? current : worst
-  ));
-}
-
-function collectTopologyStates(node) {
-  const current = node?.state ? [node.state] : [];
-  const children = Array.isArray(node?.children) ? node.children : [];
-  return children.reduce((states, child) => states.concat(collectTopologyStates(child)), current);
-}
-
-function resolveTopologyMetric(node, key) {
-  const total = aggregateTopologyMetric(node, key);
-  if (total === null) {
-    return "-";
-  }
-  return total;
-}
-
-function aggregateTopologyMetric(node, key) {
-  const children = Array.isArray(node?.children) ? node.children : [];
-  if (children.length) {
-    const totals = children
-      .map((child) => aggregateTopologyMetric(child, key))
-      .filter((value) => value !== null);
-    if (!totals.length) {
-      return null;
-    }
-    return totals.reduce((sum, value) => sum + value, 0);
-  }
-  if (node?.[key] === null || node?.[key] === undefined) {
-    return null;
-  }
-  return Number(node[key]) || 0;
-}
-
-function topologyStateSeverity(state) {
-  return {
-    ONLINE: 1,
-    AVAIL: 1,
-    DEGRADED: 2,
-    SUSPENDED: 3,
-    OFFLINE: 4,
-    REMOVED: 4,
-    FAULTED: 5,
-    UNAVAIL: 5,
-    UNKNOWN: 6,
-  }[state || "UNKNOWN"] || 6;
-}
-
-function buildCommandLogLines(results, primaryKey) {
-  if (!Array.isArray(results) || !results.length) {
-    return [];
-  }
-
-  return results.map((item, index) => ({
-    key: `${item[primaryKey] || "item"}:${index}`,
-    label: item[primaryKey] || "item",
-    success: item.success,
-    lines: [
-      `$ ${item.command || "N/A"}`,
-      item.exit_status !== null && item.exit_status !== undefined ? `exit_status: ${item.exit_status}` : null,
-      item.stdout ? `stdout: ${item.stdout}` : null,
-      item.stderr ? `stderr: ${item.stderr}` : null,
-      !item.stdout && !item.stderr ? item.message : null,
-    ].filter(Boolean),
-  }));
-}
-
-function buildSingleCommandLogLines(result, label) {
-  if (!result) {
-    return [];
-  }
-  return [
-    {
-      key: `single:${label}`,
-      label,
-      success: result.success,
-      lines: [
-        `$ ${result.command || "N/A"}`,
-        result.exit_status !== null && result.exit_status !== undefined ? `exit_status: ${result.exit_status}` : null,
-        result.stdout ? `stdout: ${result.stdout}` : null,
-        result.stderr ? `stderr: ${result.stderr}` : null,
-        !result.stdout && !result.stderr ? result.message : null,
-      ].filter(Boolean),
-    },
-  ];
-}
+</template>

@@ -1,9 +1,10 @@
 # router
 
-这里负责前端页面路由。
+Frontend routing setup.
 
-## 当前内容
+## Files
 
-- `routes.js`: `Dashboard`、`Disks`、`Pools`、`Datasets` 路由定义
+- `index.js`: creates the router with `createWebHashHistory()`
+- `routes.js`: route metadata for `Dashboard`, `Disks`, `Pools`, and `Datasets`
 
-当前项目体量还不大，路由保持扁平即可。
+The project still uses hash history so direct refreshes do not require backend SPA fallback handling.

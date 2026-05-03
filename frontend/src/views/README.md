@@ -1,17 +1,17 @@
 # views
 
-这里是前端页面级视图。
+Routed page-level Vue components.
 
-## 文件说明
+## Files
 
-- `DashboardView.js`: 概览页
-- `DisksView.js`: 磁盘与分区
-- `PoolsView.js`: 池、拓扑与属性
-- `DatasetsView.js`: dataset / zvol / snapshot inventory
+- `DashboardView.vue`: overview page
+- `DisksView.vue`: disks and partitions
+- `PoolsView.vue`: pool, topology, and property workflows
+- `DatasetsView.vue`: dataset, zvol, and snapshot inventory
 
-## 当前页面能力
+## Notes
 
-- Dashboard 显示后端提供的 `summary`
-- Disks 支持展开分区，并显示 pool 归属
-- Pools 支持属性编辑、topology 变更、新建、删除、remove
-- Datasets 支持树形 inventory、可选显示 snapshot、属性编辑、创建和删除
+- `Dashboard` renders backend summary data.
+- `Disks` supports partition expansion and pool membership display.
+- `Pools` handles property editing, topology mutation, create, destroy, and remove flows.
+- `Datasets` handles tree inventory, optional snapshot display, property editing, create, and destroy flows.

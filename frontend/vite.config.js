@@ -1,12 +1,8 @@
 import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-  resolve: {
-    // Allow template strings in plain JS components during this early scaffold stage.
-    alias: {
-      vue: "vue/dist/vue.esm-bundler.js",
-    },
-  },
+  plugins: [vue()],
   server: {
     host: "127.0.0.1",
     port: 5173,

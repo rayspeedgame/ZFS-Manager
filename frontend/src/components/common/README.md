@@ -1,16 +1,16 @@
 # components/common
 
-这里放通用基础组件。
+Shared base components used across views.
 
-## 文件说明
+## Files
 
-- `DetailDrawer.js`: 详情抽屉
-- `ConfirmDialog.js`: 确认弹窗
-- `EmptyState.js`: 空状态提示
-- `JsonDebugPanel.js`: 调试用 JSON 展示
+- `DetailDrawer.vue`: slide-over detail panel
+- `ConfirmDialog.vue`: confirmation and result dialog shell
+- `EmptyState.vue`: empty-data placeholder
+- `JsonDebugPanel.vue`: development-only raw snapshot panel
 
-## 当前使用方式
+## Usage
 
-- Pools 和 Datasets 详情使用 `DetailDrawer`
-- 高风险保存/创建/删除流程使用 `ConfirmDialog`
-- 页面数据为空或尚未准备好时优先通过 `EmptyState` 提示
+- Pools and Datasets detail workflows use `DetailDrawer`.
+- High-risk save/create/delete flows use `ConfirmDialog`.
+- Empty or not-yet-ready pages should prefer `EmptyState`.

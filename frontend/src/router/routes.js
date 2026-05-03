@@ -1,12 +1,13 @@
-import DashboardView from "../views/DashboardView.js";
-import DatasetsView from "../views/DatasetsView.js";
-import DisksView from "../views/DisksView.js";
-import PoolsView from "../views/PoolsView.js";
+import DashboardView from "../views/DashboardView.vue";
+import DatasetsView from "../views/DatasetsView.vue";
+import DisksView from "../views/DisksView.vue";
+import PoolsView from "../views/PoolsView.vue";
 
-export const routes = [
+export const navigationRoutes = [
   {
     key: "dashboard",
-    hash: "#/dashboard",
+    name: "dashboard",
+    path: "/dashboard",
     label: "Dashboard",
     icon: "grid",
     description: "Global storage health and live system summary.",
@@ -14,7 +15,8 @@ export const routes = [
   },
   {
     key: "disks",
-    hash: "#/disks",
+    name: "disks",
+    path: "/disks",
     label: "Disks",
     icon: "disc",
     description: "Physical device inventory and membership details.",
@@ -22,7 +24,8 @@ export const routes = [
   },
   {
     key: "pools",
-    hash: "#/pools",
+    name: "pools",
+    path: "/pools",
     label: "Pools",
     icon: "stack",
     description: "Pool capacity, topology, and property overview.",
@@ -30,10 +33,23 @@ export const routes = [
   },
   {
     key: "datasets",
-    hash: "#/datasets",
+    name: "datasets",
+    path: "/datasets",
     label: "Datasets",
     icon: "folder-tree",
     description: "Filesystem and volume inventory with inheritance hints.",
     component: DatasetsView,
   },
 ];
+
+export const routes = navigationRoutes.map((route) => ({
+  path: route.path,
+  name: route.name,
+  component: route.component,
+  meta: {
+    key: route.key,
+    label: route.label,
+    icon: route.icon,
+    description: route.description,
+  },
+}));

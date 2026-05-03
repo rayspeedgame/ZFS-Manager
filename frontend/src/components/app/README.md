@@ -1,14 +1,14 @@
 # components/app
 
-这一层是应用骨架组件。
+Application shell components.
 
-## 文件说明
+## Files
 
-- `AppSidebar.js`: 左侧导航
-- `AppTopbar.js`: 顶栏状态与全局操作
-- `StatusBadge.js`: 小型状态徽标
+- `AppSidebar.vue`: primary navigation
+- `AppTopbar.vue`: top status area and global refresh action
+- `StatusBadge.vue`: compact status pill
 
-## 当前重点
+## Notes
 
-- `AppTopbar.js` 展示 WebSocket、SSH source、last success、data age 等状态
-- 顶栏中的 `Force Refresh` 会调用后端全量刷新接口，而不是只读缓存
+- `AppTopbar.vue` shows WebSocket state, backend source state, last success time, and data age.
+- The topbar `Refresh` action triggers the backend full refresh path rather than only reading cached state.

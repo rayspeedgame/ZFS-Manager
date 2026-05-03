@@ -1,48 +1,48 @@
 # Frontend
 
-前端基于 Vue 3 + Vite，核心职责是消费后端快照、组织交互流程，并把高风险写操作做成可确认、可回显、可追踪的 UI。
+The frontend now uses standard Vue 3 single-file components on top of Vite, `vue-router`, and Pinia.
+It consumes backend snapshots, renders the storage UI, and keeps dangerous write flows explicit and reviewable.
 
-## 主要视图
+## Main Views
 
 - `Dashboard`
-  - 汇总状态与关键指标
+  - live summary cards and pool health overview
 - `Disks`
-  - 整盘、分区、文件系统、pool 归属
-  - inactive `zfs_member` 识别
+  - disk inventory, partitions, filesystem labels, and pool membership
 - `Pools`
-  - pool 总览
-  - 拓扑展开区
-  - 属性编辑抽屉
-  - topology 编辑抽屉
-  - 新建 pool 向导
-  - 删除 pool / 移除设备确认流
+  - pool overview, topology browser, property editing, create/remove/destroy flows
 - `Datasets`
-  - dataset / zvol inventory
-  - 可选显示 snapshot
-  - 管理抽屉
-  - 创建 / 修改 / 删除
+  - dataset and zvol tree inventory, snapshot toggle, property editing, create/destroy flows
 
-## 当前实现重点
+## Current Architecture
 
-- `src/views/PoolsView.js`
-  - pool 属性、topology、新建、删除、remove
-- `src/views/DatasetsView.js`
-  - dataset 树形 inventory、snapshot 开关、属性分组、创建/删除流
+- `src/App.vue`
+  - application shell, sidebar, topbar, and routed page outlet
+- `src/router/index.js`
+  - router bootstrap using `createWebHashHistory()`
+- `src/router/routes.js`
+  - top-level route metadata and component mapping
+- `src/stores/app.js`
+  - Pinia app store for WebSocket lifecycle, snapshots, and refresh actions
+- `src/services/api.js`
+  - REST write operations for pools and datasets
 - `src/store/state.js`
-  - WebSocket 状态
-  - REST 写接口
-  - 普通刷新与全量强制刷新
+  - compatibility adapter that exposes the old `useAppState()` shape while delegating to Pinia and the API service
+- `src/views/PoolsView.vue`
+  - pool-heavy workflows and topology management
+- `src/views/DatasetsView.vue`
+  - dataset-heavy workflows and tree presentation
 - `src/styles.css`
-  - 全局布局、状态面板、表格、抽屉、确认弹窗
+  - shared layout, table, drawer, dialog, and responsive styles
 
-## 交互约定
+## Interaction Rules
 
-- 所有高风险写操作都先弹出确认框
-- 提交后显示 loading 状态
-- 完成后展示结果摘要、SSH 日志和刷新错误
-- 前端在写操作完成后会再请求一次 `/api/state` 或 `/api/state/refresh`
+- Every destructive or high-risk action must go through an explicit confirmation dialog.
+- Submissions should show a clear loading state.
+- Results should include both a human summary and SSH command log details when available.
+- After write actions, the frontend should re-sync using `/api/state` or `/api/state/refresh`.
 
-## 启动
+## Development
 
 ```bash
 npm install
