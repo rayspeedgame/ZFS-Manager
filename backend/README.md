@@ -11,29 +11,29 @@
   - `zpool status/list/get`
   - `zfs list/get`
 - 把原始输出解析为统一的 `meta + data` 快照
-- 暴露 REST 写接口：
-  - pool 属性修改
-  - pool topology 变更
-  - pool 创建 / 删除 / remove
-  - dataset 属性修改
-  - dataset / zvol 创建 / 删除
+- 暴露 REST 接口：
+  - 状态读取与强制刷新
+  - 设置读取、保存与 SSH 测试
+  - 登录状态、登录、退出
+  - pool 和 dataset 写操作
 - 通过 WebSocket 推送最新快照
 
 ## 目录说明
 
 - `app/api/`: REST 与 WebSocket 入口
-- `app/core/`: 配置加载、共享状态存储
-- `app/schemas/`: Pydantic 请求/响应与快照模型
-- `app/services/`: 轮询、状态聚合、写操作执行器
+- `app/core/`: 配置、认证、共享状态等基础设施
+- `app/schemas/`: Pydantic 请求、响应与快照模型
+- `app/services/`: 轮询、状态聚合、写操作执行
 - `app/ssh/`: SSH 客户端、命令定义、解析器
+- `config/`: 当前使用的配置目录
 - `tests/fixtures/`: fixture 模式输入样例
 
 ## 当前实现重点
 
 - `StatePoller` 按 `pools / datasets / disks / properties` 分频刷新
-- `poller.refresh_once(force_all=True)` 用于写操作后的全量强刷
-- dataset 列表顺序与层级字段现在由后端统一整理，前端只负责展示和折叠
-- 所有高风险写操作都返回命令、退出码、stdout、stderr，便于排查
+- 写操作完成后统一调用 `poller.refresh_once(force_all=True)`
+- 设置保存后会热重载 runtime，而不是要求手动重启后端
+- 认证是轻量 cookie 登录，默认关闭，可由设置页启用
 
 ## 启动
 

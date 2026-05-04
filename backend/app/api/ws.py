@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
+from app.core.auth import websocket_is_authenticated
 from app.core.state import state_store
 
 
@@ -13,6 +14,9 @@ router = APIRouter(tags=["ws"])
 @router.websocket("/ws/state")
 async def state_stream(websocket: WebSocket) -> None:
     """Push the newest state snapshot to connected clients."""
+    if not websocket_is_authenticated(websocket):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await websocket.accept()
     version, state = await state_store.get_versioned_state()
     await websocket.send_json(state.model_dump(mode="json"))

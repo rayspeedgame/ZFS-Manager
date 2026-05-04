@@ -4,17 +4,20 @@
 
 ## 文件说明
 
-- `config.py`: 读取并校验配置，包含轮询与 SSH 参数
-- `state.py`: 保存当前应用快照，供 REST 与 WebSocket 共享
+- `config.py`: 配置读取、保存、路径解析和环境变量覆盖
+- `auth.py`: 登录开关判断、cookie 读写和认证检查
+- `state.py`: 保存当前应用快照，供 REST 和 WebSocket 共享
 
 ## 配置重点
 
-- `poller.mode`: `fixture` 或 `ssh`
-- `poller.fallback_to_fixture`: SSH 失败时是否回退到 fixture
-- `tick_seconds`
-- `pools_interval_seconds`
-- `datasets_interval_seconds`
-- `disks_interval_seconds`
-- `properties_interval_seconds`
+- 默认配置目录是 `backend/config/`
+- 仍兼容旧的 `backend/config.json` 作为回退路径
+- 也支持 `ZFS_MANAGER_CONFIG` 指定自定义配置文件
 
-这些配置允许高频状态和低频属性分开刷新。
+主要配置块：
+
+- `poller`
+- `ssh`
+- `auth`
+
+这些配置允许把高频状态和低频属性分开刷新，也允许通过设置页直接调整连接和登录行为。

@@ -2,41 +2,24 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.rest import router as rest_router
 from app.api.ws import router as ws_router
-from app.runtime import (
-    dataset_creator,
-    dataset_destroyer,
-    dataset_property_updater,
-    poller,
-    pool_creator,
-    pool_destroyer,
-    pool_property_updater,
-    pool_remover,
-    pool_topology_updater,
-)
+from app import runtime
+from app.core.auth import request_is_authenticated
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Start the poller with one warm-up refresh so /docs shows live data quickly.
-    await poller.refresh_once()
-    await poller.start()
+    await runtime.start_runtime()
     try:
         yield
     finally:
-        await dataset_creator.close()
-        await dataset_destroyer.close()
-        await pool_creator.close()
-        await pool_destroyer.close()
-        await pool_remover.close()
-        await pool_topology_updater.close()
-        await pool_property_updater.close()
-        await dataset_property_updater.close()
-        await poller.stop()
+        await runtime.stop_runtime()
 
 
 app = FastAPI(
@@ -58,6 +41,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+    # Keep auth bootstrap and docs public so the frontend can discover whether
+    # login is enabled before it tries to open the main application shell.
+    public_paths = {
+        "/api/auth/status",
+        "/api/auth/login",
+        "/api/health",
+        "/docs",
+        "/openapi.json",
+        "/redoc",
+    }
+    if path.startswith("/api") and path not in public_paths and not request_is_authenticated(request):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Authentication required."},
+        )
+    return await call_next(request)
+
 
 app.include_router(rest_router)
 app.include_router(ws_router)

@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.core.state import state_store
-from app.runtime import (
-    config,
-    dataset_creator,
-    dataset_destroyer,
-    dataset_property_updater,
-    poller,
-    pool_creator,
-    pool_destroyer,
-    pool_property_updater,
-    pool_remover,
-    pool_topology_updater,
+from app.core.auth import (
+    auth_is_enabled,
+    clear_auth_cookie,
+    require_authenticated_request,
+    request_is_authenticated,
+    set_auth_cookie,
 )
+from app.core.state import state_store
+from app.core.config import AppConfig, save_config
+from app import runtime
+from app.schemas.auth import AuthStatusResponse, LoginRequest, LoginResponse
 from app.schemas.dataset_create import DatasetCreateRequest, DatasetCreateResponse
 from app.schemas.dataset_destroy import DatasetDestroyResponse
 from app.schemas.dataset_property_update import DatasetPropertyUpdateRequest, DatasetPropertyUpdateResponse
@@ -22,8 +20,11 @@ from app.schemas.pool_create import PoolCreateRequest, PoolCreateResponse
 from app.schemas.pool_destroy import PoolDestroyResponse
 from app.schemas.pool_remove import PoolRemoveRequest, PoolRemoveResponse
 from app.schemas.property_update import PoolPropertyUpdateRequest, PoolPropertyUpdateResponse
+from app.schemas.settings import SettingsSaveResponse
+from app.schemas.ssh_test import SSHConnectionTestRequest, SSHConnectionTestResponse
 from app.schemas.topology_update import PoolTopologyUpdateRequest, PoolTopologyUpdateResponse
 from app.schemas.zfs_state import AppState
+from app.ssh.client import SSHClient, SSHConfig
 
 
 router = APIRouter(prefix="/api", tags=["state"])
@@ -137,15 +138,107 @@ DATASET_CREATE_ALLOWED_PROPERTIES = {
 
 
 @router.get("/state", response_model=AppState)
-async def get_state() -> AppState:
+async def get_state(request: Request) -> AppState:
     """Return the latest in-memory snapshot used by the frontend."""
+    require_authenticated_request(request)
     return await state_store.get_state()
 
 
 @router.post("/state/refresh", response_model=AppState, tags=["system"])
-async def force_refresh_state() -> AppState:
+async def force_refresh_state(request: Request) -> AppState:
     """Force a full backend refresh instead of only returning cached state."""
-    return await poller.refresh_once(force_all=True)
+    require_authenticated_request(request)
+    return await runtime.poller.refresh_once(force_all=True)
+
+
+@router.get("/auth/status", response_model=AuthStatusResponse, tags=["auth"])
+async def get_auth_status(request: Request) -> AuthStatusResponse:
+    return AuthStatusResponse(
+        enabled=auth_is_enabled(),
+        authenticated=request_is_authenticated(request),
+    )
+
+
+@router.post("/auth/login", response_model=LoginResponse, tags=["auth"])
+async def login(payload: LoginRequest, response: Response) -> LoginResponse:
+    if not auth_is_enabled():
+        return LoginResponse(success=True, message="Authentication is disabled.")
+
+    if payload.password != (runtime.config.auth.password or ""):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password.",
+        )
+
+    set_auth_cookie(response)
+    return LoginResponse(success=True, message="Login succeeded.")
+
+
+@router.post("/auth/logout", response_model=LoginResponse, tags=["auth"])
+async def logout(response: Response) -> LoginResponse:
+    clear_auth_cookie(response)
+    return LoginResponse(success=True, message="Logged out.")
+
+
+@router.get("/settings", response_model=AppConfig, tags=["system"])
+async def get_settings(request: Request) -> AppConfig:
+    """Return the currently active backend configuration."""
+    require_authenticated_request(request)
+    return runtime.config.model_copy(deep=True)
+
+
+@router.put("/settings", response_model=SettingsSaveResponse, tags=["system"])
+async def save_settings(payload: AppConfig, request: Request, response: Response) -> SettingsSaveResponse:
+    """Persist backend settings and reload long-lived runtime services."""
+    require_authenticated_request(request)
+    if payload.auth.enabled and not (payload.auth.password or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Login password is required when password login is enabled.",
+        )
+    config_path = save_config(payload)
+    next_config = await runtime.reload_runtime(payload)
+    if next_config.auth.enabled and (next_config.auth.password or "").strip():
+        set_auth_cookie(response)
+    else:
+        clear_auth_cookie(response)
+    return SettingsSaveResponse(
+        config=next_config,
+        config_path=str(config_path),
+        reloaded=True,
+        message="Settings saved and runtime reloaded.",
+    )
+
+
+@router.post("/settings/test-ssh", response_model=SSHConnectionTestResponse, tags=["system"])
+async def test_ssh_connection(payload: SSHConnectionTestRequest, request: Request) -> SSHConnectionTestResponse:
+    """Test SSH connectivity with the provided settings without saving them."""
+    require_authenticated_request(request)
+    client = SSHClient(
+        SSHConfig(
+            host=payload.ssh.host,
+            username=payload.ssh.username,
+            port=payload.ssh.port,
+            password=payload.ssh.password,
+            known_hosts=payload.ssh.known_hosts,
+            client_keys=payload.ssh.key_files,
+            connect_timeout=payload.ssh.connect_timeout,
+            keepalive_interval=payload.ssh.keepalive_interval,
+            keepalive_count_max=payload.ssh.keepalive_count_max,
+        )
+    )
+
+    try:
+        await client.connect()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"SSH connection test failed: {exc}") from exc
+    finally:
+        await client.close()
+
+    return SSHConnectionTestResponse(
+        success=True,
+        message="SSH connection succeeded.",
+    )
 
 
 @router.post(
@@ -154,20 +247,20 @@ async def force_refresh_state() -> AppState:
     tags=["pools"],
 )
 async def create_pool(payload: PoolCreateRequest) -> PoolCreateResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Pool creation requires SSH mode.")
 
     state = await state_store.get_state()
     _validate_pool_creation(payload=payload, state=state)
 
-    result = await pool_creator.create_pool(payload)
+    result = await runtime.pool_creator.create_pool(payload)
 
     refreshed = False
     refresh_error: str | None = None
     try:
         # Pool writes always force a full refresh so the response reflects
         # the host's real post-command state instead of local assumptions.
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -181,18 +274,18 @@ async def create_pool(payload: PoolCreateRequest) -> PoolCreateResponse:
     tags=["datasets"],
 )
 async def create_dataset(payload: DatasetCreateRequest) -> DatasetCreateResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Dataset creation requires SSH mode.")
 
     state = await state_store.get_state()
     _validate_dataset_creation(payload=payload, state=state)
 
-    result = await dataset_creator.create_dataset(payload)
+    result = await runtime.dataset_creator.create_dataset(payload)
 
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -206,19 +299,19 @@ async def create_dataset(payload: DatasetCreateRequest) -> DatasetCreateResponse
     tags=["datasets"],
 )
 async def destroy_dataset(dataset_name: str) -> DatasetDestroyResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Dataset destroy requires SSH mode.")
 
     state = await state_store.get_state()
     dataset = _require_dataset(dataset_name=dataset_name, state=state)
     _validate_dataset_destroy(dataset=dataset)
 
-    result = await dataset_destroyer.destroy_dataset(dataset_name)
+    result = await runtime.dataset_destroyer.destroy_dataset(dataset_name)
 
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -232,18 +325,18 @@ async def destroy_dataset(dataset_name: str) -> DatasetDestroyResponse:
     tags=["pools"],
 )
 async def destroy_pool(pool_name: str) -> PoolDestroyResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Pool destroy requires SSH mode.")
 
     state = await state_store.get_state()
     _require_pool(pool_name=pool_name, state=state)
 
-    result = await pool_destroyer.destroy_pool(pool_name)
+    result = await runtime.pool_destroyer.destroy_pool(pool_name)
 
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -260,13 +353,13 @@ async def remove_pool_target(
     pool_name: str,
     payload: PoolRemoveRequest,
 ) -> PoolRemoveResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Pool topology removal requires SSH mode.")
 
     state = await state_store.get_state()
     target = _validate_pool_removal(pool_name=pool_name, payload=payload, state=state)
 
-    result = await pool_remover.remove_target(
+    result = await runtime.pool_remover.remove_target(
         pool=pool_name,
         command_target=payload.command_target,
         display_label=str(target.get("displayLabel") or payload.command_target),
@@ -278,7 +371,7 @@ async def remove_pool_target(
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -295,19 +388,19 @@ async def update_pool_properties(
     pool_name: str,
     payload: PoolPropertyUpdateRequest,
 ) -> PoolPropertyUpdateResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Pool property updates require SSH mode.")
 
     if not payload.changes:
         raise HTTPException(status_code=400, detail="No property changes were provided.")
 
-    results = await pool_property_updater.apply_pool_changes(pool=pool_name, changes=payload.changes)
+    results = await runtime.pool_property_updater.apply_pool_changes(pool=pool_name, changes=payload.changes)
 
     refreshed = False
     refresh_error: str | None = None
     try:
         # Force a fresh SSH read so the UI sees the real post-write state.
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -329,7 +422,7 @@ async def update_pool_topology(
     pool_name: str,
     payload: PoolTopologyUpdateRequest,
 ) -> PoolTopologyUpdateResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Pool topology updates require SSH mode.")
 
     if not payload.additions:
@@ -338,7 +431,7 @@ async def update_pool_topology(
     state = await state_store.get_state()
     _validate_topology_additions(pool_name=pool_name, payload=payload, state=state)
 
-    results = await pool_topology_updater.apply_pool_additions(
+    results = await runtime.pool_topology_updater.apply_pool_additions(
         pool=pool_name,
         additions=payload.additions,
         force=payload.force,
@@ -347,7 +440,7 @@ async def update_pool_topology(
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)
@@ -369,7 +462,7 @@ async def update_dataset_properties(
     dataset_name: str,
     payload: DatasetPropertyUpdateRequest,
 ) -> DatasetPropertyUpdateResponse:
-    if config.poller.mode != "ssh":
+    if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Dataset property updates require SSH mode.")
 
     if not payload.changes:
@@ -379,12 +472,12 @@ async def update_dataset_properties(
     dataset = _require_dataset(dataset_name=dataset_name, state=state)
     _validate_dataset_property_changes(dataset=dataset, payload=payload)
 
-    results = await dataset_property_updater.apply_dataset_changes(dataset=dataset_name, changes=payload.changes)
+    results = await runtime.dataset_property_updater.apply_dataset_changes(dataset=dataset_name, changes=payload.changes)
 
     refreshed = False
     refresh_error: str | None = None
     try:
-        await poller.refresh_once(force_all=True)
+        await runtime.poller.refresh_once(force_all=True)
         refreshed = True
     except Exception as exc:
         refresh_error = str(exc)

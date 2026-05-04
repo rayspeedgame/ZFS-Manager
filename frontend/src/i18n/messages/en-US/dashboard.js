@@ -1,0 +1,20 @@
+export default {
+  summary: {
+    disks: "Disks",
+    pools: "Pools",
+    capacity: "Capacity",
+    datasets: "Datasets",
+    allHealthy: "All healthy",
+    unhealthyCount: "{count} unhealthy",
+    freeValue: "{value} free",
+    disksDiscovered: "{count} disks discovered",
+  },
+  poolCapacity: "Pool Capacity",
+  poolCapacityDescription: "Live pool usage and health overview.",
+  healthOverview: "Health Overview",
+  healthOverviewDescription: "Current pool and disk conditions from the live snapshot.",
+  usedValue: "{value} used",
+  freeValue: "Free {value}",
+  fragmentationValue: "Fragmentation {value}",
+  dedupValue: "Dedup {value}",
+};

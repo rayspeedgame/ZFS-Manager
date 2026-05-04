@@ -13,10 +13,12 @@ const props = defineProps({
 });
 
 const { locale, t } = useI18n();
-const { forceRefreshState } = useAppState();
+const { forceRefreshState, logout } = useAppState();
 const snapshot = computed(() => props.state.snapshot.value);
 const meta = computed(() => snapshot.value?.meta || {});
 const connectionState = computed(() => props.state.connectionState.value);
+const authEnabled = computed(() => props.state.authEnabled.value);
+const authenticated = computed(() => props.state.authenticated.value);
 const sourceStatus = computed(() => meta.value?.source_status || "unknown");
 const refreshing = ref(false);
 const refreshError = ref("");
@@ -53,6 +55,10 @@ async function forceRefresh() {
 function updateLocale(nextLocale) {
   setLocale(nextLocale);
 }
+
+async function submitLogout() {
+  await logout();
+}
 </script>
 
 <template>
@@ -80,6 +86,14 @@ function updateLocale(nextLocale) {
           </label>
           <button type="button" class="ghost-button topbar-refresh-mini" :disabled="refreshing" @click="forceRefresh">
             {{ refreshing ? t("app.topbar.refreshing") : t("app.topbar.refresh") }}
+          </button>
+          <button
+            v-if="authEnabled && authenticated"
+            type="button"
+            class="ghost-button topbar-refresh-mini"
+            @click="submitLogout"
+          >
+            {{ t("app.topbar.logout") }}
           </button>
         </div>
       </div>

@@ -1,0 +1,20 @@
+export default {
+  inventory: "Disk Inventory",
+  inventoryDescription: "Physical devices, partitions, and detected ZFS membership.",
+  emptyTitle: "No disks discovered",
+  emptyDescription: "The current snapshot did not report any block devices.",
+  detailTitle: "Disk Details",
+  identity: "Identity",
+  filesystemRelation: "Filesystem Relation",
+  columns: {
+    device: "Device",
+    model: "Model",
+    size: "Size",
+    filesystem: "Filesystem",
+    pool: "Pool",
+    path: "Path",
+    type: "Type",
+    partition: "Partition",
+    name: "Name",
+  },
+};

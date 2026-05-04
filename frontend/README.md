@@ -1,69 +1,62 @@
 # Frontend
 
-The frontend uses Vue 3 single-file components on top of Vite, `vue-router`, Pinia, and `vue-i18n`.
-It consumes backend snapshots, renders the storage UI, and keeps risky write flows explicit and reviewable.
+前端使用 Vue 3 单文件组件，运行在 Vite、`vue-router`、Pinia 和 `vue-i18n` 之上。
+它负责消费后端快照、渲染存储管理界面，并把高风险写操作包装成清晰可确认的流程。
 
 ## Main Views
 
 - `Dashboard`
-  - live summary cards and pool health overview
+  - 实时摘要卡片和健康概览
 - `Disks`
-  - disk inventory, partitions, filesystem labels, and pool membership
+  - 磁盘清单、分区、文件系统标签和 pool 归属
 - `Pools`
-  - pool overview, topology browser, property editing, create/remove/destroy flows
+  - pool 概览、拓扑浏览、属性编辑、创建、移除和销毁
 - `Datasets`
-  - dataset and zvol tree inventory, snapshot toggle, property editing, create/destroy flows
+  - dataset / zvol 树、snapshot 切换、属性编辑、创建和销毁
+- `Settings`
+  - 后端 SSH、轮询与网页登录设置
 
 ## Current Architecture
 
 - `src/App.vue`
-  - application shell, sidebar, topbar, and routed page outlet
+  - 应用壳，负责根据登录状态显示登录页或主界面
 - `src/components/app`
-  - shell components including the refresh action and locale switcher
+  - 壳层组件，包括侧边栏、顶栏、登录门禁
 - `src/components/common`
-  - shared drawer, dialog, property, and command-result primitives
+  - 通用抽屉、对话框、属性编辑和命令结果组件
 - `src/components/pools`
-  - pool-only list, drawer, topology, and create workflow components
+  - pool 专用列表、抽屉、拓扑和创建流程组件
 - `src/components/datasets`
-  - dataset-only tree, drawer, and create workflow components
+  - dataset 专用树、抽屉和创建流程组件
 - `src/i18n/index.js`
-  - locale bootstrap, browser-language detection, and local storage persistence
+  - 语言初始化、浏览器语言识别、本地持久化
 - `src/i18n/messages.js`
-  - translation resources grouped by module such as `app`, `routes`, `common`, `dashboard`, `pools`, and `datasets`
-- `src/router/index.js`
-  - router bootstrap using `createWebHashHistory()`
+  - 总翻译入口，聚合各语言资源
+- `src/i18n/messages/en-US/` 与 `src/i18n/messages/zh-CN/`
+  - 按模块拆分的翻译资源
 - `src/router/routes.js`
-  - top-level route metadata and component mapping using `labelKey` and `descriptionKey`
+  - 顶层路由元数据，使用翻译 key 而不是直接写文案
 - `src/stores/app.js`
-  - Pinia app store for WebSocket lifecycle, snapshots, and refresh actions
+  - WebSocket 生命周期、快照缓存、认证状态、刷新动作
 - `src/services/api.js`
-  - REST write operations for pools and datasets
+  - REST 写请求、设置接口和认证接口
 - `src/store/state.js`
-  - compatibility adapter that exposes the old `useAppState()` shape while delegating to Pinia and the API service
-- `src/views/PoolsView.vue`
-  - pool page container, live snapshot rebinding, create wizard orchestration, and write actions
-- `src/views/DatasetsView.vue`
-  - dataset page container, live snapshot rebinding, and write orchestration
-- `src/styles.css`
-  - shared layout, table, drawer, dialog, locale switcher, and responsive styles
+  - 兼容旧 `useAppState()` 形状的适配层
 
 ## Internationalization Notes
 
-- The app currently ships with `en-US` and `zh-CN`.
-- First load chooses Chinese for `zh*` browser languages and English otherwise.
-- User locale changes are persisted in `localStorage`, so refreshes keep the selected language.
-- The topbar locale switcher lives to the left of the `Refresh` button.
-- New visible UI copy should use translation keys instead of hardcoded strings.
-- Route metadata now stores keys, not raw labels, so shell navigation stays reactive when the locale changes.
+- 当前支持 `en-US` 和 `zh-CN`
+- 首次加载按浏览器语言选择中英文
+- 用户语言选择会写入 `localStorage`
+- 文案资源已经按语言加模块拆分，后续扩展新页面时优先往对应模块中追加
+- 新的可见文案应优先走 `useI18n()`，避免直接硬编码
 
-## Interaction Rules
+## Authentication Notes
 
-- Every destructive or high-risk action must go through an explicit confirmation dialog.
-- Submissions should show a clear loading state.
-- Results should include both a human summary and SSH command log details when available.
-- After write actions, the frontend should re-sync using `/api/state` or `/api/state/refresh`.
-- Live snapshot updates must not overwrite in-progress form edits; page containers keep dirty-draft guards for this.
-- Locale changes should update visible shell and page copy without requiring a route reload.
+- 网页密码登录默认关闭
+- 开启后，前端会先请求 `/api/auth/status`
+- 未登录时显示 `AppLoginGate.vue`
+- 登录成功后再建立 WebSocket 连接并进入主界面
 
 ## Development
 

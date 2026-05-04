@@ -9,10 +9,12 @@ ZFS-Manager/
 |   |   |-- schemas/
 |   |   |-- services/
 |   |   `-- ssh/
+|   |-- config/
+|   |   |-- config.example.json
+|   |   `-- config.json
 |   |-- scripts/
 |   |-- tests/
 |   |   `-- fixtures/
-|   |-- config.example.json
 |   |-- README.md
 |   `-- requirements.txt
 |-- frontend/
@@ -23,6 +25,9 @@ ZFS-Manager/
 |   |   |   |-- datasets/
 |   |   |   `-- pools/
 |   |   |-- i18n/
+|   |   |   `-- messages/
+|   |   |       |-- en-US/
+|   |   |       `-- zh-CN/
 |   |   |-- lib/
 |   |   |-- router/
 |   |   |-- services/
@@ -42,38 +47,45 @@ ZFS-Manager/
 `-- README.md
 ```
 
-## Frontend Refactor Notes
+## Frontend Notes
 
-- `frontend/src/views/PoolsView.vue`
-  - page container for pool selection, dialog state, live snapshot rebinding, and API calls
-- `frontend/src/views/DatasetsView.vue`
-  - page container for dataset selection, tree expansion, dialog state, and API calls
-- `frontend/src/components/common/`
-  - reusable property editors, result lists, command logs, plus shared drawer/dialog shells
-- `frontend/src/components/pools/`
-  - list panel, detail drawer, topology drawer, create wizard, dialog bundle, and config
-- `frontend/src/components/datasets/`
-  - tree table, detail drawer, create drawer, dialog bundle, and config
-- `frontend/src/i18n/`
-  - locale selection logic and translation bundles for English and Simplified Chinese
+- `frontend/src/views/SettingsView.vue`
+  - 后端设置页，负责加载、编辑、保存、重载和 SSH 测试
+- `frontend/src/components/app/AppLoginGate.vue`
+  - 网页密码登录界面
+- `frontend/src/App.vue`
+  - 根据登录状态决定显示登录页还是主应用壳
+- `frontend/src/i18n/messages/`
+  - 翻译资源已经按语言和模块拆分
+  - 每种语言下包含 `app`、`routes`、`common`、`dashboard`、`disks`、`pools`、`datasets`、`settings`、`properties`、`login`
+
+## Backend Notes
+
+- `backend/config/`
+  - 当前正式配置目录
+- `backend/app/core/config.py`
+  - 配置加载、保存、路径解析和环境变量覆盖
+- `backend/app/core/auth.py`
+  - 轻量登录态处理
+- `backend/app/api/rest.py`
+  - 状态接口、设置接口、认证接口和各类 ZFS 写接口
+- `backend/app/main.py`
+  - 应用启动、CORS 与认证中间件
 
 ## Related Hotspots
 
-- Pool writes
-  - `backend/app/services/pool_creator.py`
-  - `backend/app/services/topology_updater.py`
-  - `backend/app/services/pool_destroyer.py`
-  - `backend/app/services/pool_remover.py`
-- Dataset writes
-  - `backend/app/services/dataset_creator.py`
-  - `backend/app/services/dataset_property_updater.py`
-  - `backend/app/services/dataset_destroyer.py`
-- Frontend state and API
+- 配置与认证
+  - `backend/app/core/config.py`
+  - `backend/app/core/auth.py`
+  - `backend/app/api/rest.py`
+  - `backend/app/main.py`
+- 前端状态与登录门禁
   - `frontend/src/stores/app.js`
   - `frontend/src/store/state.js`
-  - `frontend/src/services/api.js`
-- Frontend internationalization
+  - `frontend/src/App.vue`
+  - `frontend/src/components/app/AppLoginGate.vue`
+- 前端国际化
   - `frontend/src/i18n/index.js`
   - `frontend/src/i18n/messages.js`
-  - `frontend/src/router/routes.js`
-  - `frontend/src/components/app/AppTopbar.vue`
+  - `frontend/src/i18n/messages/en-US/`
+  - `frontend/src/i18n/messages/zh-CN/`

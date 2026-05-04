@@ -1,0 +1,20 @@
+export default {
+  summary: {
+    disks: "磁盘",
+    pools: "存储池",
+    capacity: "容量",
+    datasets: "数据集",
+    allHealthy: "全部健康",
+    unhealthyCount: "{count} 个异常",
+    freeValue: "空闲 {value}",
+    disksDiscovered: "发现 {count} 块磁盘",
+  },
+  poolCapacity: "存储池容量",
+  poolCapacityDescription: "实时展示存储池使用率与健康状态。",
+  healthOverview: "健康概览",
+  healthOverviewDescription: "来自实时快照的存储池与磁盘状态。",
+  usedValue: "已用 {value}",
+  freeValue: "空闲 {value}",
+  fragmentationValue: "碎片率 {value}",
+  dedupValue: "去重比 {value}",
+};

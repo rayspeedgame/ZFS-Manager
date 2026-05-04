@@ -1,14 +1,16 @@
 # components/app
 
-Application shell components.
+应用壳层组件。
 
 ## Files
 
-- `AppSidebar.vue`: primary navigation
-- `AppTopbar.vue`: top status area and global refresh action
-- `StatusBadge.vue`: compact status pill
+- `AppSidebar.vue`: 主导航
+- `AppTopbar.vue`: 顶部状态区、语言切换、刷新和退出登录
+- `AppLoginGate.vue`: 网页密码登录界面
+- `StatusBadge.vue`: 紧凑状态标记
 
 ## Notes
 
-- `AppTopbar.vue` shows WebSocket state, backend source state, last success time, and data age.
-- The topbar `Refresh` action triggers the backend full refresh path rather than only reading cached state.
+- `AppTopbar.vue` 展示 WebSocket 状态、后端数据源状态、上次成功时间和数据时效
+- 顶栏的 `Refresh` 会触发后端全量刷新，而不是只读取缓存
+- `AppLoginGate.vue` 只在开启网页登录且当前未认证时显示

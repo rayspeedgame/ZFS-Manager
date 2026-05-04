@@ -1,12 +1,14 @@
 # store
 
-Compatibility adapter layer.
+兼容适配层。
 
 ## Files
 
-- `state.js`: exposes the historical `useAppState()` interface while delegating to the new Pinia store and API service layer
+- `state.js`
+  - 暴露历史上的 `useAppState()` 接口
+  - 内部委托给新的 Pinia store 和 API service
 
 ## Notes
 
-- Transport-layer connection state is still separate from backend snapshot source state in `snapshot.meta`.
-- New code should prefer `src/stores/app.js` for snapshot lifecycle and `src/services/api.js` for write requests.
+- 传输层连接状态仍然独立于 `snapshot.meta` 中的后端数据源状态
+- 新代码优先直接使用 `src/stores/app.js` 与 `src/services/api.js`

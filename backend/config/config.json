@@ -1,0 +1,28 @@
+{
+  "poller": {
+    "mode": "ssh",
+    "interval_seconds": 5,
+    "fallback_to_fixture": false,
+    "tick_seconds": 1,
+    "pools_interval_seconds": 10,
+    "datasets_interval_seconds": 15,
+    "disks_interval_seconds": 60,
+    "properties_interval_seconds": 120
+  },
+  "ssh": {
+    "host": "192.168.10.128",
+    "username": "root",
+    "port": 22,
+    "password": "testtest",
+    "key_files": [],
+    "known_hosts": null,
+    "connect_timeout": 10.0,
+    "command_timeout": 30.0,
+    "keepalive_interval": 30.0,
+    "keepalive_count_max": 3
+  },
+  "auth": {
+    "enabled": true,
+    "password": "test"
+  }
+}

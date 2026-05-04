@@ -49,6 +49,34 @@ svg {
   min-height: 100vh;
 }
 
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(9, 15, 31, 0.94));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.login-card h1 {
+  margin: 0;
+}
+
+.login-submit {
+  width: 100%;
+  padding: 12px 16px;
+}
+
 .sidebar {
   padding: 28px 18px;
   border-right: 1px solid rgba(148, 163, 184, 0.14);
@@ -1111,6 +1139,36 @@ svg {
   gap: 14px 16px;
 }
 
+.settings-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-subpanel {
+  padding: 0;
+  border: 0;
+  background: rgba(14, 23, 43, 0.92);
+}
+
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.settings-form-span-2 {
+  grid-column: span 2;
+}
+
+.settings-textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.form-field-checkbox {
+  align-content: start;
+}
+
 .form-field {
   display: grid;
   gap: 6px;
@@ -1271,7 +1329,7 @@ svg {
   }
 
   .nav-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .summary-grid {
@@ -1310,7 +1368,12 @@ svg {
   .split-list,
   .detail-grid,
   .pool-expand-shell,
-  .topology-form-grid {
+  .topology-form-grid,
+  .settings-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-form-span-2 {
+    grid-column: auto;
   }
 }

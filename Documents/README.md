@@ -1,17 +1,18 @@
 # Documents
 
-This folder keeps project-facing reference notes for maintainers and future contributors.
+这个目录保存面向维护者和后续开发者的项目说明文档。
 
-## Files
+## 文件
 
-- `agent.md`: quick onboarding notes for a new contributor or coding agent
-- `target.md`: current product goals, shipped capabilities, and next steps
-- `ProjectStruction.md`: high-level architecture and responsibility split
-- `ProjectDirectoryStructure.md`: directory map with the current frontend component split
+- `agent.md`: 新协作者或编码代理的快速上手说明
+- `target.md`: 当前产品目标、已完成功能与后续方向
+- `ProjectStruction.md`: 高层架构与职责分层
+- `ProjectDirectoryStructure.md`: 当前目录结构与关键模块分布
 
-## Current Focus
+## 当前关注点
 
-- The frontend now uses a container-plus-components layout for `Pools` and `Datasets`.
-- Shared property editors, command results, and command log UI now live under `frontend/src/components/common/`.
-- Page containers in `frontend/src/views/` own API calls and protect in-progress drafts from live snapshot refreshes.
-- The frontend now has a shared `vue-i18n` layer with English and Simplified Chinese resources plus a persistent topbar language switcher.
+- 后端配置文件已经统一收敛到 `backend/config/`
+- 前端新增了设置页，可直接编辑 SSH、轮询和登录相关配置
+- 后端提供了设置读取、保存、SSH 测试、登录状态、登录与退出接口
+- 前端支持可选密码登录门禁，默认关闭
+- 前端国际化已拆成按语言加按模块的结构，便于后续继续扩展中文和新增页面文案

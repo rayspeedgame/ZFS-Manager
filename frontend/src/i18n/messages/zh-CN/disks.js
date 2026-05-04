@@ -1,0 +1,20 @@
+export default {
+  inventory: "磁盘清单",
+  inventoryDescription: "物理设备、分区以及检测到的 ZFS 归属关系。",
+  emptyTitle: "未发现磁盘",
+  emptyDescription: "当前快照没有返回任何块设备。",
+  detailTitle: "磁盘详情",
+  identity: "标识信息",
+  filesystemRelation: "文件系统关系",
+  columns: {
+    device: "设备",
+    model: "型号",
+    size: "容量",
+    filesystem: "文件系统",
+    pool: "存储池",
+    path: "路径",
+    type: "类型",
+    partition: "分区",
+    name: "名称",
+  },
+};

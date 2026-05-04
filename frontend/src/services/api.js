@@ -8,7 +8,11 @@ async function parsePayload(response) {
 }
 
 async function request(path, init = {}, errorLabel = "Request failed") {
-  const response = await fetch(`${buildApiBaseUrl()}${path}`, init);
+  const response = await fetch(`${buildApiBaseUrl()}${path}`, {
+    // Settings save, login, and state refresh all rely on the backend cookie.
+    credentials: "include",
+    ...init,
+  });
   const payload = await parsePayload(response);
 
   if (!response.ok) {
@@ -16,6 +20,34 @@ async function request(path, init = {}, errorLabel = "Request failed") {
   }
 
   return payload;
+}
+
+export async function getAuthStatus() {
+  return request("/auth/status", {}, "Failed to load auth status");
+}
+
+export async function login(payload) {
+  return request(
+    "/auth/login",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to log in"
+  );
+}
+
+export async function logout() {
+  return request(
+    "/auth/logout",
+    {
+      method: "POST",
+    },
+    "Failed to log out"
+  );
 }
 
 export async function updatePoolProperties(poolName, changes) {
@@ -29,6 +61,38 @@ export async function updatePoolProperties(poolName, changes) {
       body: JSON.stringify({ changes }),
     },
     "Failed to update pool properties"
+  );
+}
+
+export async function getSettings() {
+  return request("/settings", {}, "Failed to load settings");
+}
+
+export async function saveSettings(payload) {
+  return request(
+    "/settings",
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to save settings"
+  );
+}
+
+export async function testSshConnection(payload) {
+  return request(
+    "/settings/test-ssh",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to test SSH connection"
   );
 }
 

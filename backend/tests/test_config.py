@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from app.core.config import AppConfig
+from app.core.config import AppConfig, DEFAULT_EXAMPLE_CONFIG_PATH
 
 
 def test_app_config_accepts_ssh_mode() -> None:
@@ -20,7 +18,7 @@ def test_app_config_accepts_ssh_mode() -> None:
 
 
 def test_example_config_is_valid_json() -> None:
-    config_path = Path(__file__).resolve().parents[1] / "config.example.json"
+    config_path = DEFAULT_EXAMPLE_CONFIG_PATH
     config = AppConfig.model_validate_json(config_path.read_text(encoding="utf-8"))
 
     assert config.poller.mode == "ssh"

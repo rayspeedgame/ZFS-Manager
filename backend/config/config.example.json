@@ -22,5 +22,9 @@
     "command_timeout": 30.0,
     "keepalive_interval": 30.0,
     "keepalive_count_max": 3
+  },
+  "auth": {
+    "enabled": false,
+    "password": null
   }
 }

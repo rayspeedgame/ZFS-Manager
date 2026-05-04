@@ -32,15 +32,27 @@ class PollerSettings(BaseModel):
     properties_interval_seconds: int = 120
 
 
+class AuthSettings(BaseModel):
+    enabled: bool = False
+    password: str | None = None
+
+
 class AppConfig(BaseModel):
     poller: PollerSettings = Field(default_factory=PollerSettings)
     ssh: SSHSettings = Field(default_factory=SSHSettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_DIR = BACKEND_ROOT / "config"
+DEFAULT_CONFIG_PATH = CONFIG_DIR / "config.json"
+DEFAULT_EXAMPLE_CONFIG_PATH = CONFIG_DIR / "config.example.json"
+LEGACY_CONFIG_PATH = BACKEND_ROOT / "config.json"
 
 
 def load_config() -> AppConfig:
-    """Load config from backend/config.json, then apply env var overrides."""
-    backend_root = Path(__file__).resolve().parents[2]
-    config_path = Path(os.environ.get("ZFS_MANAGER_CONFIG", backend_root / "config.json"))
+    """Load config from disk, then apply environment variable overrides."""
+    config_path = resolve_config_path()
 
     data: dict = {}
     if config_path.exists():
@@ -48,6 +60,30 @@ def load_config() -> AppConfig:
 
     config = AppConfig.model_validate(data)
     return _apply_env_overrides(config)
+
+
+def resolve_config_path() -> Path:
+    # Prefer an explicit override, then the managed config directory, and only
+    # fall back to the legacy flat file for older local checkouts.
+    if config_path := os.environ.get("ZFS_MANAGER_CONFIG"):
+        return Path(config_path)
+    if DEFAULT_CONFIG_PATH.exists():
+        return DEFAULT_CONFIG_PATH
+    return LEGACY_CONFIG_PATH
+
+
+def save_config(config: AppConfig) -> Path:
+    config_path = resolve_config_path()
+    # Once the app writes settings itself, keep them in backend/config/ even if
+    # the current runtime had to fall back to the legacy location for reading.
+    if config_path == LEGACY_CONFIG_PATH:
+        config_path = DEFAULT_CONFIG_PATH
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        config.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return config_path
 
 
 def _apply_env_overrides(config: AppConfig) -> AppConfig:
@@ -89,5 +125,10 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
         config.ssh.keepalive_count_max = int(value)
     if value := os.environ.get("ZFS_MANAGER_SSH_KEY_FILES"):
         config.ssh.key_files = [item.strip() for item in value.split(",") if item.strip()]
+
+    if value := os.environ.get("ZFS_MANAGER_AUTH_ENABLED"):
+        config.auth.enabled = value.lower() in {"1", "true", "yes", "on"}
+    if value := os.environ.get("ZFS_MANAGER_AUTH_PASSWORD"):
+        config.auth.password = value
 
     return config

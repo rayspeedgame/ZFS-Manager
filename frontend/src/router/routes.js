@@ -2,6 +2,7 @@ import DashboardView from "../views/DashboardView.vue";
 import DatasetsView from "../views/DatasetsView.vue";
 import DisksView from "../views/DisksView.vue";
 import PoolsView from "../views/PoolsView.vue";
+import SettingsView from "../views/SettingsView.vue";
 
 export const navigationRoutes = [
   {
@@ -39,6 +40,15 @@ export const navigationRoutes = [
     icon: "folder-tree",
     descriptionKey: "routes.datasets.description",
     component: DatasetsView,
+  },
+  {
+    key: "settings",
+    name: "settings",
+    path: "/settings",
+    labelKey: "routes.settings.label",
+    icon: "gear",
+    descriptionKey: "routes.settings.description",
+    component: SettingsView,
   },
 ];
 
