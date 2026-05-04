@@ -476,6 +476,63 @@ svg {
   color: #86efac;
 }
 
+.health-status {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.health-online {
+  color: #86efac;
+}
+
+.health-warning {
+  color: #fcd34d;
+}
+
+.health-offline {
+  color: #fca5a5;
+}
+
+.health-idle {
+  color: #93c5fd;
+}
+
+.health-unknown {
+  color: #94a3b8;
+}
+
+.disk-health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(14, 23, 43, 0.92);
+}
+
+.disk-name {
+  color: #edf5ff;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.disk-model {
+  flex: 1;
+  color: #94a3b8;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-hint {
+  color: #8ea2c4;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
 .split-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
