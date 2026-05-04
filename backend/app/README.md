@@ -1,19 +1,21 @@
 # app
 
-`app/` 是后端主代码目录，负责配置加载、认证、接口暴露、SSH 查询、状态轮询、写操作执行和快照输出。
+> [中文版本](./README.zh-CN.md)
 
-## 子目录职责
+`app/` is the main backend code directory, responsible for configuration loading, authentication, endpoint exposure, SSH queries, state polling, write operation execution, and snapshot output.
 
-- `api/`: REST 和 WebSocket 路由
-- `core/`: 配置、认证、共享状态等基础设施
-- `schemas/`: Pydantic 数据模型
-- `services/`: 轮询器、聚合器和写操作服务
-- `ssh/`: SSH 命令定义、客户端和解析器
+## Subdirectory Responsibilities
 
-## 运行主线
+- `api/`: REST and WebSocket routes
+- `core/`: Configuration, authentication, shared state, and other infrastructure
+- `schemas/`: Pydantic data models
+- `services/`: Pollers, aggregators, and write operation services
+- `ssh/`: SSH command definitions, client, and parsers
 
-- `main.py` 创建 FastAPI 应用，并在生命周期里启动 runtime
-- runtime 持有当前配置和一组长生命周期服务
-- `StatePoller` 负责按计划刷新各类状态并写入 `state_store`
-- 写接口执行命令后统一触发一次强制刷新
-- 设置接口保存后会重建 runtime，让新的配置立即生效
+## Main Execution Flow
+
+- `main.py` creates the FastAPI application and starts the runtime during its lifecycle
+- Runtime holds the current configuration and a set of long-lifecycle services
+- `StatePoller` is responsible for scheduled refresh of various states and writes to `state_store`
+- Write endpoints trigger a forced refresh after executing commands
+- Settings endpoints rebuild the runtime after saving, so new configuration takes effect immediately

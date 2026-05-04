@@ -1,5 +1,7 @@
 # components/datasets
 
+> [中文版本](./README.zh-CN.md)
+
 Dataset-specific workflow components.
 
 ## Files

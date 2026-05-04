@@ -1,9 +1,11 @@
 # scripts
 
-这里放后端开发辅助脚本。
+> [中文版本](./README.zh-CN.md)
 
-## 当前脚本
+Backend development helper scripts.
 
-- `debug_ssh_parser.py`: 用于本地加载 fixture 或命令输出，快速验证 parser 行为
+## Current Scripts
 
-当解析器、拓扑映射或 dataset 层级整理出现问题时，建议先在这里复现样例，再进入业务代码修正。
+- `debug_ssh_parser.py`: For loading fixtures or command output locally to quickly verify parser behavior
+
+When issues arise with parsers, topology mapping, or dataset hierarchy organization, it is recommended to first reproduce the sample here before entering business code fixes.

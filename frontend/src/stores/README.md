@@ -1,16 +1,18 @@
 # stores
 
-Pinia store 放在这里。
+> [中文版本](./README.zh-CN.md)
+
+Pinia stores live here.
 
 ## Files
 
 - `app.js`
-  - WebSocket 生命周期
-  - 快照缓存
-  - 认证状态
-  - 登录、退出、刷新动作
+  - WebSocket lifecycle
+  - Snapshot cache
+  - Auth state
+  - Login, logout, refresh actions
 
 ## Notes
 
-- 这个 store 替代了旧的模块单例状态实现
-- 登录门禁开启时，store 会在认证通过后再建立 WebSocket 连接
+- This store replaces the old module singleton state implementation
+- When login gate is enabled, the store establishes WebSocket connection after auth succeeds

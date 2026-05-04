@@ -1,33 +1,35 @@
 # api
 
-这一层负责把后端内存中的最新快照和控制接口暴露给前端。
+> [中文版本](./README.zh-CN.md)
 
-## 文件说明
+This layer exposes the latest snapshot in backend memory and control endpoints to the frontend.
 
-- `rest.py`: HTTP 接口，提供状态读取、设置管理、认证和写操作入口
-- `ws.py`: WebSocket 推送，用于前端实时更新
+## File Descriptions
 
-## 当前接口约定
+- `rest.py`: HTTP endpoints for state read, settings management, authentication, and write operation entry points
+- `ws.py`: WebSocket push for frontend real-time updates
 
-- `GET /api/state`: 返回完整应用快照
-- `POST /api/state/refresh`: 触发一次全量后端刷新
-- `GET /api/settings`: 读取当前生效配置
-- `PUT /api/settings`: 保存配置并热重载 runtime
-- `POST /api/settings/test-ssh`: 用临时参数测试 SSH 连接，不保存配置
-- `GET /api/auth/status`: 返回是否启用登录，以及当前是否已认证
-- `POST /api/auth/login`: 登录
-- `POST /api/auth/logout`: 退出登录
-- `POST /api/pools/{pool_name}/properties`: 修改 pool 属性
-- `POST /api/pools/{pool_name}/topology`: 新增 topology 设备
-- `POST /api/pools`: 创建 pool
-- `POST /api/pools/{pool_name}/destroy`: 删除 pool
-- `POST /api/pools/{pool_name}/remove`: 移除可删除 topology 目标
-- `POST /api/datasets`: 创建 dataset / zvol
-- `POST /api/datasets/{dataset_name:path}/properties`: 修改 dataset 属性
-- `POST /api/datasets/{dataset_name:path}/destroy`: 删除 dataset
+## Current API Conventions
 
-## 当前约束
+- `GET /api/state`: Returns complete application snapshot
+- `POST /api/state/refresh`: Triggers a full backend refresh
+- `GET /api/settings`: Reads current active configuration
+- `PUT /api/settings`: Saves configuration and hot-reloads runtime
+- `POST /api/settings/test-ssh`: Tests SSH connection with temporary parameters without saving configuration
+- `GET /api/auth/status`: Returns whether login is enabled and current authentication status
+- `POST /api/auth/login`: Login
+- `POST /api/auth/logout`: Logout
+- `POST /api/pools/{pool_name}/properties`: Modify pool properties
+- `POST /api/pools/{pool_name}/topology`: Add topology devices
+- `POST /api/pools`: Create pool
+- `POST /api/pools/{pool_name}/destroy`: Delete pool
+- `POST /api/pools/{pool_name}/remove`: Remove removable topology targets
+- `POST /api/datasets`: Create dataset / zvol
+- `POST /api/datasets/{dataset_name:path}/properties`: Modify dataset properties
+- `POST /api/datasets/{dataset_name:path}/destroy`: Delete dataset
 
-- dataset 路由使用 `{dataset_name:path}`，以支持 `tank/data` 这类多级名称
-- 除公开接口外，其余 `/api/*` 请求都需要通过认证中间件
-- 写操作完成后会主动刷新，尽快把真实主机状态推回前端
+## Current Constraints
+
+- Dataset routes use `{dataset_name:path}` to support multi-level names like `tank/data`
+- All `/api/*` requests except public endpoints require authentication middleware
+- Write operations actively refresh after completion to push real host state back to frontend as soon as possible

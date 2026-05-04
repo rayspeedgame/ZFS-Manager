@@ -1,19 +1,21 @@
 # views
 
-路由级页面组件。
+> [中文版本](./README.zh-CN.md)
+
+Route-level page components.
 
 ## Files
 
-- `DashboardView.vue`: 总览页
-- `DisksView.vue`: 磁盘与分区页
-- `PoolsView.vue`: pool 页面容器，负责列表、抽屉、对话框和拓扑流程
-- `DatasetsView.vue`: dataset 页面容器，负责树视图、抽屉、对话框和创建销毁流程
-- `SettingsView.vue`: 后端设置页，负责配置加载、保存、重载和 SSH 测试
+- `DashboardView.vue`: Overview page
+- `DisksView.vue`: Disks and partitions page
+- `PoolsView.vue`: Pool page container, responsible for list, drawer, dialog, and topology flows
+- `DatasetsView.vue`: Dataset page container, responsible for tree view, drawer, dialog, and create/destroy flows
+- `SettingsView.vue`: Backend settings page, responsible for config loading, save, reload, and SSH test
 
 ## Notes
 
-- `Dashboard` 渲染后端汇总数据
-- `Disks` 支持分区展开和 pool 归属展示
-- `Pools` 将大部分渲染委托给 `components/pools/`
-- `Datasets` 将大部分渲染委托给 `components/datasets/`
-- `Settings` 负责后端连接参数、轮询参数和网页登录设置
+- `Dashboard` renders backend summary data
+- `Disks` supports partition expansion and pool ownership display
+- `Pools` delegates most rendering to `components/pools/`
+- `Datasets` delegates most rendering to `components/datasets/`
+- `Settings` is responsible for backend connection parameters, polling parameters, and web login settings

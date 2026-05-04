@@ -1,16 +1,18 @@
 # services
 
-前端 API 服务层。
+> [中文版本](./README.zh-CN.md)
+
+Frontend API service layer.
 
 ## Files
 
 - `api.js`
-  - pool、dataset 写请求
-  - 设置读取、保存、SSH 测试
-  - 登录状态、登录、退出
-  - 共享 API 基础地址辅助函数
+  - pool, dataset write requests
+  - Settings read, save, SSH test
+  - Login status, login, logout
+  - Shared API base address helper
 
 ## Notes
 
-- 所有请求默认携带 `credentials: "include"`，以便复用后端的登录 cookie
-- 这一层负责把请求路径和 payload 形状与后端 API 对齐
+- All requests carry `credentials: "include"` by default to reuse backend login cookie
+- This layer is responsible for aligning request paths and payload shapes with backend API

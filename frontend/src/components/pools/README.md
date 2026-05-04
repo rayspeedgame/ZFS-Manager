@@ -1,5 +1,7 @@
 # components/pools
 
+> [中文版本](./README.zh-CN.md)
+
 Pool-specific workflow components.
 
 ## Files

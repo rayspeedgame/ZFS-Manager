@@ -1,62 +1,63 @@
 # Frontend
 
-前端使用 Vue 3 单文件组件，运行在 Vite、`vue-router`、Pinia 和 `vue-i18n` 之上。
-它负责消费后端快照、渲染存储管理界面，并把高风险写操作包装成清晰可确认的流程。
+> [中文版本](./README.zh-CN.md)
+
+The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, Pinia, and `vue-i18n`. It is responsible for consuming backend snapshots, rendering the storage management interface, and wrapping high-risk write operations into clear, confirmable flows.
 
 ## Main Views
 
 - `Dashboard`
-  - 实时摘要卡片和健康概览
+  - Real-time summary cards and health overview
 - `Disks`
-  - 磁盘清单、分区、文件系统标签和 pool 归属
+  - Disk inventory, partitions, filesystem labels, and pool ownership
 - `Pools`
-  - pool 概览、拓扑浏览、属性编辑、创建、移除和销毁
+  - Pool overview, topology browsing, property editing, create, remove, and destroy
 - `Datasets`
-  - dataset / zvol 树、snapshot 切换、属性编辑、创建和销毁
+  - Dataset / zvol tree, snapshot toggle, property editing, create and destroy
 - `Settings`
-  - 后端 SSH、轮询与网页登录设置
+  - Backend SSH, polling, and web login settings
 
 ## Current Architecture
 
 - `src/App.vue`
-  - 应用壳，负责根据登录状态显示登录页或主界面
+  - Application shell, decides whether to show login page or main interface based on login status
 - `src/components/app`
-  - 壳层组件，包括侧边栏、顶栏、登录门禁
+  - Shell components including sidebar, topbar, and login gate
 - `src/components/common`
-  - 通用抽屉、对话框、属性编辑和命令结果组件
+  - Common drawer, dialog, property editor, and command result components
 - `src/components/pools`
-  - pool 专用列表、抽屉、拓扑和创建流程组件
+  - Pool-specific list, drawer, topology, and create flow components
 - `src/components/datasets`
-  - dataset 专用树、抽屉和创建流程组件
+  - Dataset-specific tree, drawer, and create flow components
 - `src/i18n/index.js`
-  - 语言初始化、浏览器语言识别、本地持久化
+  - Locale initialization, browser language detection, local persistence
 - `src/i18n/messages.js`
-  - 总翻译入口，聚合各语言资源
-- `src/i18n/messages/en-US/` 与 `src/i18n/messages/zh-CN/`
-  - 按模块拆分的翻译资源
+  - Central translation entry, aggregates language resources
+- `src/i18n/messages/en-US/` and `src/i18n/messages/zh-CN/`
+  - Module-split translation resources
 - `src/router/routes.js`
-  - 顶层路由元数据，使用翻译 key 而不是直接写文案
+  - Top-level route metadata, uses translation keys instead of hardcoded text
 - `src/stores/app.js`
-  - WebSocket 生命周期、快照缓存、认证状态、刷新动作
+  - WebSocket lifecycle, snapshot cache, auth state, and refresh actions
 - `src/services/api.js`
-  - REST 写请求、设置接口和认证接口
+  - REST write requests, settings endpoints, and auth endpoints
 - `src/store/state.js`
-  - 兼容旧 `useAppState()` 形状的适配层
+  - Compatibility adapter for legacy `useAppState()` shape
 
 ## Internationalization Notes
 
-- 当前支持 `en-US` 和 `zh-CN`
-- 首次加载按浏览器语言选择中英文
-- 用户语言选择会写入 `localStorage`
-- 文案资源已经按语言加模块拆分，后续扩展新页面时优先往对应模块中追加
-- 新的可见文案应优先走 `useI18n()`，避免直接硬编码
+- Currently supports `en-US` and `zh-CN`
+- First load selects language based on browser language
+- User language preference is written to `localStorage`
+- Text resources are split by language and module; when extending new pages, prioritize appending to the corresponding module
+- New visible text should preferentially use `useI18n()`, avoid hardcoding
 
 ## Authentication Notes
 
-- 网页密码登录默认关闭
-- 开启后，前端会先请求 `/api/auth/status`
-- 未登录时显示 `AppLoginGate.vue`
-- 登录成功后再建立 WebSocket 连接并进入主界面
+- Web password login is disabled by default
+- When enabled, frontend first requests `/api/auth/status`
+- Shows `AppLoginGate.vue` when not logged in
+- After successful login, establishes WebSocket connection and enters main interface
 
 ## Development
 

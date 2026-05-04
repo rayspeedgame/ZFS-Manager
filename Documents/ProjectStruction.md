@@ -1,5 +1,7 @@
 # Project Structure
 
+> [中文版本](./ProjectStruction.zh-CN.md)
+
 ## Backend
 
 - `app/api`

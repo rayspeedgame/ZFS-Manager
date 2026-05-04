@@ -1,5 +1,7 @@
 # components
 
+> [中文版本](./README.zh-CN.md)
+
 Reusable Vue components live here.
 
 ## Structure

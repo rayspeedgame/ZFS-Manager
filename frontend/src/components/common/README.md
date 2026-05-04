@@ -1,5 +1,7 @@
 # components/common
 
+> [中文版本](./README.zh-CN.md)
+
 Shared base components used across views.
 
 ## Files

@@ -1,5 +1,7 @@
 # Target
 
+> [中文版本](./target.zh-CN.md)
+
 ## Current Product Goal
 
 Build ZFS Manager into a practical web UI for a single host or small home-lab deployment, so an operator can complete common pool and dataset workflows without dropping to the shell for every task.

@@ -1,5 +1,7 @@
 # Agent Guide
 
+> [中文版本](./agent.zh-CN.md)
+
 This note helps a new contributor understand where data comes from, where writes go, and which areas are easiest to break.
 
 ## Stack

@@ -1,58 +1,62 @@
 # ZFS Manager
 
-ZFS Manager 是一个通过 SSH 管理远程 ZFS 主机的 Web 控制台。项目由 FastAPI 后端、Vue 3 前端，以及一组状态轮询与写操作服务组成，目标是把常见的池、数据集、磁盘查看与管理收敛到同一个界面里。
+> [中文版本](./README.zh-CN.md)
 
-## 当前能力
+ZFS Manager is a web console for managing remote ZFS hosts via SSH. The project consists of a FastAPI backend, a Vue 3 frontend, and a set of state polling and write operation services, aiming to consolidate common pool, dataset, and disk viewing and management into a single interface.
 
-- 实时展示 `disks`、`pools`、`datasets` 和总览摘要
-- 通过 WebSocket 推送最新快照，写操作后通过 REST 主动触发强制刷新
-- 查看 pool 拓扑、磁盘 `by-id`、健康状态和可移除目标
-- 修改 pool 属性，新增 topology 设备，创建、删除、移除 pool
-- 在创建 pool 时同时配置 root dataset 属性
-- 管理 dataset / zvol
-  - 树形 inventory
-  - 详情抽屉
-  - 固定属性与可编辑属性分组
-  - 创建、修改、删除
-  - snapshot 可选显示
-- 在网页中编辑后端设置
-  - SSH 连接参数
-  - 轮询频率
-  - 是否允许 SSH 失败后回退到 fixture
-  - SSH 测试连接
-- 可选启用网页登录密码
-  - 默认关闭
-  - 启用后先经过登录页再进入主界面
-- 顶栏支持全量 `force refresh`
-- 内置中英文切换，并持久化用户语言选择
+## Current Capabilities
 
-## 目录
+- Real-time display of `disks`, `pools`, `datasets`, and overview summary
+- WebSocket push for latest snapshots, REST-triggered forced refresh after write operations
+- View pool topology, disk `by-id`, health status, and removable targets
+- Modify pool properties, add topology devices, create, delete, and remove pools
+- Configure root dataset properties when creating a pool
+- Manage datasets / zvols
+  - Tree inventory
+  - Detail drawer
+  - Grouped fixed and editable properties
+  - Create, modify, delete
+  - Optional snapshot display
+- Edit backend settings in the web interface
+  - SSH connection parameters
+  - Polling frequency
+  - Whether to fall back to fixture when SSH fails
+  - SSH connection test
+- Optional web login password
+  - Disabled by default
+  - When enabled, requires login page before accessing the main interface
+- Full `force refresh` support in the top bar
+- Built-in English and Chinese switching with persistent user language preference
 
-- [backend/README.md](./backend/README.md): 后端服务、接口、轮询与 SSH 写入链路
-- [frontend/README.md](./frontend/README.md): 前端视图、组件、登录门禁、设置页与 i18n
-- [Documents/README.md](./Documents/README.md): 项目说明、结构文档与维护说明
+## Contents
 
-## 运行
+- [backend/README.md](./backend/README.md): Backend services, endpoints, polling, and SSH write pipeline
+- [frontend/README.md](./frontend/README.md): Frontend views, components, login gate, settings page, and i18n
+- [Documents/README.md](./Documents/README.md): Project documentation, structure documents, and maintenance notes
 
-后端：
+## Running
+
+Backend:
+
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-前端：
+Frontend:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## 配置
+## Configuration
 
-后端优先从 `backend/config/config.json` 读取配置，示例文件位于 `backend/config/config.example.json`。
+The backend prioritizes reading configuration from `backend/config/config.json`, with the example file located at `backend/config/config.example.json`.
 
-主要配置块：
+Main configuration blocks:
 
 - `poller`
   - `mode`
@@ -64,9 +68,9 @@ npm run dev
   - `disks_interval_seconds`
   - `properties_interval_seconds`
 - `ssh`
-  - 主机、端口、用户名、密码、密钥、known_hosts、超时和 keepalive
+  - host, port, username, password, key, known_hosts, timeout, and keepalive
 - `auth`
   - `enabled`
   - `password`
 
-也支持环境变量覆盖。设置页保存后，后端会写回配置文件并热重载运行时服务。
+Environment variable overrides are also supported. After saving from the settings page, the backend will write back to the config file and hot-reload the runtime services.

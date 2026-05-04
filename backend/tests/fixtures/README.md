@@ -1,11 +1,13 @@
 # fixtures
 
-这里存放后端测试和调试使用的静态样例数据。
+> [中文版本](./README.zh-CN.md)
 
-## 当前用途
+Static sample data for backend testing and debugging.
 
-- 模拟 `lsblk`、`findmnt`、`blkid`
-- 模拟 `zpool` 和 `zfs` 输出
-- 支持解析器测试与调试脚本
+## Current Usage
 
-如果后续新增更复杂的 dataset 树、snapshot 场景或 pool 拓扑，建议优先把真实输出样例补到这里。
+- Simulate `lsblk`, `findmnt`, `blkid`
+- Simulate `zpool` and `zfs` output
+- Support parser testing and debugging scripts
+
+If more complex dataset trees, snapshot scenarios, or pool topologies are added later, it is recommended to prioritize adding real output samples here.

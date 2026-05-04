@@ -1,18 +1,20 @@
 # tests
 
-这里是后端测试目录。
+> [中文版本](./README.zh-CN.md)
 
-## 当前覆盖范围
+Backend test directory.
 
-- `test_api.py`: REST 快照与写接口
-- `test_ws.py`: WebSocket 推送
-- `test_config.py`: 配置读取
-- `test_parser.py`: 命令解析，包含 dataset / snapshot / 多 pool 场景
-- `test_ssh_client.py`: SSH 客户端行为
+## Current Coverage
 
-## 当前测试重点
+- `test_api.py`: REST snapshot and write endpoints
+- `test_ws.py`: WebSocket push
+- `test_config.py`: Configuration read
+- `test_parser.py`: Command parsing, including dataset / snapshot / multi-pool scenarios
+- `test_ssh_client.py`: SSH client behavior
 
-- `AppState(meta, data)` 结构
-- `summary / disks / pools / datasets` 新结构
-- pool / dataset 写操作返回结果格式
-- `zfs list/get` 对 snapshot 的解析
+## Current Test Focus
+
+- `AppState(meta, data)` structure
+- `summary / disks / pools / datasets` new structure
+- Pool / dataset write operation return result format
+- `zfs list/get` parsing for snapshots

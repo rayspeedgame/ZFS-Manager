@@ -1,6 +1,6 @@
 # Project Directory Structure
 
-> [中文版本](./ProjectDirectoryStructure.zh-CN.md)
+> [English Version](./ProjectDirectoryStructure.md)
 
 ```text
 ZFS-Manager/
@@ -49,44 +49,44 @@ ZFS-Manager/
 `-- README.md
 ```
 
-## Frontend Notes
+## 前端说明
 
 - `frontend/src/views/SettingsView.vue`
-  - Backend settings page, handles loading, editing, saving, reloading, and SSH testing
+  - 后端设置页，负责加载、编辑、保存、重载和 SSH 测试
 - `frontend/src/components/app/AppLoginGate.vue`
-  - Web password login interface
+  - 网页密码登录界面
 - `frontend/src/App.vue`
-  - Decides whether to show login page or main application shell based on login status
+  - 根据登录状态决定显示登录页还是主应用壳
 - `frontend/src/i18n/messages/`
-  - Translation resources are split by language and module
-  - Each language includes `app`, `routes`, `common`, `dashboard`, `disks`, `pools`, `datasets`, `settings`, `properties`, `login`
+  - 翻译资源已经按语言和模块拆分
+  - 每种语言下包含 `app`、`routes`、`common`、`dashboard`、`disks`、`pools`、`datasets`、`settings`、`properties`、`login`
 
-## Backend Notes
+## 后端说明
 
 - `backend/config/`
-  - Current active configuration directory
+  - 当前正式配置目录
 - `backend/app/core/config.py`
-  - Configuration loading, saving, path resolution, and environment variable overrides
+  - 配置加载、保存、路径解析和环境变量覆盖
 - `backend/app/core/auth.py`
-  - Lightweight login state handling
+  - 轻量登录态处理
 - `backend/app/api/rest.py`
-  - Status endpoints, settings endpoints, auth endpoints, and various ZFS write endpoints
+  - 状态接口、设置接口、认证接口和各类 ZFS 写接口
 - `backend/app/main.py`
-  - Application startup, CORS, and auth middleware
+  - 应用启动、CORS 与认证中间件
 
-## Related Hotspots
+## 相关热点
 
-- Configuration & Auth
+- 配置与认证
   - `backend/app/core/config.py`
   - `backend/app/core/auth.py`
   - `backend/app/api/rest.py`
   - `backend/app/main.py`
-- Frontend State & Login Gate
+- 前端状态与登录门禁
   - `frontend/src/stores/app.js`
   - `frontend/src/store/state.js`
   - `frontend/src/App.vue`
   - `frontend/src/components/app/AppLoginGate.vue`
-- Frontend i18n
+- 前端国际化
   - `frontend/src/i18n/index.js`
   - `frontend/src/i18n/messages.js`
   - `frontend/src/i18n/messages/en-US/`

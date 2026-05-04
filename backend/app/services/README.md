@@ -1,21 +1,23 @@
 # services
 
-这一层负责后端运行时的核心行为，尤其是轮询、缓存、快照组装和写操作执行。
+> [中文版本](./README.zh-CN.md)
 
-## 文件说明
+This layer is responsible for the core behavior of the backend runtime, especially polling, caching, snapshot assembly, and write operation execution.
 
-- `poller.py`: 调度不同频率的 SSH 刷新任务，维护快照缓存，并生成 `summary / disks / pools / datasets`
-- `pool_creator.py`: 生成并执行原子化 `zpool create`
-- `property_updater.py`: 执行 `zpool set`
-- `topology_updater.py`: 执行 `zpool add`
-- `pool_destroyer.py`: 执行 `zpool destroy`
-- `pool_remover.py`: 执行 `zpool remove`
-- `dataset_creator.py`: 执行 `zfs create`
-- `dataset_property_updater.py`: 执行 `zfs set`
-- `dataset_destroyer.py`: 执行 `zfs destroy`
+## File Descriptions
 
-## 当前设计
+- `poller.py`: Schedules SSH refresh tasks at different frequencies, maintains snapshot cache, and generates `summary / disks / pools / datasets`
+- `pool_creator.py`: Generates and executes atomic `zpool create`
+- `property_updater.py`: Executes `zpool set`
+- `topology_updater.py`: Executes `zpool add`
+- `pool_destroyer.py`: Executes `zpool destroy`
+- `pool_remover.py`: Executes `zpool remove`
+- `dataset_creator.py`: Executes `zfs create`
+- `dataset_property_updater.py`: Executes `zfs set`
+- `dataset_destroyer.py`: Executes `zfs destroy`
 
-- `StatePoller` 按 `pools / datasets / disks / properties` 分频刷新
-- 写接口不直接修改内存快照，而是重新采集真实主机状态
-- dataset 的层级、父子关系和显示顺序由后端统一整理，再传给前端
+## Current Design
+
+- `StatePoller` refreshes at different frequencies for `pools / datasets / disks / properties`
+- Write endpoints do not directly modify in-memory snapshots, but re-collect real host state
+- Dataset hierarchy, parent-child relationships, and display order are uniformly organized by the backend before passing to the frontend

@@ -1,23 +1,25 @@
 # core
 
-这一层放置后端基础设施代码。
+> [中文版本](./README.zh-CN.md)
 
-## 文件说明
+This layer contains backend infrastructure code.
 
-- `config.py`: 配置读取、保存、路径解析和环境变量覆盖
-- `auth.py`: 登录开关判断、cookie 读写和认证检查
-- `state.py`: 保存当前应用快照，供 REST 和 WebSocket 共享
+## File Descriptions
 
-## 配置重点
+- `config.py`: Configuration read, save, path resolution, and environment variable overrides
+- `auth.py`: Login toggle check, cookie read/write, and authentication check
+- `state.py`: Saves current application snapshot for REST and WebSocket sharing
 
-- 默认配置目录是 `backend/config/`
-- 仍兼容旧的 `backend/config.json` 作为回退路径
-- 也支持 `ZFS_MANAGER_CONFIG` 指定自定义配置文件
+## Configuration Focus
 
-主要配置块：
+- Default configuration directory is `backend/config/`
+- Still compatible with legacy `backend/config.json` as fallback path
+- Also supports `ZFS_MANAGER_CONFIG` to specify custom config file
+
+Main configuration blocks:
 
 - `poller`
 - `ssh`
 - `auth`
 
-这些配置允许把高频状态和低频属性分开刷新，也允许通过设置页直接调整连接和登录行为。
+These configurations allow separating high-frequency state and low-frequency property refresh, and also allow directly adjusting connection and login behavior through the settings page.

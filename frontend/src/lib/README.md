@@ -1,9 +1,11 @@
 # lib
 
-这里存放前端工具函数。
+> [中文版本](./README.zh-CN.md)
 
-## 当前内容
+Frontend utility functions live here.
 
-- `formatters.js`: 日期、容量、状态文本等展示辅助格式化
+## Current Contents
 
-这类函数应保持无副作用，尽量只处理展示逻辑，不承担业务推断。
+- `formatters.js`: Display helpers for date, capacity, status text, etc.
+
+Such functions should remain side-effect-free, focusing on display logic rather than business inference.
