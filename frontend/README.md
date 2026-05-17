@@ -2,7 +2,7 @@
 
 > [中文版本](./README.zh-CN.md)
 
-The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, Pinia, and `vue-i18n`. It is responsible for consuming backend snapshots, rendering the storage management interface, and wrapping high-risk write operations into clear, confirmable flows.
+The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, Pinia, and `vue-i18n`. It is responsible for consuming backend snapshots, rendering the storage management interface, exposing recent task history, and wrapping high-risk write operations into clear, confirmable flows.
 
 ## Main Views
 
@@ -13,7 +13,9 @@ The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, P
 - `Pools`
   - Pool overview, topology browsing, property editing, create, remove, and destroy
 - `Datasets`
-  - Dataset / zvol tree, snapshot toggle, property editing, create and destroy
+  - Dataset / zvol tree, snapshot toggle, property editing, create, and destroy
+- `Tasks`
+  - Recent write workflows, task status, progress, and command logs
 - `Settings`
   - Backend SSH, polling, and web login settings
 
@@ -30,7 +32,7 @@ The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, P
 - `src/components/datasets`
   - Dataset-specific tree, drawer, and create flow components
 - `src/i18n/index.js`
-  - Locale initialization, browser language detection, local persistence
+  - Locale initialization, browser language detection, and local persistence
 - `src/i18n/messages.js`
   - Central translation entry, aggregates language resources
 - `src/i18n/messages/en-US/` and `src/i18n/messages/zh-CN/`
@@ -39,8 +41,10 @@ The frontend uses Vue 3 single-file components, running on Vite, `vue-router`, P
   - Top-level route metadata, uses translation keys instead of hardcoded text
 - `src/stores/app.js`
   - WebSocket lifecycle, snapshot cache, auth state, and refresh actions
+- `src/stores/tasks.js`
+  - Task list cache, selected task detail, and periodic refresh logic
 - `src/services/api.js`
-  - REST write requests, settings endpoints, and auth endpoints
+  - REST write requests, task endpoints, settings endpoints, and auth endpoints
 - `src/store/state.js`
   - Compatibility adapter for legacy `useAppState()` shape
 

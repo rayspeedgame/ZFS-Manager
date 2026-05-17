@@ -30,5 +30,6 @@ class DatasetPropertyUpdateResult(BaseModel):
 class DatasetPropertyUpdateResponse(BaseModel):
     dataset: str
     results: list[DatasetPropertyUpdateResult] = Field(default_factory=list)
+    task_id: str | None = None
     refreshed: bool = False
     refresh_error: str | None = None

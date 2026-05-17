@@ -137,6 +137,16 @@ export default {
     errors: "Errors",
     notReported: "Not reported",
   },
+  scrub: {
+    title: "Scrub",
+    description: "Start or stop a pool scrub and watch progress through the task system.",
+    start: "Start Scrub",
+    stop: "Stop Scrub",
+    current: "Current Scan",
+    progress: "Progress",
+    eta: "ETA",
+    state: "State",
+  },
   topologyNode: {
     poolStatus: "Pool status",
   },

@@ -2,19 +2,20 @@
 
 > [English Version](./README.md)
 
-这个目录保存面向维护者和后续开发者的项目说明文档。
+`Documents/` 目录存放面向项目的设计、结构说明和开发路线文档。
 
-## 文件
+## 文件索引
 
-- `agent.md`: 新协作者或编码代理的快速上手说明
-- `target.md`: 当前产品目标、已完成功能与后续方向
-- `ProjectStruction.md`: 高层架构与职责分层
-- `ProjectDirectoryStructure.md`: 当前目录结构与关键模块分布
+- `agent.md`: 面向后续开发者或代理的实现说明与扩展提示
+- `target.md`: 产品目标与当前实现方向
+- `Roadmap.md`: 功能路线图与推荐开发顺序
+- `TaskSystemArchitecture.md`: 任务持久化、恢复与扩展性设计
+- `ProjectStruction.md`: 项目高层结构概览
+- `ProjectDirectoryStructure.md`: 按目录展开的代码结构说明
 
-## 当前关注点
+## 备注
 
-- 后端配置文件已经统一收敛到 `backend/config/`
-- 前端新增了设置页，可直接编辑 SSH、轮询和登录相关配置
-- 后端提供了设置读取、保存、SSH 测试、登录状态、登录与退出接口
-- 前端支持可选密码登录门禁，默认关闭
-- 前端国际化已拆成按语言加按模块的结构，便于后续继续扩展中文和新增页面文案
+- 运行时配置位于 `backend/config/`
+- 后端行为主要围绕 SSH 轮询、REST 写操作和状态刷新展开
+- 前端行为主要围绕视图、状态管理、API 服务和实时状态消费展开
+- 任务系统设计默认将远端 ZFS 状态视为恢复时的主真相源

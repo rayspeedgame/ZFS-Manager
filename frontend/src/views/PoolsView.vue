@@ -34,7 +34,16 @@ export default {
   },
   setup(props) {
     const { t } = useI18n();
-    const { createPool, destroyPool, removePoolTarget, updatePoolProperties, updatePoolTopology, refreshStateOnce } = useAppState();
+    const {
+      createPool,
+      destroyPool,
+      removePoolTarget,
+      updatePoolProperties,
+      updatePoolTopology,
+      refreshStateOnce,
+      startPoolScrub,
+      stopPoolScrub,
+    } = useAppState();
     const selectedPool = ref(null);
     const drawerOpen = ref(false);
     const topologyDrawerOpen = ref(false);
@@ -84,6 +93,9 @@ export default {
     const removeDialogResult = ref(null);
     const removeSubmitting = ref(false);
     const selectedRemovalTarget = ref(null);
+    const scrubSubmitting = ref(false);
+    const scrubSummary = ref("");
+    const scrubError = ref("");
 
     const pools = computed(() => {
       const value = props.state.snapshot.value?.data?.pools;
@@ -195,6 +207,16 @@ export default {
         }),
       }))
     );
+
+    const selectedPoolScrubStatus = computed(() => {
+      const scanStatus = selectedPool.value?.scanStatus || null;
+      const activeScrub = Boolean(scanStatus && scanStatus.kind === "scrub" && scanStatus.active);
+      return {
+        ...(scanStatus || {}),
+        canStart: !activeScrub,
+        canStop: activeScrub,
+      };
+    });
 
     const createPoolPropertyFields = computed(() => Object.entries(CREATE_POOL_PROPERTY_OPTIONS));
     const createPoolRootCommonFields = computed(() => CREATE_ROOT_DATASET_FIELDS.common);
@@ -347,6 +369,8 @@ export default {
       selectedPool.value = pool;
       advancedReadonlyOpen.value = false;
       poolPropertyForce.value = false;
+      scrubSummary.value = "";
+      scrubError.value = "";
       initializeDraft(pool);
       resetDialogState();
       drawerOpen.value = true;
@@ -890,6 +914,46 @@ export default {
       }
     }
 
+    async function triggerScrub(action) {
+      if (!selectedPool.value?.name || scrubSubmitting.value) {
+        return;
+      }
+
+      scrubSubmitting.value = true;
+      scrubSummary.value = "";
+      scrubError.value = "";
+
+      try {
+        const response = action === "stop"
+          ? await stopPoolScrub(selectedPool.value.name)
+          : await startPoolScrub(selectedPool.value.name);
+
+        scrubSummary.value = response.message || "";
+        if (response.refresh_error) {
+          scrubError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
+        }
+
+        await rebindSelectedPool();
+      } catch (error) {
+        scrubError.value = error instanceof Error ? error.message : String(error);
+        try {
+          await refreshStateOnce();
+        } catch {
+          // Keep scrub error as primary.
+        }
+      } finally {
+        scrubSubmitting.value = false;
+      }
+    }
+
+    async function handleStartScrub() {
+      await triggerScrub("start");
+    }
+
+    async function handleStopScrub() {
+      await triggerScrub("stop");
+    }
+
     return {
       advancedReadonlyOpen,
       availableTopologyDevices,
@@ -955,6 +1019,8 @@ export default {
       pools,
       previousCreatePoolStep,
       propertyInput,
+      handleStartScrub,
+      handleStopScrub,
       removeConfirmDialogOpen,
       removeCreatePoolVdev,
       removeDialogError,
@@ -965,11 +1031,15 @@ export default {
       removeTerminalLogLines,
       rootDatasetPropertyInput,
       selectedPool,
+      selectedPoolScrubStatus,
       selectedRemovalTarget,
       setCreatePoolDraft,
       setCreatePoolStep,
       setDraftValues,
       setTopologyDraft,
+      scrubError,
+      scrubSubmitting,
+      scrubSummary,
       submitting,
       terminalLogLines,
       toggleCreatePoolDevice,
@@ -1253,6 +1323,10 @@ function buildSingleCommandLogLines(result, label) {
     <PoolDetailDrawer
       v-model="drawerOpen"
       :selected-pool="selectedPool"
+      :scrub-status="selectedPoolScrubStatus"
+      :scrub-submitting="scrubSubmitting"
+      :scrub-summary="scrubSummary"
+      :scrub-error="scrubError"
       :advanced-readonly-open="advancedReadonlyOpen"
       :pool-property-force="poolPropertyForce"
       :changed-items="changedItems"
@@ -1264,6 +1338,8 @@ function buildSingleCommandLogLines(result, label) {
       @toggle-advanced="advancedReadonlyOpen = !advancedReadonlyOpen"
       @open-confirm="openConfirmDialog"
       @open-destroy="openDestroyPoolConfirmDialog"
+      @start-scrub="handleStartScrub"
+      @stop-scrub="handleStopScrub"
     />
 
     <PoolTopologyDrawer

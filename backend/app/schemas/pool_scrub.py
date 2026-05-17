@@ -3,8 +3,9 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-class PoolDestroyResponse(BaseModel):
+class PoolScrubResponse(BaseModel):
     pool: str
+    action: str
     success: bool
     message: str
     task_id: str | None = None

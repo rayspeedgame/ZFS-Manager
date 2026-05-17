@@ -47,6 +47,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = BACKEND_ROOT / "config"
 DEFAULT_CONFIG_PATH = CONFIG_DIR / "config.json"
 DEFAULT_EXAMPLE_CONFIG_PATH = CONFIG_DIR / "config.example.json"
+DEFAULT_TASK_DB_PATH = CONFIG_DIR / "tasks.sqlite3"
 LEGACY_CONFIG_PATH = BACKEND_ROOT / "config.json"
 
 
@@ -84,6 +85,12 @@ def save_config(config: AppConfig) -> Path:
         encoding="utf-8",
     )
     return config_path
+
+
+def resolve_task_db_path() -> Path:
+    if db_path := os.environ.get("ZFS_MANAGER_TASK_DB"):
+        return Path(db_path)
+    return DEFAULT_TASK_DB_PATH
 
 
 def _apply_env_overrides(config: AppConfig) -> AppConfig:

@@ -66,6 +66,7 @@ class PoolCreateResponse(BaseModel):
     pool: str
     success: bool
     message: str
+    task_id: str | None = None
     command: str | None = None
     exit_status: int | None = None
     stdout: str | None = None

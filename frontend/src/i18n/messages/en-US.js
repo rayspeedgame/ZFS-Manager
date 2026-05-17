@@ -8,6 +8,8 @@ import datasets from "./en-US/datasets.js";
 import settings from "./en-US/settings.js";
 import properties from "./en-US/properties.js";
 import login from "./en-US/login.js";
+import tasks from "./en-US/tasks.js";
+import schedules from "./en-US/schedules.js";
 
 export default {
   app,
@@ -20,4 +22,6 @@ export default {
   settings,
   properties,
   login,
+  tasks,
+  schedules,
 };

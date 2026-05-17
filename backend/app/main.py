@@ -46,6 +46,8 @@ app.add_middleware(
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
+    if request.method == "OPTIONS":
+        return await call_next(request)
     # Keep auth bootstrap and docs public so the frontend can discover whether
     # login is enabled before it tries to open the main application shell.
     public_paths = {

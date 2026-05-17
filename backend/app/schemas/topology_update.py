@@ -53,5 +53,6 @@ class PoolTopologyUpdateResult(BaseModel):
 class PoolTopologyUpdateResponse(BaseModel):
     pool: str
     results: list[PoolTopologyUpdateResult] = Field(default_factory=list)
+    task_id: str | None = None
     refreshed: bool = False
     refresh_error: str | None = None

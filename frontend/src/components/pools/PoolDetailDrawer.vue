@@ -9,6 +9,10 @@ import CommandResultList from "../common/CommandResultList.vue";
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
   selectedPool: { type: Object, default: null },
+  scrubStatus: { type: Object, default: null },
+  scrubSubmitting: { type: Boolean, default: false },
+  scrubSummary: { type: String, default: "" },
+  scrubError: { type: String, default: "" },
   advancedReadonlyOpen: { type: Boolean, default: false },
   poolPropertyForce: { type: Boolean, default: false },
   changedItems: { type: Array, required: true },
@@ -25,6 +29,8 @@ const emit = defineEmits([
   "toggle-advanced",
   "open-confirm",
   "open-destroy",
+  "start-scrub",
+  "stop-scrub",
 ]);
 
 function toMetaMap(items, prefix = "") {
@@ -72,6 +78,53 @@ function toMetaMap(items, prefix = "") {
           grid-class="detail-grid advanced-detail-grid"
         />
       </PropertySection>
+
+      <section class="drawer-section">
+        <div class="drawer-section-header">
+          <div class="scrub-header-copy">
+            <h4>{{ t("pools.scrub.title") }}</h4>
+            <p class="subtle-text">{{ t("pools.scrub.description") }}</p>
+          </div>
+          <div class="inline-action-controls scrub-header-actions">
+            <button
+              type="button"
+              class="ghost-button"
+              :disabled="scrubSubmitting || !(scrubStatus && scrubStatus.canStop)"
+              @click="emit('stop-scrub')"
+            >
+              {{ t("pools.scrub.stop") }}
+            </button>
+            <button
+              type="button"
+              class="primary-button"
+              :disabled="scrubSubmitting || !(scrubStatus && scrubStatus.canStart)"
+              @click="emit('start-scrub')"
+            >
+              {{ t("pools.scrub.start") }}
+            </button>
+          </div>
+        </div>
+        <dl class="detail-grid scrub-detail-grid">
+          <div class="scrub-scan-row">
+            <dt>{{ t("pools.scrub.current") }}</dt>
+            <dd>{{ scrubStatus?.raw || t("pools.quickFacts.notReported") }}</dd>
+          </div>
+          <div>
+            <dt>{{ t("pools.scrub.progress") }}</dt>
+            <dd>{{ scrubStatus?.active ? `${scrubStatus?.progress ?? 0}%` : "-" }}</dd>
+          </div>
+          <div>
+            <dt>{{ t("pools.scrub.eta") }}</dt>
+            <dd>{{ scrubStatus?.eta || "-" }}</dd>
+          </div>
+          <div>
+            <dt>{{ t("pools.scrub.state") }}</dt>
+            <dd>{{ scrubStatus?.active ? t("tasks.status.running") : (scrubStatus?.completed ? t("tasks.status.succeeded") : t("tasks.status.unknown")) }}</dd>
+          </div>
+        </dl>
+        <p v-if="scrubSummary" class="notice-text">{{ scrubSummary }}</p>
+        <p v-if="scrubError" class="error-text">{{ scrubError }}</p>
+      </section>
 
       <PropertySection
         :title="t('pools.editableProperties')"

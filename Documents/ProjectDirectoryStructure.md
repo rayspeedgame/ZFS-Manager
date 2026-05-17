@@ -44,6 +44,7 @@ ZFS-Manager/
 |   |-- README.md
 |   |-- agent.md
 |   |-- target.md
+|   |-- Roadmap.md
 |   |-- ProjectStruction.md
 |   `-- ProjectDirectoryStructure.md
 `-- README.md
@@ -51,6 +52,10 @@ ZFS-Manager/
 
 ## Frontend Notes
 
+- `frontend/src/views/TasksView.vue`
+  - Dedicated task page for recent write workflows, progress, and command logs
+- `frontend/src/stores/tasks.js`
+  - Task list loading, selected task loading, and periodic refresh
 - `frontend/src/views/SettingsView.vue`
   - Backend settings page, handles loading, editing, saving, reloading, and SSH testing
 - `frontend/src/components/app/AppLoginGate.vue`
@@ -59,7 +64,7 @@ ZFS-Manager/
   - Decides whether to show login page or main application shell based on login status
 - `frontend/src/i18n/messages/`
   - Translation resources are split by language and module
-  - Each language includes `app`, `routes`, `common`, `dashboard`, `disks`, `pools`, `datasets`, `settings`, `properties`, `login`
+  - Each language now includes `app`, `routes`, `common`, `dashboard`, `disks`, `pools`, `datasets`, `tasks`, `settings`, `properties`, and `login`
 
 ## Backend Notes
 
@@ -70,7 +75,11 @@ ZFS-Manager/
 - `backend/app/core/auth.py`
   - Lightweight login state handling
 - `backend/app/api/rest.py`
-  - Status endpoints, settings endpoints, auth endpoints, and various ZFS write endpoints
+  - State endpoints, settings endpoints, auth endpoints, ZFS write endpoints, and task endpoints
+- `backend/app/services/task_manager.py`
+  - In-memory task registry used to track recent write workflows
+- `backend/app/schemas/task.py`
+  - Task records, command logs, and task list/detail response models
 - `backend/app/main.py`
   - Application startup, CORS, and auth middleware
 
@@ -81,6 +90,12 @@ ZFS-Manager/
   - `backend/app/core/auth.py`
   - `backend/app/api/rest.py`
   - `backend/app/main.py`
+- Task System
+  - `backend/app/services/task_manager.py`
+  - `backend/app/schemas/task.py`
+  - `backend/app/api/rest.py`
+  - `frontend/src/stores/tasks.js`
+  - `frontend/src/views/TasksView.vue`
 - Frontend State & Login Gate
   - `frontend/src/stores/app.js`
   - `frontend/src/store/state.js`

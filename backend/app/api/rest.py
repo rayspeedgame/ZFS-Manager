@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from app.core.auth import (
     auth_is_enabled,
@@ -19,9 +19,17 @@ from app.schemas.dataset_property_update import DatasetPropertyUpdateRequest, Da
 from app.schemas.pool_create import PoolCreateRequest, PoolCreateResponse
 from app.schemas.pool_destroy import PoolDestroyResponse
 from app.schemas.pool_remove import PoolRemoveRequest, PoolRemoveResponse
+from app.schemas.pool_scrub import PoolScrubResponse
 from app.schemas.property_update import PoolPropertyUpdateRequest, PoolPropertyUpdateResponse
 from app.schemas.settings import SettingsSaveResponse
 from app.schemas.ssh_test import SSHConnectionTestRequest, SSHConnectionTestResponse
+from app.schemas.task import TaskCommandLog, TaskDetailResponse, TaskListResponse
+from app.schemas.task_schedule import (
+    TaskScheduleCreateRequest,
+    TaskScheduleDetailResponse,
+    TaskScheduleListResponse,
+    TaskScheduleUpdateRequest,
+)
 from app.schemas.topology_update import PoolTopologyUpdateRequest, PoolTopologyUpdateResponse
 from app.schemas.zfs_state import AppState
 from app.ssh.client import SSHClient, SSHConfig
@@ -151,6 +159,92 @@ async def force_refresh_state(request: Request) -> AppState:
     return await runtime.poller.refresh_once(force_all=True)
 
 
+@router.get("/tasks", response_model=TaskListResponse, tags=["tasks"])
+async def list_tasks(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status_filter: str | None = Query(default=None),
+) -> TaskListResponse:
+    require_authenticated_request(request)
+    await runtime.task_recovery_service.reconcile_active_tasks(await state_store.get_state())
+    (
+        tasks,
+        total,
+        filtered_total,
+        normalized_page,
+        normalized_page_size,
+        total_pages,
+        running_count,
+        completed_count,
+        failed_count,
+    ) = await runtime.task_manager.list_tasks(page=page, page_size=page_size, status_filter=status_filter)
+    return TaskListResponse(
+        tasks=tasks,
+        total=total,
+        filtered_total=filtered_total,
+        page=normalized_page,
+        page_size=normalized_page_size,
+        total_pages=total_pages,
+        running_count=running_count,
+        completed_count=completed_count,
+        failed_count=failed_count,
+    )
+
+
+@router.get("/tasks/{task_id}", response_model=TaskDetailResponse, tags=["tasks"])
+async def get_task(task_id: str, request: Request) -> TaskDetailResponse:
+    require_authenticated_request(request)
+    await runtime.task_recovery_service.reconcile_active_tasks(await state_store.get_state())
+    task = await runtime.task_manager.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id!r} was not found.")
+    return TaskDetailResponse(task=task)
+
+
+@router.get("/task-schedules", response_model=TaskScheduleListResponse, tags=["tasks"])
+async def list_task_schedules(request: Request) -> TaskScheduleListResponse:
+    require_authenticated_request(request)
+    return TaskScheduleListResponse(schedules=await runtime.task_scheduler.list_schedules())
+
+
+@router.post("/task-schedules", response_model=TaskScheduleDetailResponse, tags=["tasks"])
+async def create_task_schedule(
+    payload: TaskScheduleCreateRequest,
+    request: Request,
+) -> TaskScheduleDetailResponse:
+    require_authenticated_request(request)
+    await _validate_task_schedule_payload(payload)
+    schedule = await runtime.task_scheduler.create_schedule(payload)
+    return TaskScheduleDetailResponse(schedule=schedule)
+
+
+@router.patch("/task-schedules/{schedule_id}", response_model=TaskScheduleDetailResponse, tags=["tasks"])
+async def update_task_schedule(
+    schedule_id: str,
+    payload: TaskScheduleUpdateRequest,
+    request: Request,
+) -> TaskScheduleDetailResponse:
+    require_authenticated_request(request)
+    existing = await runtime.task_scheduler.get_schedule(schedule_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail=f"Task schedule {schedule_id!r} was not found.")
+    await _validate_task_schedule_update(existing.kind, existing.scope_type, existing.scope_name, payload)
+    schedule = await runtime.task_scheduler.update_schedule(schedule_id, payload)
+    if schedule is None:
+        raise HTTPException(status_code=404, detail=f"Task schedule {schedule_id!r} was not found.")
+    return TaskScheduleDetailResponse(schedule=schedule)
+
+
+@router.delete("/task-schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["tasks"])
+async def delete_task_schedule(schedule_id: str, request: Request) -> Response:
+    require_authenticated_request(request)
+    deleted = await runtime.task_scheduler.delete_schedule(schedule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Task schedule {schedule_id!r} was not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/auth/status", response_model=AuthStatusResponse, tags=["auth"])
 async def get_auth_status(request: Request) -> AuthStatusResponse:
     return AuthStatusResponse(
@@ -253,6 +347,15 @@ async def create_pool(payload: PoolCreateRequest) -> PoolCreateResponse:
     state = await state_store.get_state()
     _validate_pool_creation(payload=payload, state=state)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Create pool {payload.name}",
+        kind="pool.create",
+        scope_type="pool",
+        scope_name=payload.name,
+        message="Queued pool creation.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Creating pool {payload.name}...", progress=25)
+
     result = await runtime.pool_creator.create_pool(payload)
 
     refreshed = False
@@ -265,7 +368,20 @@ async def create_pool(payload: PoolCreateRequest) -> PoolCreateResponse:
     except Exception as exc:
         refresh_error = str(exc)
 
-    return result.model_copy(update={"refreshed": refreshed, "refresh_error": refresh_error})
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Pool {payload.name} created.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=payload.name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
 
 
 @router.post(
@@ -280,6 +396,15 @@ async def create_dataset(payload: DatasetCreateRequest) -> DatasetCreateResponse
     state = await state_store.get_state()
     _validate_dataset_creation(payload=payload, state=state)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Create dataset {payload.full_name}",
+        kind="dataset.create",
+        scope_type="dataset",
+        scope_name=payload.full_name,
+        message="Queued dataset creation.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Creating dataset {payload.full_name}...", progress=25)
+
     result = await runtime.dataset_creator.create_dataset(payload)
 
     refreshed = False
@@ -290,7 +415,20 @@ async def create_dataset(payload: DatasetCreateRequest) -> DatasetCreateResponse
     except Exception as exc:
         refresh_error = str(exc)
 
-    return result.model_copy(update={"refreshed": refreshed, "refresh_error": refresh_error})
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Dataset {payload.full_name} created.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=payload.full_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
 
 
 @router.post(
@@ -306,6 +444,15 @@ async def destroy_dataset(dataset_name: str) -> DatasetDestroyResponse:
     dataset = _require_dataset(dataset_name=dataset_name, state=state)
     _validate_dataset_destroy(dataset=dataset)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Destroy dataset {dataset_name}",
+        kind="dataset.destroy",
+        scope_type="dataset",
+        scope_name=dataset_name,
+        message="Queued dataset destroy.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Destroying dataset {dataset_name}...", progress=25)
+
     result = await runtime.dataset_destroyer.destroy_dataset(dataset_name)
 
     refreshed = False
@@ -316,7 +463,20 @@ async def destroy_dataset(dataset_name: str) -> DatasetDestroyResponse:
     except Exception as exc:
         refresh_error = str(exc)
 
-    return result.model_copy(update={"refreshed": refreshed, "refresh_error": refresh_error})
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Dataset {dataset_name} destroyed.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=dataset_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
 
 
 @router.post(
@@ -331,6 +491,15 @@ async def destroy_pool(pool_name: str) -> PoolDestroyResponse:
     state = await state_store.get_state()
     _require_pool(pool_name=pool_name, state=state)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Destroy pool {pool_name}",
+        kind="pool.destroy",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued pool destroy.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Destroying pool {pool_name}...", progress=25)
+
     result = await runtime.pool_destroyer.destroy_pool(pool_name)
 
     refreshed = False
@@ -341,7 +510,20 @@ async def destroy_pool(pool_name: str) -> PoolDestroyResponse:
     except Exception as exc:
         refresh_error = str(exc)
 
-    return result.model_copy(update={"refreshed": refreshed, "refresh_error": refresh_error})
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Pool {pool_name} destroyed.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=pool_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
 
 
 @router.post(
@@ -358,6 +540,20 @@ async def remove_pool_target(
 
     state = await state_store.get_state()
     target = _validate_pool_removal(pool_name=pool_name, payload=payload, state=state)
+
+    task = await runtime.task_manager.create_task(
+        title=f"Remove {payload.command_target} from pool {pool_name}",
+        kind="pool.remove",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued pool topology removal.",
+        metadata={"command_target": payload.command_target},
+    )
+    await runtime.task_manager.mark_running(
+        task.id,
+        message=f"Removing {payload.command_target} from pool {pool_name}...",
+        progress=25,
+    )
 
     result = await runtime.pool_remover.remove_target(
         pool=pool_name,
@@ -376,7 +572,20 @@ async def remove_pool_target(
     except Exception as exc:
         refresh_error = str(exc)
 
-    return result.model_copy(update={"refreshed": refreshed, "refresh_error": refresh_error})
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Removed {payload.command_target} from pool {pool_name}.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=payload.command_target, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
 
 
 @router.post(
@@ -394,6 +603,16 @@ async def update_pool_properties(
     if not payload.changes:
         raise HTTPException(status_code=400, detail="No property changes were provided.")
 
+    task = await runtime.task_manager.create_task(
+        title=f"Update pool properties for {pool_name}",
+        kind="pool.properties",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued pool property update.",
+        metadata={"change_count": len(payload.changes)},
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Updating pool properties for {pool_name}...", progress=25)
+
     results = await runtime.pool_property_updater.apply_pool_changes(pool=pool_name, changes=payload.changes)
 
     refreshed = False
@@ -405,12 +624,158 @@ async def update_pool_properties(
     except Exception as exc:
         refresh_error = str(exc)
 
-    return PoolPropertyUpdateResponse(
+    response = PoolPropertyUpdateResponse(
         pool=pool_name,
+        task_id=task.id,
         results=results,
         refreshed=refreshed,
         refresh_error=refresh_error,
     )
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=all(item.success for item in results) if results else False,
+        message=_build_multi_result_task_message(
+            success_count=sum(1 for item in results if item.success),
+            total_count=len(results),
+            refresh_error=refresh_error,
+            noun="pool properties",
+        ),
+        command_logs=[_task_log_from_multi_result(item.property, item) for item in results],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return response
+
+
+@router.post(
+    "/pools/{pool_name}/scrub/start",
+    response_model=PoolScrubResponse,
+    tags=["pools"],
+)
+async def start_pool_scrub(pool_name: str) -> PoolScrubResponse:
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Pool scrub requires SSH mode.")
+
+    state = await state_store.get_state()
+    pool = _require_pool(pool_name=pool_name, state=state)
+    if _pool_has_active_scrub(pool):
+        raise HTTPException(status_code=400, detail=f"Pool {pool_name!r} already has an active scrub.")
+
+    task = await runtime.task_manager.create_task(
+        title=f"Start scrub for pool {pool_name}",
+        kind="pool.scrub.start",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued scrub start.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Starting scrub for pool {pool_name}...", progress=15, stage="scrub-starting")
+
+    result = await runtime.pool_scrubber.start_scrub(pool_name)
+
+    refreshed = False
+    refresh_error: str | None = None
+    refreshed_state = state
+    try:
+        refreshed_state = await runtime.poller.refresh_once(force_all=True)
+        refreshed = True
+    except Exception as exc:
+        refresh_error = str(exc)
+
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    if not result.success:
+        await runtime.task_manager.mark_finished(
+            task.id,
+            success=False,
+            message=_build_single_result_task_message(
+                success=False,
+                success_text=f"Scrub start submitted for pool {pool_name}.",
+                failure_text=result.message,
+                refresh_error=refresh_error,
+            ),
+            progress=100,
+            stage="failed",
+            command_logs=[_task_log_from_single_result(label=pool_name, result=result)],
+            metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+        )
+    else:
+        await runtime.task_recovery_service.reconcile_active_tasks(refreshed_state)
+        await runtime.task_manager.update_task(
+            task.id,
+            message=(result.message if not refresh_error else f"{result.message} State refresh warning: {refresh_error}"),
+            metadata={
+                "refreshed": refreshed,
+                "refresh_error": refresh_error,
+                "command": result.command,
+                "exit_status": result.exit_status,
+            },
+            command_logs=[_task_log_from_single_result(label=pool_name, result=result)],
+        )
+    return finalized
+
+
+@router.post(
+    "/pools/{pool_name}/scrub/stop",
+    response_model=PoolScrubResponse,
+    tags=["pools"],
+)
+async def stop_pool_scrub(pool_name: str) -> PoolScrubResponse:
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Pool scrub stop requires SSH mode.")
+
+    state = await state_store.get_state()
+    pool = _require_pool(pool_name=pool_name, state=state)
+    if not _pool_has_active_scrub(pool):
+        raise HTTPException(status_code=400, detail=f"Pool {pool_name!r} does not have an active scrub.")
+
+    task = await runtime.task_manager.create_task(
+        title=f"Stop scrub for pool {pool_name}",
+        kind="pool.scrub.stop",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued scrub stop.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Stopping scrub for pool {pool_name}...", progress=20, stage="scrub-stopping")
+
+    result = await runtime.pool_scrubber.stop_scrub(pool_name)
+
+    refreshed = False
+    refresh_error: str | None = None
+    refreshed_state = state
+    try:
+        refreshed_state = await runtime.poller.refresh_once(force_all=True)
+        refreshed = True
+    except Exception as exc:
+        refresh_error = str(exc)
+
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    if not result.success:
+        await runtime.task_manager.mark_finished(
+            task.id,
+            success=False,
+            message=_build_single_result_task_message(
+                success=False,
+                success_text=f"Scrub stop submitted for pool {pool_name}.",
+                failure_text=result.message,
+                refresh_error=refresh_error,
+            ),
+            progress=100,
+            stage="failed",
+            command_logs=[_task_log_from_single_result(label=pool_name, result=result)],
+            metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+        )
+    else:
+        await runtime.task_recovery_service.reconcile_active_tasks(refreshed_state)
+        await runtime.task_manager.update_task(
+            task.id,
+            message=(result.message if not refresh_error else f"{result.message} State refresh warning: {refresh_error}"),
+            metadata={
+                "refreshed": refreshed,
+                "refresh_error": refresh_error,
+                "command": result.command,
+                "exit_status": result.exit_status,
+            },
+            command_logs=[_task_log_from_single_result(label=pool_name, result=result)],
+        )
+    return finalized
 
 
 @router.post(
@@ -431,6 +796,16 @@ async def update_pool_topology(
     state = await state_store.get_state()
     _validate_topology_additions(pool_name=pool_name, payload=payload, state=state)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Update pool topology for {pool_name}",
+        kind="pool.topology",
+        scope_type="pool",
+        scope_name=pool_name,
+        message="Queued pool topology update.",
+        metadata={"addition_count": len(payload.additions)},
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Updating pool topology for {pool_name}...", progress=25)
+
     results = await runtime.pool_topology_updater.apply_pool_additions(
         pool=pool_name,
         additions=payload.additions,
@@ -445,12 +820,26 @@ async def update_pool_topology(
     except Exception as exc:
         refresh_error = str(exc)
 
-    return PoolTopologyUpdateResponse(
+    response = PoolTopologyUpdateResponse(
         pool=pool_name,
+        task_id=task.id,
         results=results,
         refreshed=refreshed,
         refresh_error=refresh_error,
     )
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=all(item.success for item in results) if results else False,
+        message=_build_multi_result_task_message(
+            success_count=sum(1 for item in results if item.success),
+            total_count=len(results),
+            refresh_error=refresh_error,
+            noun="topology additions",
+        ),
+        command_logs=[_task_log_from_multi_result(item.category, item) for item in results],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return response
 
 
 @router.post(
@@ -472,6 +861,16 @@ async def update_dataset_properties(
     dataset = _require_dataset(dataset_name=dataset_name, state=state)
     _validate_dataset_property_changes(dataset=dataset, payload=payload)
 
+    task = await runtime.task_manager.create_task(
+        title=f"Update dataset properties for {dataset_name}",
+        kind="dataset.properties",
+        scope_type="dataset",
+        scope_name=dataset_name,
+        message="Queued dataset property update.",
+        metadata={"change_count": len(payload.changes)},
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Updating dataset properties for {dataset_name}...", progress=25)
+
     results = await runtime.dataset_property_updater.apply_dataset_changes(dataset=dataset_name, changes=payload.changes)
 
     refreshed = False
@@ -482,17 +881,81 @@ async def update_dataset_properties(
     except Exception as exc:
         refresh_error = str(exc)
 
-    return DatasetPropertyUpdateResponse(
+    response = DatasetPropertyUpdateResponse(
         dataset=dataset_name,
+        task_id=task.id,
         results=results,
         refreshed=refreshed,
         refresh_error=refresh_error,
     )
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=all(item.success for item in results) if results else False,
+        message=_build_multi_result_task_message(
+            success_count=sum(1 for item in results if item.success),
+            total_count=len(results),
+            refresh_error=refresh_error,
+            noun="dataset properties",
+        ),
+        command_logs=[_task_log_from_multi_result(item.property, item) for item in results],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return response
 
 
 @router.get("/health", tags=["system"])
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+def _build_single_result_task_message(
+    *,
+    success: bool,
+    success_text: str,
+    failure_text: str,
+    refresh_error: str | None,
+) -> str:
+    message = success_text if success else failure_text
+    if refresh_error:
+        return f"{message} State refresh warning: {refresh_error}"
+    return message
+
+
+def _build_multi_result_task_message(
+    *,
+    success_count: int,
+    total_count: int,
+    refresh_error: str | None,
+    noun: str,
+) -> str:
+    message = f"Applied {success_count}/{total_count} {noun}."
+    if refresh_error:
+        return f"{message} State refresh warning: {refresh_error}"
+    return message
+
+
+def _task_log_from_single_result(*, label: str, result) -> TaskCommandLog:
+    return TaskCommandLog(
+        label=label,
+        success=bool(getattr(result, "success", False)),
+        message=str(getattr(result, "message", "")),
+        command=getattr(result, "command", None),
+        exit_status=getattr(result, "exit_status", None),
+        stdout=getattr(result, "stdout", None),
+        stderr=getattr(result, "stderr", None),
+    )
+
+
+def _task_log_from_multi_result(label: str, result) -> TaskCommandLog:
+    return TaskCommandLog(
+        label=label,
+        success=bool(getattr(result, "success", False)),
+        message=str(getattr(result, "message", "")),
+        command=getattr(result, "command", None),
+        exit_status=getattr(result, "exit_status", None),
+        stdout=getattr(result, "stdout", None),
+        stderr=getattr(result, "stderr", None),
+    )
 
 
 def _validate_topology_additions(
@@ -533,6 +996,60 @@ def _require_pool(*, pool_name: str, state: AppState) -> dict:
     if pool is None:
         raise HTTPException(status_code=404, detail=f"Pool {pool_name!r} was not found in the latest snapshot.")
     return pool
+
+
+def _pool_has_active_scrub(pool: dict) -> bool:
+    scan_status = pool.get("scanStatus") or {}
+    if scan_status.get("kind") == "scrub" and scan_status.get("active"):
+        return True
+    scan = str((pool.get("status") or {}).get("scan") or "").lower()
+    return "scrub in progress" in scan
+
+
+async def _validate_task_schedule_payload(payload: TaskScheduleCreateRequest) -> None:
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Task schedules require SSH mode.")
+    if payload.kind != "pool.scrub.schedule":
+        raise HTTPException(status_code=400, detail=f"Unsupported schedule kind: {payload.kind!r}.")
+    if payload.scope_type != "pool":
+        raise HTTPException(status_code=400, detail="Scheduled scrub currently only supports pool scope.")
+    if payload.schedule_type != "weekly":
+        raise HTTPException(status_code=400, detail=f"Unsupported schedule type: {payload.schedule_type!r}.")
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="A schedule title is required.")
+    if not payload.scope_name.strip():
+        raise HTTPException(status_code=400, detail="A pool name is required for scheduled scrub.")
+    _validate_weekly_pattern_fields(payload.pattern.weekday, payload.pattern.hour, payload.pattern.minute)
+    state = await state_store.get_state()
+    _require_pool(pool_name=payload.scope_name, state=state)
+
+
+async def _validate_task_schedule_update(
+    kind: str,
+    scope_type: str,
+    scope_name: str,
+    payload: TaskScheduleUpdateRequest,
+) -> None:
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Task schedules require SSH mode.")
+    if kind != "pool.scrub.schedule" or scope_type != "pool":
+        raise HTTPException(status_code=400, detail="Only pool scrub schedules can be updated in this version.")
+    if not scope_name:
+        raise HTTPException(status_code=400, detail="Schedule scope is missing a pool name.")
+    state = await state_store.get_state()
+    _require_pool(pool_name=scope_name, state=state)
+    if payload.pattern is None:
+        return
+    _validate_weekly_pattern_fields(payload.pattern.weekday, payload.pattern.hour, payload.pattern.minute)
+
+
+def _validate_weekly_pattern_fields(weekday: int, hour: int, minute: int) -> None:
+    if weekday < 0 or weekday > 6:
+        raise HTTPException(status_code=400, detail="Schedule weekday must be between 0 and 6.")
+    if hour < 0 or hour > 23:
+        raise HTTPException(status_code=400, detail="Schedule hour must be between 0 and 23.")
+    if minute < 0 or minute > 59:
+        raise HTTPException(status_code=400, detail="Schedule minute must be between 0 and 59.")
 
 
 def _require_dataset(*, dataset_name: str, state: AppState) -> dict:

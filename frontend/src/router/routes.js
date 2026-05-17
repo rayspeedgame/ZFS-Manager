@@ -2,7 +2,9 @@ import DashboardView from "../views/DashboardView.vue";
 import DatasetsView from "../views/DatasetsView.vue";
 import DisksView from "../views/DisksView.vue";
 import PoolsView from "../views/PoolsView.vue";
+import SchedulesView from "../views/SchedulesView.vue";
 import SettingsView from "../views/SettingsView.vue";
+import TasksView from "../views/TasksView.vue";
 
 export const navigationRoutes = [
   {
@@ -40,6 +42,24 @@ export const navigationRoutes = [
     icon: "folder-tree",
     descriptionKey: "routes.datasets.description",
     component: DatasetsView,
+  },
+  {
+    key: "schedules",
+    name: "schedules",
+    path: "/schedules",
+    labelKey: "routes.schedules.label",
+    icon: "calendar",
+    descriptionKey: "routes.schedules.description",
+    component: SchedulesView,
+  },
+  {
+    key: "tasks",
+    name: "tasks",
+    path: "/tasks",
+    labelKey: "routes.tasks.label",
+    icon: "pulse",
+    descriptionKey: "routes.tasks.description",
+    component: TasksView,
   },
   {
     key: "settings",

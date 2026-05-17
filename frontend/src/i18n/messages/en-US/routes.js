@@ -15,6 +15,14 @@ export default {
     label: "Datasets",
     description: "Filesystem and volume inventory with inheritance hints.",
   },
+  schedules: {
+    label: "Schedules",
+    description: "Recurring scrub plans and the future scheduling workspace.",
+  },
+  tasks: {
+    label: "Task Records & Status",
+    description: "Paged task records, live execution status, and command history.",
+  },
   settings: {
     label: "Settings",
     description: "Backend connection and refresh configuration.",

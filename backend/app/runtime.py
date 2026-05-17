@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from app.core.config import AppConfig, load_config
+from app.core.config import AppConfig, load_config, resolve_task_db_path
 from app.services.dataset_creator import DatasetCreator
 from app.services.dataset_destroyer import DatasetDestroyer
 from app.services.dataset_property_updater import DatasetPropertyUpdater
 from app.services.pool_creator import PoolCreator
 from app.services.pool_destroyer import PoolDestroyer
 from app.services.pool_remover import PoolRemover
+from app.services.pool_scrubber import PoolScrubber
 from app.services.poller import StatePoller
 from app.services.property_updater import PoolPropertyUpdater
+from app.services.task_manager import TaskManager
+from app.services.task_recovery import TaskRecoveryService, build_default_recovery_registry
+from app.services.task_scheduler import TaskSchedulerService
+from app.services.task_store import SQLiteTaskStore
 from app.services.topology_updater import PoolTopologyUpdater
 
 
@@ -19,9 +24,13 @@ dataset_destroyer: DatasetDestroyer
 pool_creator: PoolCreator
 pool_destroyer: PoolDestroyer
 pool_remover: PoolRemover
+pool_scrubber: PoolScrubber
 pool_property_updater: PoolPropertyUpdater
 dataset_property_updater: DatasetPropertyUpdater
 pool_topology_updater: PoolTopologyUpdater
+task_manager: TaskManager
+task_recovery_service: TaskRecoveryService
+task_scheduler: TaskSchedulerService
 _runtime_started = False
 
 
@@ -33,9 +42,13 @@ def _build_runtime(next_config: AppConfig) -> None:
     global pool_creator
     global pool_destroyer
     global pool_remover
+    global pool_scrubber
     global pool_property_updater
     global dataset_property_updater
     global pool_topology_updater
+    global task_manager
+    global task_recovery_service
+    global task_scheduler
 
     config = next_config
     poller = StatePoller(config)
@@ -44,25 +57,41 @@ def _build_runtime(next_config: AppConfig) -> None:
     pool_creator = PoolCreator(config)
     pool_destroyer = PoolDestroyer(config)
     pool_remover = PoolRemover(config)
+    pool_scrubber = PoolScrubber(config)
     pool_property_updater = PoolPropertyUpdater(config)
     dataset_property_updater = DatasetPropertyUpdater(config)
     pool_topology_updater = PoolTopologyUpdater(config)
+    task_store = SQLiteTaskStore(resolve_task_db_path())
+    task_manager = TaskManager(store=task_store)
+    task_recovery_service = TaskRecoveryService(task_manager, build_default_recovery_registry())
+    task_scheduler = TaskSchedulerService(
+        store=task_store,
+        task_manager=task_manager,
+        task_recovery_service=task_recovery_service,
+        pool_scrubber=pool_scrubber,
+        refresh_state=poller.refresh_once,
+    )
 
 
 async def start_runtime() -> None:
     global _runtime_started
-    await poller.refresh_once()
+    await task_manager.startup()
+    state = await poller.refresh_once()
+    await task_recovery_service.recover_pending_tasks(state)
     await poller.start()
+    await task_scheduler.startup()
     _runtime_started = True
 
 
 async def stop_runtime() -> None:
     global _runtime_started
+    await task_scheduler.shutdown()
     await dataset_creator.close()
     await dataset_destroyer.close()
     await pool_creator.close()
     await pool_destroyer.close()
     await pool_remover.close()
+    await pool_scrubber.close()
     await pool_topology_updater.close()
     await pool_property_updater.close()
     await dataset_property_updater.close()

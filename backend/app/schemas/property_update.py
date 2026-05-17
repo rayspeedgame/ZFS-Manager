@@ -30,5 +30,6 @@ class PoolPropertyUpdateResult(BaseModel):
 class PoolPropertyUpdateResponse(BaseModel):
     pool: str
     results: list[PoolPropertyUpdateResult] = Field(default_factory=list)
+    task_id: str | None = None
     refreshed: bool = False
     refresh_error: str | None = None

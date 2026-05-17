@@ -5,6 +5,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import re
 
 from app.core.config import AppConfig
 from app.core.state import state_store
@@ -591,6 +592,7 @@ def _build_pool_rows(zpool_data: dict, disks: list[dict]) -> list[dict]:
             {
                 **pool,
                 "status": _enrich_topology_status(status, disk_lookup),
+                "scanStatus": _build_scan_status(status.get("scan")),
                 "properties": properties.get(name, {}),
                 "topologySummary": _build_topology_summary(status, disk_lookup),
                 "removalTargets": _build_removal_targets(status, disk_lookup),
@@ -599,6 +601,30 @@ def _build_pool_rows(zpool_data: dict, disks: list[dict]) -> list[dict]:
         )
 
     return rows
+
+
+def _build_scan_status(scan: str | None) -> dict:
+    normalized = str(scan or "").strip()
+    lowered = normalized.lower()
+    progress_match = re.search(r"([0-9]+(?:\.[0-9]+)?)%\s+done", normalized, re.IGNORECASE)
+    eta_match = re.search(r",\s*([^,]+?)\s+to go", normalized, re.IGNORECASE)
+    progress = 0
+    if progress_match:
+        progress = max(0, min(100, int(float(progress_match.group(1)))))
+    elif "repaired" in lowered:
+        progress = 100
+    elif "in progress" in lowered:
+        progress = 15
+
+    return {
+        "raw": normalized or None,
+        "active": "in progress" in lowered,
+        "kind": "scrub" if "scrub" in lowered else ("resilver" if "resilver" in lowered else None),
+        "progress": progress,
+        "eta": eta_match.group(1).strip() if eta_match else None,
+        "completed": "scrub repaired" in lowered or "scrub completed" in lowered,
+        "stopped": "scrub canceled" in lowered or "scrub cancelled" in lowered or "scrub stopped" in lowered,
+    }
 
 
 def _build_dataset_rows(dataset_data: dict) -> list[dict]:

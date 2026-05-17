@@ -50,6 +50,63 @@ export async function logout() {
   );
 }
 
+export async function getTasks({ page = 1, pageSize = 20, statusFilter = "" } = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (statusFilter) {
+    query.set("status_filter", String(statusFilter));
+  }
+  return request(`/tasks?${query.toString()}`, {}, "Failed to load tasks");
+}
+
+export async function getTask(taskId) {
+  return request(`/tasks/${encodeURIComponent(taskId)}`, {}, "Failed to load task");
+}
+
+export async function getTaskSchedules() {
+  return request("/task-schedules", {}, "Failed to load task schedules");
+}
+
+export async function createTaskSchedule(payload) {
+  return request(
+    "/task-schedules",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to create task schedule"
+  );
+}
+
+export async function updateTaskSchedule(scheduleId, payload) {
+  return request(
+    `/task-schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to update task schedule"
+  );
+}
+
+export async function deleteTaskSchedule(scheduleId) {
+  return request(
+    `/task-schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      method: "DELETE",
+    },
+    "Failed to delete task schedule"
+  );
+}
+
 export async function updatePoolProperties(poolName, changes) {
   return request(
     `/pools/${encodeURIComponent(poolName)}/properties`,
@@ -61,6 +118,26 @@ export async function updatePoolProperties(poolName, changes) {
       body: JSON.stringify({ changes }),
     },
     "Failed to update pool properties"
+  );
+}
+
+export async function startPoolScrub(poolName) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/scrub/start`,
+    {
+      method: "POST",
+    },
+    "Failed to start pool scrub"
+  );
+}
+
+export async function stopPoolScrub(poolName) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/scrub/stop`,
+    {
+      method: "POST",
+    },
+    "Failed to stop pool scrub"
   );
 }
 

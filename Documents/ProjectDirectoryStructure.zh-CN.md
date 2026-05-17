@@ -13,7 +13,8 @@ ZFS-Manager/
 |   |   `-- ssh/
 |   |-- config/
 |   |   |-- config.example.json
-|   |   `-- config.json
+|   |   |-- config.json
+|   |   `-- tasks.sqlite3
 |   |-- scripts/
 |   |-- tests/
 |   |   `-- fixtures/
@@ -44,6 +45,8 @@ ZFS-Manager/
 |   |-- README.md
 |   |-- agent.md
 |   |-- target.md
+|   |-- Roadmap.md
+|   |-- TaskSystemArchitecture.md
 |   |-- ProjectStruction.md
 |   `-- ProjectDirectoryStructure.md
 `-- README.md
@@ -51,43 +54,55 @@ ZFS-Manager/
 
 ## 前端说明
 
-- `frontend/src/views/SettingsView.vue`
-  - 后端设置页，负责加载、编辑、保存、重载和 SSH 测试
-- `frontend/src/components/app/AppLoginGate.vue`
-  - 网页密码登录界面
-- `frontend/src/App.vue`
-  - 根据登录状态决定显示登录页还是主应用壳
-- `frontend/src/i18n/messages/`
-  - 翻译资源已经按语言和模块拆分
-  - 每种语言下包含 `app`、`routes`、`common`、`dashboard`、`disks`、`pools`、`datasets`、`settings`、`properties`、`login`
+- `frontend/src/views/TasksView.vue`
+  - 最近写操作和长任务的统一任务页
+- `frontend/src/views/PoolsView.vue`
+  - pool 概览、拓扑、属性编辑，以及 `scrub` 入口
+- `frontend/src/components/pools/PoolDetailDrawer.vue`
+  - 池详情抽屉，包含 `scrub` 状态、开始/停止按钮和属性编辑
+- `frontend/src/stores/tasks.js`
+  - 任务列表、详情和自动刷新
+- `frontend/src/services/api.js`
+  - 包含 pool / dataset 写接口、任务接口、以及 `scrub` 接口
 
 ## 后端说明
 
-- `backend/config/`
-  - 当前正式配置目录
+- `backend/config/tasks.sqlite3`
+  - 当前任务持久化数据库
 - `backend/app/core/config.py`
-  - 配置加载、保存、路径解析和环境变量覆盖
-- `backend/app/core/auth.py`
-  - 轻量登录态处理
+  - 配置加载、保存，以及任务数据库路径解析
+- `backend/app/services/task_store.py`
+  - `SQLite` 任务持久化层
+- `backend/app/services/task_manager.py`
+  - 内存运行态任务管理器
+- `backend/app/services/task_recovery.py`
+  - 任务恢复注册表和恢复服务
+- `backend/app/services/pool_scrubber.py`
+  - `zpool scrub` / `zpool scrub -s` 执行器
+- `backend/app/schemas/pool_scrub.py`
+  - `scrub` 请求响应模型
 - `backend/app/api/rest.py`
-  - 状态接口、设置接口、认证接口和各类 ZFS 写接口
-- `backend/app/main.py`
-  - 应用启动、CORS 与认证中间件
+  - 状态、设置、认证、任务接口，以及 `scrub` 启停接口
+- `backend/app/services/poller.py`
+  - 为每个 pool 生成结构化 `scanStatus`
 
 ## 相关热点
 
+- 任务系统
+  - `backend/app/services/task_store.py`
+  - `backend/app/services/task_manager.py`
+  - `backend/app/services/task_recovery.py`
+  - `backend/app/schemas/task.py`
+  - `frontend/src/stores/tasks.js`
+  - `frontend/src/views/TasksView.vue`
+- scrub
+  - `backend/app/services/pool_scrubber.py`
+  - `backend/app/schemas/pool_scrub.py`
+  - `backend/app/api/rest.py`
+  - `backend/app/services/poller.py`
+  - `frontend/src/views/PoolsView.vue`
+  - `frontend/src/components/pools/PoolDetailDrawer.vue`
 - 配置与认证
   - `backend/app/core/config.py`
   - `backend/app/core/auth.py`
-  - `backend/app/api/rest.py`
   - `backend/app/main.py`
-- 前端状态与登录门禁
-  - `frontend/src/stores/app.js`
-  - `frontend/src/store/state.js`
-  - `frontend/src/App.vue`
-  - `frontend/src/components/app/AppLoginGate.vue`
-- 前端国际化
-  - `frontend/src/i18n/index.js`
-  - `frontend/src/i18n/messages.js`
-  - `frontend/src/i18n/messages/en-US/`
-  - `frontend/src/i18n/messages/zh-CN/`

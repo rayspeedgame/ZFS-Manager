@@ -2,7 +2,7 @@
 
 > [中文版本](./README.zh-CN.md)
 
-The backend is responsible for three things: collecting remote host state, normalizing raw command output into unified snapshots, and executing ZFS/ZPool write operations with forced state refresh afterward.
+The backend is responsible for four things: collecting remote host state, normalizing raw command output into unified snapshots, executing ZFS/ZPool write operations, and recording operator-visible tasks for those workflows.
 
 ## Main Responsibilities
 
@@ -18,14 +18,15 @@ The backend is responsible for three things: collecting remote host state, norma
   - Settings read, save, and SSH test
   - Login status, login, and logout
   - Pool and dataset write operations
+  - Task list and task detail
 - Push latest snapshots via WebSocket
 
 ## Directory Structure
 
 - `app/api/`: REST and WebSocket entry points
 - `app/core/`: Configuration, auth, shared state, and other infrastructure
-- `app/schemas/`: Pydantic request, response, and snapshot models
-- `app/services/`: Polling, state aggregation, and write operation execution
+- `app/schemas/`: Pydantic request, response, snapshot, and task models
+- `app/services/`: Polling, state aggregation, write operation execution, and task registration
 - `app/ssh/`: SSH client, command definitions, and parsers
 - `config/`: Current active configuration directory
 - `tests/fixtures/`: Fixture mode input samples
@@ -34,8 +35,9 @@ The backend is responsible for three things: collecting remote host state, norma
 
 - `StatePoller` refreshes at different frequencies for `pools / datasets / disks / properties`
 - Write operations uniformly call `poller.refresh_once(force_all=True)` upon completion
+- `TaskManager` records recent write workflows in memory for operator visibility
 - Settings save hot-reloads the runtime instead of requiring manual backend restart
-- Auth is lightweight cookie-based login, disabled by default, can be enabled via settings page
+- Auth is lightweight cookie-based login, disabled by default, and can be enabled via the settings page
 
 ## Startup
 

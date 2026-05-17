@@ -8,6 +8,8 @@ import datasets from "./zh-CN/datasets.js";
 import settings from "./zh-CN/settings.js";
 import properties from "./zh-CN/properties.js";
 import login from "./zh-CN/login.js";
+import tasks from "./zh-CN/tasks.js";
+import schedules from "./zh-CN/schedules.js";
 
 export default {
   app,
@@ -20,4 +22,6 @@ export default {
   settings,
   properties,
   login,
+  tasks,
+  schedules,
 };
