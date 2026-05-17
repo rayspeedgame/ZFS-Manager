@@ -4,68 +4,80 @@
 
 ## Current Product Goal
 
-Build ZFS Manager into a practical web UI for a single host or small home-lab deployment, so an operator can complete common pool and dataset workflows without dropping to the shell for every task.
+Build ZFS Manager into a practical ZFS web interface for single-node or small lab environments, so operators can complete common pool, dataset, task, and scheduling workflows without constantly dropping to the CLI.
 
-## Shipped Capabilities
+## Delivered Capabilities
 
 ### Pool workflows
 
-- Pool status and health overview
-- Editable pool properties
+- Pool health, capacity, and status overview
 - Topology visualization
-- Add devices to `log`, `cache`, `special`, `dedup`, and `spare`
-- Create a new pool with:
+- Editable pool properties
+- Add `log`, `cache`, `special`, `dedup`, and `spare` devices
+- Create new pools with:
   - pool properties
   - root dataset properties
-  - staged data vdev planning
-  - staged auxiliary vdev planning
-- Destroy a pool
+  - step-based data-vdev and auxiliary-vdev planning
+- Destroy pools
 - Remove supported topology targets
-- Prefer stable by-id presentation when available
+- Start and stop `scrub`
+- Show current pool `scan` / `scrub` status, progress, and ETA inside pool details
 
 ### Dataset workflows
 
 - Dataset and zvol inventory
 - Expandable dataset tree
-- Optional snapshot display
+- Optional snapshot visibility
 - Create dataset and zvol children
 - Edit dataset properties
 - Destroy dataset and zvol entries
 
-### Task workflows
+### Task and schedule workflows
 
-- Dedicated task page for recent write operations
-- Shared task model for pool and dataset write requests
-- Task status, progress, stage, timestamps, and command logs
-- Task detail endpoint for deeper inspection of a single operation
+- Dedicated task records page for recent write operations and long-running workflows
+- Unified task model for pool and dataset writes
+- Task detail view with status, progress, stage, timestamps, and command logs
+- SQLite-backed task persistence
+- Startup recovery for recent unfinished tasks
+- `scrub` progress recovery based on `zpool status`
+- Dedicated schedules page for recurring tasks
+- Weekly scheduled `scrub` definitions with enable, disable, and delete actions
+- Placeholder panel reserved for future scheduled snapshot workflows
+- Paged task records with page-size controls and status filtering
 
 ### UI capabilities
 
-- English and Simplified Chinese locale switching
-- Browser-language based first-load locale detection
-- Persisted locale preference in the frontend
-- Translated shell navigation, dashboard, pool workflows, dataset workflows, task workflows, dialogs, and command-result panels
+- English and Chinese language switching
+- Initial locale detection from browser language
+- Local persistence of user language preference
+- Translated navigation, dashboard, pools, datasets, schedules, task records, settings, and dialog copy
 
 ## Frontend Direction
 
-- `PoolsView` and `DatasetsView` are page containers instead of giant all-in-one templates.
-- `TasksView` is the shared visibility layer for recent write workflows and their logs.
-- Shared property editors, command results, and command logs are centralized under `frontend/src/components/common/`.
-- Pool-specific and dataset-specific workflow UIs live under their own component folders.
-- Live snapshot refreshes should update visible data without wiping in-progress edits.
-- User-visible frontend copy should be sourced from translation keys so new locales can be added without refactoring the shell or views.
+- `PoolsView` and `DatasetsView` remain page containers
+- `TasksView` is the shared visibility layer for task records, long-running workflows, and command logs
+- `SchedulesView` owns recurring workflow definitions such as scheduled `scrub`
+- Pool details in `PoolsView` now carry the `scrub` controls and live status summary
+- Shared property editors, dialogs, command-result views, and utility panels remain in `frontend/src/components/common/`
+- User-visible text should continue to flow through i18n keys
 
 ## Backend Direction
 
-- Write operations now register operator-visible tasks before and after command execution.
-- The task system is currently in-memory and intentionally lightweight.
-- Future long-running workflows such as scrub, snapshot scheduling, replace, and expansion should build on the same task model.
+- Write operations continue to register operator-visible tasks uniformly
+- The task system currently uses an in-memory runtime plus SQLite persistence model
+- Startup order is:
+  1. load persisted task history
+  2. refresh remote state
+  3. reconcile unfinished tasks
+  4. start background polling and scheduling
+- `scrub` is the first fully connected long-running workflow that participates in recovery
+- Scheduled workflows now go through the same task infrastructure instead of bypassing it
+- Future `replace`, `resilver`, `expansion`, and snapshot schedules should reuse the same recovery model
 
 ## Next Steps
 
-- Persist task history beyond process restart when needed
-- Add more topology actions such as `replace`, `detach`, and `offline/online`
-- Expand SMART and disk-health integration
-- Add finer-grained permission handling
-- Continue splitting large workflow logic into smaller composable units where it improves clarity
-- Expand locale coverage for any future frontend additions as they are introduced
+- Move active-task reconciliation further into background polling, not only task reads
+- Add more pool-level long-running recoverers, starting with `replace/resilver`
+- Fill in snapshot scheduling and retention logic on top of the schedules page
+- Continue expanding task events, logs, and operator-facing audit context
+- Keep extending i18n and state hints for newly added workflows

@@ -2,22 +2,25 @@
 
 > [中文版本](./README.zh-CN.md)
 
-This directory contains project documentation intended for maintainers and future developers.
+`Documents/` contains project-facing design notes, structure guides, and roadmap material.
 
-## Files
+## Index
 
-- `agent.md`: Quick start guide for new collaborators or coding agents
-- `target.md`: Current product goals, shipped capabilities, and future direction
-- `Roadmap.md`: Planned feature roadmap, implementation order, and snapshot UI direction
-- `TaskSystemArchitecture.md`: Task persistence, recovery, and extensibility design
-- `ProjectStruction.md`: High-level architecture and responsibility layers
-- `ProjectDirectoryStructure.md`: Current directory structure and key module distribution
+- `agent.md`: Developer handoff notes, implementation conventions, and extension hints
+- `target.md`: Product direction and current delivered capability summary
+- `Roadmap.md`: Delivery roadmap, implementation order, and next-stage priorities
+- `TaskSystemArchitecture.md`: Task persistence, recovery, scheduling, and extensibility design
+- `ProjectStruction.md`: High-level project structure overview
+- `ProjectDirectoryStructure.md`: Expanded directory-by-directory code map
 
-## Current Focus
+## Current Notes
 
-- Backend configuration files have been consolidated into `backend/config/`
-- Frontend added a settings page for editing SSH, polling, and login configurations
-- Backend provides settings read, save, SSH test, login status, login, and logout endpoints
-- Frontend supports optional password login gate, disabled by default
-- Frontend internationalization has been split into language + module structure for easy extension
-- The task system design treats remote ZFS state as the primary recovery source
+- Runtime configuration lives under `backend/config/`
+- The backend is centered on SSH polling, REST write operations, task persistence, and recovery
+- The frontend is centered on routed views, Pinia state, i18n, and live snapshot consumption
+- The task system now covers:
+  - SQLite-backed task history
+  - startup recovery
+  - scheduled scrub definitions
+  - paged and filterable task records
+- ZFS and host state remain the primary source of truth for long-running workflow recovery

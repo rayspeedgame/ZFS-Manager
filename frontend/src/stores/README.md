@@ -10,9 +10,16 @@ Pinia stores live here.
   - WebSocket lifecycle
   - Snapshot cache
   - Auth state
-  - Login, logout, refresh actions
+  - Login, logout, and refresh actions
+- `tasks.js`
+  - Task records cache
+  - Selected task detail
+  - Pagination state
+  - Status filter state
+  - Periodic refresh logic
 
 ## Notes
 
-- This store replaces the old module singleton state implementation
-- When login gate is enabled, the store establishes WebSocket connection after auth succeeds
+- These stores replace the older singleton-style frontend state
+- When login is enabled, the app store establishes WebSocket only after auth succeeds
+- The tasks store is now responsible for keeping task-page UX state stable across refreshes

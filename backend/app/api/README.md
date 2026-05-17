@@ -2,23 +2,32 @@
 
 > [中文版本](./README.zh-CN.md)
 
-This layer exposes the latest snapshot in backend memory and control endpoints to the frontend.
+This layer exposes the latest in-memory snapshot and control endpoints to the frontend.
 
 ## File Descriptions
 
-- `rest.py`: HTTP endpoints for state read, settings management, authentication, and write operation entry points
+- `rest.py`: HTTP endpoints for state reads, settings, auth, writes, task records, and schedules
 - `ws.py`: WebSocket push for frontend real-time updates
 
 ## Current API Conventions
 
-- `GET /api/state`: Returns complete application snapshot
-- `POST /api/state/refresh`: Triggers a full backend refresh
-- `GET /api/settings`: Reads current active configuration
-- `PUT /api/settings`: Saves configuration and hot-reloads runtime
-- `POST /api/settings/test-ssh`: Tests SSH connection with temporary parameters without saving configuration
-- `GET /api/auth/status`: Returns whether login is enabled and current authentication status
+- `GET /api/state`: Return the complete application snapshot
+- `POST /api/state/refresh`: Trigger a full backend refresh
+- `GET /api/settings`: Read active configuration
+- `PUT /api/settings`: Save configuration and hot-reload runtime
+- `POST /api/settings/test-ssh`: Test SSH connectivity without saving settings
+- `GET /api/auth/status`: Return whether login is enabled and whether the request is authenticated
 - `POST /api/auth/login`: Login
 - `POST /api/auth/logout`: Logout
+- `GET /api/tasks`: List task records
+  - supports `page`, `page_size`, and `status_filter`
+- `GET /api/tasks/{task_id}`: Return one task detail
+- `GET /api/task-schedules`: List recurring schedules
+- `POST /api/task-schedules`: Create a recurring schedule
+- `PATCH /api/task-schedules/{schedule_id}`: Update a recurring schedule
+- `DELETE /api/task-schedules/{schedule_id}`: Delete a recurring schedule
+- `POST /api/pools/{pool_name}/scrub/start`: Start pool scrub
+- `POST /api/pools/{pool_name}/scrub/stop`: Stop pool scrub
 - `POST /api/pools/{pool_name}/properties`: Modify pool properties
 - `POST /api/pools/{pool_name}/topology`: Add topology devices
 - `POST /api/pools`: Create pool
@@ -30,6 +39,7 @@ This layer exposes the latest snapshot in backend memory and control endpoints t
 
 ## Current Constraints
 
-- Dataset routes use `{dataset_name:path}` to support multi-level names like `tank/data`
-- All `/api/*` requests except public endpoints require authentication middleware
-- Write operations actively refresh after completion to push real host state back to frontend as soon as possible
+- Dataset routes use `{dataset_name:path}` so multi-level names like `tank/data` work
+- All `/api/*` requests except public endpoints still pass through auth middleware
+- `OPTIONS` preflight is allowed so credentialed browser requests can complete correctly
+- Write operations actively refresh after completion to push real host state back to the frontend quickly

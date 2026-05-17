@@ -13,7 +13,8 @@ ZFS-Manager/
 |   |   `-- ssh/
 |   |-- config/
 |   |   |-- config.example.json
-|   |   `-- config.json
+|   |   |-- config.json
+|   |   `-- tasks.sqlite3
 |   |-- scripts/
 |   |-- tests/
 |   |   `-- fixtures/
@@ -45,64 +46,78 @@ ZFS-Manager/
 |   |-- agent.md
 |   |-- target.md
 |   |-- Roadmap.md
+|   |-- TaskSystemArchitecture.md
 |   |-- ProjectStruction.md
 |   `-- ProjectDirectoryStructure.md
 `-- README.md
 ```
 
-## Frontend Notes
+## Frontend Hotspots
 
 - `frontend/src/views/TasksView.vue`
-  - Dedicated task page for recent write workflows, progress, and command logs
+  - Task records and status page
+  - Paged task browsing, status filtering, refresh, and task detail drill-down
+- `frontend/src/views/SchedulesView.vue`
+  - Schedule page for recurring workflows
+  - Currently owns scheduled `scrub` creation and the snapshot placeholder panel
+- `frontend/src/views/PoolsView.vue`
+  - Pool overview, topology, property editing, and `scrub` actions
+- `frontend/src/components/pools/PoolDetailDrawer.vue`
+  - Pool detail drawer with `scrub` summary, start/stop controls, and property editing
 - `frontend/src/stores/tasks.js`
-  - Task list loading, selected task loading, and periodic refresh
-- `frontend/src/views/SettingsView.vue`
-  - Backend settings page, handles loading, editing, saving, reloading, and SSH testing
-- `frontend/src/components/app/AppLoginGate.vue`
-  - Web password login interface
-- `frontend/src/App.vue`
-  - Decides whether to show login page or main application shell based on login status
-- `frontend/src/i18n/messages/`
-  - Translation resources are split by language and module
-  - Each language now includes `app`, `routes`, `common`, `dashboard`, `disks`, `pools`, `datasets`, `tasks`, `settings`, `properties`, and `login`
+  - Task list cache, pagination state, status filter, selection, and auto-refresh
+- `frontend/src/services/api.js`
+  - Pool and dataset writes, task APIs, task schedule APIs, auth APIs, and `scrub` APIs
+- `frontend/src/router/routes.js`
+  - Navigation metadata for dashboard, disks, pools, datasets, schedules, task records, and settings
 
-## Backend Notes
+## Backend Hotspots
 
-- `backend/config/`
-  - Current active configuration directory
+- `backend/config/tasks.sqlite3`
+  - SQLite database for tasks and task schedules
 - `backend/app/core/config.py`
-  - Configuration loading, saving, path resolution, and environment variable overrides
-- `backend/app/core/auth.py`
-  - Lightweight login state handling
-- `backend/app/api/rest.py`
-  - State endpoints, settings endpoints, auth endpoints, ZFS write endpoints, and task endpoints
+  - Configuration loading, saving, and task database path resolution
+- `backend/app/services/task_store.py`
+  - SQLite-backed persistence for tasks and schedules
 - `backend/app/services/task_manager.py`
-  - In-memory task registry used to track recent write workflows
-- `backend/app/schemas/task.py`
-  - Task records, command logs, and task list/detail response models
-- `backend/app/main.py`
-  - Application startup, CORS, and auth middleware
+  - In-memory runtime task manager with pagination and filtering support
+- `backend/app/services/task_recovery.py`
+  - Recovery registry and active-task reconciliation
+- `backend/app/services/task_scheduler.py`
+  - Background scheduler for recurring workflows
+- `backend/app/services/pool_scrubber.py`
+  - `zpool scrub` / `zpool scrub -s` executor
+- `backend/app/schemas/pool_scrub.py`
+  - `scrub` request-response shape
+- `backend/app/schemas/task_schedule.py`
+  - Schedule create, update, list, and detail models
+- `backend/app/api/rest.py`
+  - State, settings, auth, task list/detail, task schedules, and `scrub` start/stop endpoints
+- `backend/app/services/poller.py`
+  - Generates structured `scanStatus` for each pool
 
-## Related Hotspots
+## Related Change Clusters
 
-- Configuration & Auth
-  - `backend/app/core/config.py`
-  - `backend/app/core/auth.py`
-  - `backend/app/api/rest.py`
-  - `backend/app/main.py`
-- Task System
+- Task system
+  - `backend/app/services/task_store.py`
   - `backend/app/services/task_manager.py`
+  - `backend/app/services/task_recovery.py`
   - `backend/app/schemas/task.py`
-  - `backend/app/api/rest.py`
   - `frontend/src/stores/tasks.js`
   - `frontend/src/views/TasksView.vue`
-- Frontend State & Login Gate
-  - `frontend/src/stores/app.js`
-  - `frontend/src/store/state.js`
-  - `frontend/src/App.vue`
-  - `frontend/src/components/app/AppLoginGate.vue`
-- Frontend i18n
-  - `frontend/src/i18n/index.js`
-  - `frontend/src/i18n/messages.js`
-  - `frontend/src/i18n/messages/en-US/`
-  - `frontend/src/i18n/messages/zh-CN/`
+- Scheduled workflows
+  - `backend/app/services/task_scheduler.py`
+  - `backend/app/schemas/task_schedule.py`
+  - `backend/app/api/rest.py`
+  - `frontend/src/views/SchedulesView.vue`
+- Scrub
+  - `backend/app/services/pool_scrubber.py`
+  - `backend/app/schemas/pool_scrub.py`
+  - `backend/app/api/rest.py`
+  - `backend/app/services/poller.py`
+  - `frontend/src/views/PoolsView.vue`
+  - `frontend/src/components/pools/PoolDetailDrawer.vue`
+- Configuration and auth
+  - `backend/app/core/config.py`
+  - `backend/app/core/auth.py`
+  - `backend/app/main.py`

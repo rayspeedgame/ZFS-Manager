@@ -2,7 +2,7 @@
 
 > [中文版本](./README.zh-CN.md)
 
-The backend is responsible for four things: collecting remote host state, normalizing raw command output into unified snapshots, executing ZFS/ZPool write operations, and recording operator-visible tasks for those workflows.
+The backend currently handles five things: collecting remote host state, normalizing raw output into unified snapshots, executing ZFS/ZPool write operations, persisting operator-visible tasks, and recovering unfinished workflows after restart.
 
 ## Main Responsibilities
 
@@ -13,31 +13,35 @@ The backend is responsible for four things: collecting remote host state, normal
   - `zpool status/list/get`
   - `zfs list/get`
 - Parse raw output into unified `meta + data` snapshots
-- Expose REST endpoints:
-  - State read and forced refresh
-  - Settings read, save, and SSH test
-  - Login status, login, and logout
-  - Pool and dataset write operations
-  - Task list and task detail
+- Expose REST endpoints for:
+  - state read and forced refresh
+  - settings read, save, and SSH test
+  - login status, login, and logout
+  - pool and dataset write operations
+  - `scrub` start and stop
+  - task list, task detail, and task schedules
 - Push latest snapshots via WebSocket
+- Persist tasks and schedules in SQLite, then reconcile unfinished workflows at startup
 
 ## Directory Structure
 
 - `app/api/`: REST and WebSocket entry points
-- `app/core/`: Configuration, auth, shared state, and other infrastructure
-- `app/schemas/`: Pydantic request, response, snapshot, and task models
-- `app/services/`: Polling, state aggregation, write operation execution, and task registration
+- `app/core/`: Configuration, auth, shared state, and runtime infrastructure
+- `app/schemas/`: Pydantic request, response, snapshot, task, and schedule models
+- `app/services/`: Polling, state aggregation, writes, tasks, schedules, and recovery
 - `app/ssh/`: SSH client, command definitions, and parsers
-- `config/`: Current active configuration directory
-- `tests/fixtures/`: Fixture mode input samples
+- `config/`: Active configuration directory and `tasks.sqlite3`
+- `tests/fixtures/`: Fixture-mode input samples
 
 ## Current Implementation Focus
 
 - `StatePoller` refreshes at different frequencies for `pools / datasets / disks / properties`
-- Write operations uniformly call `poller.refresh_once(force_all=True)` upon completion
-- `TaskManager` records recent write workflows in memory for operator visibility
-- Settings save hot-reloads the runtime instead of requiring manual backend restart
-- Auth is lightweight cookie-based login, disabled by default, and can be enabled via the settings page
+- Write operations still call `poller.refresh_once(force_all=True)` after completion
+- `TaskManager + SQLiteTaskStore` provide a combined in-memory runtime and SQLite persistence model
+- `TaskRecoveryService` reconciles unfinished tasks at startup and during task reads
+- `TaskScheduler` persists and runs recurring `scrub` schedules
+- `poller.py` generates structured `scanStatus` for each pool
+- Auth remains a lightweight cookie-based login, disabled by default and configurable from settings
 
 ## Startup
 

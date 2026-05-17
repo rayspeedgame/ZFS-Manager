@@ -2,7 +2,7 @@
 
 > [中文版本](./README.zh-CN.md)
 
-`src/` contains Vue frontend source code.
+`src/` contains the Vue frontend source code.
 
 ## Structure
 
@@ -12,7 +12,7 @@
 - `styles.css`: Global shared styles
 - `components/`: Reusable UI components
 - `lib/`: Formatting helpers
-- `router/`: Router creation and metadata
+- `router/`: Router creation and route metadata
 - `services/`: REST API calls
 - `store/`: Compatibility adapter layer
 - `stores/`: Pinia stores
@@ -20,8 +20,9 @@
 
 ## Current Notes
 
-- `PoolsView.vue` and `DatasetsView.vue` continue as page containers, responsible for API calls, live snapshot rebinding, and draft protection
-- `SettingsView.vue` is responsible for settings read, save, SSH test, and login configuration editing
-- `App.vue` is responsible for showing login interface or main application based on auth status
-- `i18n/messages.js` is now just an aggregation entry point; real translation resources are located in `i18n/messages/<locale>/<module>.js`
-- Route definitions continue to expose translation keys so sidebar and titles update immediately when switching languages
+- `PoolsView.vue` and `DatasetsView.vue` remain page containers for API calls, live snapshot rebinding, and draft protection
+- `TasksView.vue` now owns task-record browsing, status filtering, pagination, and detail loading
+- `SchedulesView.vue` owns recurring scrub definitions and the future snapshot-schedule placeholder
+- `SettingsView.vue` handles settings read, save, SSH test, and login configuration editing
+- `i18n/messages.js` is only an aggregation entry point; actual translation resources live in `i18n/messages/<locale>/<module>.js`
+- Route definitions still expose translation keys so sidebar and titles refresh immediately on locale changes

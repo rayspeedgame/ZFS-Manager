@@ -6,15 +6,19 @@ Pool-specific workflow components.
 
 ## Files
 
-- `PoolListPanel.vue`: pool inventory list and entry-point actions
-- `PoolDetailDrawer.vue`: readonly facts plus editable pool properties
-- `PoolTopologyDrawer.vue`: topology add/remove workflows
-- `CreatePoolDrawer.vue`: step-based pool creation UI
-- `PoolActionDialogs.vue`: confirmation and result dialogs for pool writes
-- `TopologyNode.vue`: recursive topology presentation
-- `pool-form-config.js`: pool property fields, topology options, and create-pool config
+- `PoolListPanel.vue`: Pool inventory list and entry-point actions
+- `PoolDetailDrawer.vue`: Pool facts, editable properties, and scrub status/actions
+- `PoolTopologyDrawer.vue`: Topology add/remove workflows
+- `CreatePoolDrawer.vue`: Step-based pool creation UI
+- `PoolActionDialogs.vue`: Confirmation and result dialogs for pool writes
+- `TopologyNode.vue`: Recursive topology presentation
+- `pool-form-config.js`: Pool property fields, topology options, and create-pool config
 
 ## Notes
 
-- These components render UI only and emit events upward.
-- `PoolsView.vue` owns API calls, live snapshot rebinding, and draft safety.
+- These components render UI and emit events upward
+- `PoolDetailDrawer.vue` now includes a dedicated scrub section with:
+  - status summary
+  - progress and ETA
+  - start and stop controls
+- `PoolsView.vue` still owns API calls, live snapshot rebinding, and draft safety

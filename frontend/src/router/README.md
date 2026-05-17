@@ -6,10 +6,11 @@ Frontend routing configuration.
 
 ## Files
 
-- `index.js`: Creates router using `createWebHashHistory()`
-- `routes.js`: Route metadata for `Dashboard`, `Disks`, `Pools`, `Datasets`, `Settings`
+- `index.js`: Creates the router with `createWebHashHistory()`
+- `routes.js`: Route metadata for `Dashboard`, `Disks`, `Pools`, `Datasets`, `Schedules`, `Tasks`, and `Settings`
 
 ## Notes
 
-- Routes still use hash history so direct refresh doesn't require backend SPA fallback
-- Route metadata uses `labelKey` and `descriptionKey` for automatic text refresh on language switch
+- Hash history remains in use so direct refresh does not require backend SPA fallback
+- Route metadata uses `labelKey` and `descriptionKey` so navigation text updates on locale switch
+- The tasks route is presented as task records and status, while schedules is a separate top-level workflow page

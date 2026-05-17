@@ -1,200 +1,133 @@
-# 任务记录与恢复系统设计
+# Task System Architecture
 
 > [English Version](./TaskSystemArchitecture.md)
 
 ## 目标
 
-本设计稿定义 ZFS Manager 的任务记录、持久化、恢复和展示体系。当前实现已经覆盖以下两层：
+- 用一套任务系统统一承载写操作、长任务和计划任务
+- 在本地持久化运维可见历史
+- 在后端重启后恢复未完成工作流
+- 让 ZFS 和主机状态成为长任务进度恢复的主真相源
+- 为 `scrub`、`replace`、`expansion`、定时快照和未来工作流预留清晰扩展点
 
-- 第一层：`SQLite` 持久化
-- 第二层：启动恢复流程与恢复注册表
+## 当前已落地形态
 
-设计目标如下：
+- 内存运行态任务管理器 + `SQLite` 任务存储
+- 启动时重新加载任务并对活动任务做状态对账
+- 基于 `zpool status` 的 `scrub` 恢复
+- 面向按周定时 `scrub` 的计划任务持久化与后台调度
+- 支持分页和状态筛选的任务记录页面
 
-- 统一记录写操作、长时间任务和计划任务
-- 后端重启后尽量恢复任务上下文，而不是只依赖进程内内存
-- 以 ZFS / 系统自身可读取状态作为主要真相来源
-- 为 `scrub`、`replace`、`expansion`、快照计划等能力预留稳定扩展点
+## 真相源分层
 
-## 当前实现状态
+使用三层真相源，并明确各自职责：
 
-### 已落地
+1. 当前主机与 ZFS 状态
+   - `zpool status`
+   - `zpool list`
+   - `zfs list`
+   - `zfs get`
+2. 事件与历史来源
+   - `zpool history`
+   - 未来如有需要，可继续接入主机日志或事件钩子
+3. 本地应用记录
+   - 任务表
+   - 任务日志
+   - 计划任务
+   - 面向 UI 的标题、描述和元数据
 
-- `TaskManager`
-  - 负责内存中的任务运行态
-- `SQLiteTaskStore`
-  - 负责任务主记录持久化
-- `TaskRecoveryRegistry`
-  - 负责恢复器注册
-- `TaskRecoveryService`
-  - 负责启动恢复和活动任务对账
-- `scrub`
-  - 已接入任务创建、任务恢复和进度恢复
+系统不应把本地运行内存当成唯一真相源。
 
-### 当前边界
-
-- 目前持久化的是任务主记录快照，还没有拆分出 `task_events` 和 `task_logs` 数据表
-- 当前活动任务对账是在读取任务接口时触发，尚未完全并入后台轮询
-- `scrub` 已具备基于 `zpool status` 的恢复逻辑
-- `replace/resilver`、`expansion`、计划任务恢复器尚未完成
-
-## 核心原则
-
-### 1. 分层真相源
-
-- `ZFS 当前状态`
-  - 例如 `zpool status`、`zpool list`、`zfs list`、`zfs get`
-- `ZFS / 系统历史事件`
-  - 例如 `zpool history`
-- `应用数据库`
-  - 保存任务元数据、展示信息、日志聚合和筛选索引
-
-### 2. 状态外部化，展示本地化
-
-- 任务真实状态尽量通过远端系统重新探测
-- 任务卡片、列表、日志和筛选索引由本地数据库维护
-
-### 3. 按任务类型定义恢复策略
+## 恢复模式
 
 - `pool_scan_based`
-  - 依赖 `zpool status`
-  - 典型任务：`scrub`、`replace/resilver`、部分 expansion
+  - 典型示例：`scrub`、`replace/resilver`、部分扩容场景
 - `state_reconcile_based`
-  - 通过目标状态对账判断是否完成
-  - 典型任务：快照创建、快照删除、属性修改
+  - 典型示例：快照创建/删除、属性修改、创建/销毁操作
 - `scheduler_based`
-  - 调度计划由应用维护，执行结果再和 ZFS 状态对账
+  - 典型示例：定时 `scrub`、定时快照
 - `app_only`
-  - 只能依赖应用记录恢复
+  - 典型示例：未来没有主机侧对应状态的 UI 内部流程
 
-## 当前架构
+## 存储模型
 
-### 1. Task API
+`SQLite` 仍然是当前阶段的默认且推荐选择，因为它：
+
+- 部署简单
+- 对单机应用足够稳定
+- 足以承载任务历史、计划任务和审计友好的日志
+- 后续如需扩展到多实例，也便于迁移
+
+推荐的数据形态：
+
+- `tasks`
+  - 任务标识、类型、作用域、状态、进度、时间戳、元数据
+- `task_logs`
+  - 命令执行与输出记录
+- `task_events`
+  - 后续扩展更丰富的时间线
+- `task_schedules`
+  - 周期计划定义
+
+## 当前运行流程
+
+### 写操作驱动的任务
+
+1. REST 写接口先验证请求
+2. 创建任务并标记为运行中
+3. 通过 SSH 执行实际命令
+4. 后端强制刷新真实状态
+5. 最后完成任务或更新任务
+
+### 计划任务
+
+1. 计划定义先持久化到本地
+2. 后台调度器检查是否到期
+3. 到期后调度器触发同一套底层工作流
+4. 实际执行仍然登记为普通任务记录
+
+### 启动恢复
+
+1. 加载最近持久化任务
+2. 采集一份新的基础状态快照
+3. 将未完成任务与当前状态对账
+4. 启动后台轮询和调度器
+
+## 当前前端形态
+
+- `TasksView.vue`
+  - 展示任务记录和状态
+  - 支持分页、每页条数调整和状态筛选
+  - 当前筛选结果为空时仍保留完整页面框架和筛选控件
+- `SchedulesView.vue`
+  - 管理定时 `scrub`
+  - 为未来快照计划预留占位区域
+- `PoolDetailDrawer.vue`
+  - 暴露 `scrub` 控制入口和当前扫描状态
+
+## 当前 API 面
 
 - `GET /api/tasks`
-- `GET /api/tasks/{id}`
-- 已在读取时触发活动任务对账
+  - 支持 `page`、`page_size` 和 `status_filter`
+- `GET /api/tasks/{task_id}`
+- `GET /api/task-schedules`
+- `POST /api/task-schedules`
+- `PATCH /api/task-schedules/{schedule_id}`
+- `DELETE /api/task-schedules/{schedule_id}`
+- `POST /api/pools/{pool_name}/scrub/start`
+- `POST /api/pools/{pool_name}/scrub/stop`
 
-### 2. Task Store
+## 扩展性建议
 
-- 当前为 `SQLiteTaskStore`
-- 默认数据库路径：`backend/config/tasks.sqlite3`
-- 可通过环境变量 `ZFS_MANAGER_TASK_DB` 覆盖
+- 恢复器继续使用可注册模式，而不是堆叠在单个 `if/else` 中
+- 计划任务继续走同一套任务系统，不要单独旁路
+- 把运维可见元数据和主机真实状态分层保存
+- 在当前状态筛选之外，为后续按任务类型筛选预留空间
+- 允许未来识别“由外部发起但当前 UI 需要展示”的任务，例如主机侧直接启动的 `scrub`
 
-### 3. Task Runtime
+## 紧接着的扩展方向
 
-- 当前由 `TaskManager` 维护
-- 保存任务当前状态、进度、阶段、命令日志和元数据
-
-### 4. Task Recovery Engine
-
-- 当前由 `TaskRecoveryService` 负责
-- 启动顺序：
-  1. 加载 SQLite 中的最近任务
-  2. 刷新一次远端状态
-  3. 将未终态任务标记为 `recovering`
-  4. 调用恢复器完成恢复判定
-
-### 5. Task Source Adapters
-
-- 当前已经依赖：
-  - `zpool status`
-  - `zpool list`
-  - `zfs list`
-  - `zfs get`
-
-## 当前数据模型
-
-当前 `SQLite` 已落地 `tasks` 表，保存：
-
-- `id`
-- `title`
-- `kind`
-- `scope_type`
-- `scope_name`
-- `status`
-- `progress`
-- `stage`
-- `message`
-- `created_at`
-- `started_at`
-- `finished_at`
-- `command_logs_json`
-- `metadata_json`
-- `updated_at`
-
-## 任务状态模型
-
-当前任务系统已使用以下状态：
-
-- `queued`
-- `running`
-- `recovering`
-- `succeeded`
-- `failed`
-- `canceled`
-- `unknown`
-- `needs_attention`
-
-## 恢复器设计
-
-### 当前实现
-
-- `KnownWriteTaskRecoveryHandler`
-  - 处理当前已交付的写任务恢复
-- `pool.scrub.start`
-  - 已支持从 `zpool status` 的 `scan` 文本恢复为 `running / succeeded / canceled / unknown`
-- `pool.scrub.stop`
-  - 已支持根据当前是否仍有活动 scrub 进行恢复
-
-### scrub 恢复方式
-
-当前恢复逻辑基于 pool 的 `scan` 文本解析：
-
-- `scrub in progress`
-  - 恢复为 `running`
-- `scrub repaired` / `scrub completed`
-  - 恢复为 `succeeded`
-- `scrub canceled` / `scrub stopped`
-  - 恢复为 `canceled`
-
-同时解析：
-
-- 进度百分比
-- ETA
-- 当前原始扫描文本
-
-这些信息会回写到任务记录中。
-
-## 当前前后端联动
-
-### 后端
-
-- `pool_scrubber.py`
-  - 负责执行 `zpool scrub` 和 `zpool scrub -s`
-- `poller.py`
-  - 为每个 pool 生成结构化 `scanStatus`
-- `task_recovery.py`
-  - 将 `scanStatus` / `scan` 用于恢复和对账
-
-### 前端
-
-- `PoolDetailDrawer.vue`
-  - 展示 `scrub` 区块
-  - 提供开始/停止按钮
-  - 展示当前扫描文本、进度、ETA 和状态
-- `TasksView.vue`
-  - 持续展示 `scrub` 任务进度和日志
-
-## 推荐下一步
-
-- 将活动任务对账并入后台轮询
-- 为 `replace/resilver` 增加 `pool_scan_based` 恢复器
-- 拆分出 `task_events` 和 `task_logs` 表
-- 增加 `task_schedules`
-- 支持外部发现的活动任务
-
-## 结论
-
-当前任务系统已经从“纯内存可视化”进入“可持久化、可启动恢复、可承载长任务”的阶段。  
-`scrub` 已经是第一类完整接入任务恢复体系的 pool 级长任务样板，后续其他长任务应沿用同样的架构模式继续扩展。
+1. 定时快照与保留策略
+2. `replace/resilver` 恢复器
+3. 更细的事件表和日志表
+4. 可选的后台活动任务持续对账，让任务页未打开时也能持续更新活动任务
