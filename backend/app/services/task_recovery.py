@@ -107,6 +107,9 @@ class KnownWriteTaskRecoveryHandler(BaseTaskRecoveryHandler):
         "dataset.create",
         "dataset.destroy",
         "dataset.properties",
+        "snapshot.create",
+        "snapshot.delete",
+        "snapshot.rollback",
     }
 
     def supports(self, task: TaskRecord) -> bool:
@@ -121,6 +124,10 @@ class KnownWriteTaskRecoveryHandler(BaseTaskRecoveryHandler):
             return _recover_dataset_create(task, state)
         if task.kind == "dataset.destroy":
             return _recover_dataset_destroy(task, state)
+        if task.kind == "snapshot.create":
+            return _recover_snapshot_create(task, state)
+        if task.kind == "snapshot.delete":
+            return _recover_snapshot_delete(task, state)
         if task.kind == "pool.scrub.start":
             return _recover_pool_scrub_start(task, state)
         if task.kind == "pool.scrub.stop":
@@ -217,12 +224,55 @@ def _recover_dataset_destroy(task: TaskRecord, state: AppState) -> TaskRecoveryR
     )
 
 
+def _recover_snapshot_create(task: TaskRecord, state: AppState) -> TaskRecoveryResult:
+    if _snapshot_exists(state, task.scope_name):
+        return TaskRecoveryResult(
+            status="succeeded",
+            stage="recovered-completed",
+            progress=100,
+            message=f"Recovered after restart: snapshot {task.scope_name} exists.",
+            metadata={"recovery_status": "reconciled-from-state"},
+        )
+    return TaskRecoveryResult(
+        status="unknown",
+        stage="recovery-needs-verification",
+        progress=max(task.progress, 10),
+        message=f"Recovered after restart: snapshot {task.scope_name} was not found and completion could not be confirmed.",
+        metadata={"recovery_status": "not-confirmed"},
+    )
+
+
+def _recover_snapshot_delete(task: TaskRecord, state: AppState) -> TaskRecoveryResult:
+    if not _snapshot_exists(state, task.scope_name):
+        return TaskRecoveryResult(
+            status="succeeded",
+            stage="recovered-completed",
+            progress=100,
+            message=f"Recovered after restart: snapshot {task.scope_name} is no longer present.",
+            metadata={"recovery_status": "reconciled-from-state"},
+        )
+    return TaskRecoveryResult(
+        status="unknown",
+        stage="recovery-needs-verification",
+        progress=max(task.progress, 10),
+        message=f"Recovered after restart: snapshot {task.scope_name} still exists, so delete completion could not be confirmed.",
+        metadata={"recovery_status": "not-confirmed"},
+    )
+
+
 def _pool_exists(state: AppState, pool_name: str) -> bool:
     return any(str(pool.get("name") or "") == pool_name for pool in (state.data.pools or []))
 
 
 def _dataset_exists(state: AppState, dataset_name: str) -> bool:
     return any(str(dataset.get("name") or "") == dataset_name for dataset in (state.data.datasets or []))
+
+
+def _snapshot_exists(state: AppState, snapshot_name: str) -> bool:
+    return any(
+        str(dataset.get("name") or "") == snapshot_name and str(dataset.get("type") or "") == "snapshot"
+        for dataset in (state.data.datasets or [])
+    )
 
 
 def _recover_pool_scrub_start(task: TaskRecord, state: AppState) -> TaskRecoveryResult:

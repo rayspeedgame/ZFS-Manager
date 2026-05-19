@@ -1,51 +1,32 @@
 # Backend
 
-> [中文版本](./README.zh-CN.md)
+> [中文版](./README.zh-CN.md)
 
-The backend currently handles five things: collecting remote host state, normalizing raw output into unified snapshots, executing ZFS/ZPool write operations, persisting operator-visible tasks, and recovering unfinished workflows after restart.
+The backend owns SSH polling, REST write execution, task persistence, schedule execution, and recovery.
 
-## Main Responsibilities
+## Current Responsibilities
 
-- Execute read-only commands via SSH to collect:
-  - `lsblk`
-  - `findmnt`
-  - `blkid`
-  - `zpool status/list/get`
-  - `zfs list/get`
-- Parse raw output into unified `meta + data` snapshots
-- Expose REST endpoints for:
-  - state read and forced refresh
-  - settings read, save, and SSH test
-  - login status, login, and logout
-  - pool and dataset write operations
-  - `scrub` start and stop
-  - task list, task detail, and task schedules
-- Push latest snapshots via WebSocket
-- Persist tasks and schedules in SQLite, then reconcile unfinished workflows at startup
+- Poll host state from `lsblk`, `blkid`, `zpool`, and `zfs`
+- Normalize pool, dataset, disk, and property state into one application snapshot
+- Execute write operations for pools, datasets, and snapshots
+- Persist tasks and task schedules in SQLite
+- Recover unfinished tasks after restart
+- Run scheduled `scrub`
+- Run scheduled `snapshot`
+- Apply schedule-scoped snapshot retention cleanup
 
-## Directory Structure
+## Important Current Modules
 
-- `app/api/`: REST and WebSocket entry points
-- `app/core/`: Configuration, auth, shared state, and runtime infrastructure
-- `app/schemas/`: Pydantic request, response, snapshot, task, and schedule models
-- `app/services/`: Polling, state aggregation, writes, tasks, schedules, and recovery
-- `app/ssh/`: SSH client, command definitions, and parsers
-- `config/`: Active configuration directory and `tasks.sqlite3`
-- `tests/fixtures/`: Fixture-mode input samples
+- `app/api/`: REST API surface
+- `app/services/poller.py`: state collection and snapshot assembly
+- `app/services/task_scheduler.py`: recurring workflow scheduler
+- `app/services/snapshot_metadata.py`: ZFS user-property definitions for scheduled snapshots
+- `app/services/snapshot_retention.py`: short scheduled snapshot naming and retention planning
+- `app/services/task_store.py`: SQLite-backed persistence
+- `app/services/task_recovery.py`: startup recovery and reconciliation
 
-## Current Implementation Focus
+## Current Snapshot Scheduling Rule
 
-- `StatePoller` refreshes at different frequencies for `pools / datasets / disks / properties`
-- Write operations still call `poller.refresh_once(force_all=True)` after completion
-- `TaskManager + SQLiteTaskStore` provide a combined in-memory runtime and SQLite persistence model
-- `TaskRecoveryService` reconciles unfinished tasks at startup and during task reads
-- `TaskScheduler` persists and runs recurring `scrub` schedules
-- `poller.py` generates structured `scanStatus` for each pool
-- Auth remains a lightweight cookie-based login, disabled by default and configurable from settings
-
-## Startup
-
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+- Scheduled snapshot names stay short
+- Schedule identity is written into ZFS user properties
+- Cleanup matches snapshots by stored schedule ownership instead of parsing long names

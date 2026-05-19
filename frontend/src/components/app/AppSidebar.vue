@@ -30,6 +30,11 @@ const icons = {
       <path d="M3 5h6l2 2h10v4H3zm0 8h7v6H3zm11-1h7v3h-7zm0 5h7v3h-7z" />
     </svg>
   `,
+  camera: `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 5h2l1.2 2H18a3 3 0 0 1 3 3v7a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-7a3 3 0 0 1 3-3h.8L8 5zm4 4.5A4.5 4.5 0 1 0 16.5 14 4.5 4.5 0 0 0 12 9.5zm0 2A2.5 2.5 0 1 1 9.5 14 2.5 2.5 0 0 1 12 11.5z" />
+    </svg>
+  `,
   pulse: `
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 13h4l2.5-5 4 10 2.5-5H21v-2h-3.8l-1.5 3-4-10-2.7 5.4H3z" />

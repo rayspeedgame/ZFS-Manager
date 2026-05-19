@@ -4,6 +4,7 @@ import DisksView from "../views/DisksView.vue";
 import PoolsView from "../views/PoolsView.vue";
 import SchedulesView from "../views/SchedulesView.vue";
 import SettingsView from "../views/SettingsView.vue";
+import SnapshotsView from "../views/SnapshotsView.vue";
 import TasksView from "../views/TasksView.vue";
 
 export const navigationRoutes = [
@@ -42,6 +43,15 @@ export const navigationRoutes = [
     icon: "folder-tree",
     descriptionKey: "routes.datasets.description",
     component: DatasetsView,
+  },
+  {
+    key: "snapshots",
+    name: "snapshots",
+    path: "/snapshots",
+    labelKey: "routes.snapshots.label",
+    icon: "camera",
+    descriptionKey: "routes.snapshots.description",
+    component: SnapshotsView,
   },
   {
     key: "schedules",

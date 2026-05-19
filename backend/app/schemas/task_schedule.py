@@ -7,9 +7,11 @@ from pydantic import BaseModel, Field
 
 
 class TaskSchedulePattern(BaseModel):
-    weekday: int = Field(ge=0, le=6)
-    hour: int = Field(ge=0, le=23)
-    minute: int = Field(ge=0, le=59)
+    interval: int | None = Field(default=None, ge=1, le=60)
+    weekday: int | None = Field(default=None, ge=0, le=6)
+    day_of_month: int | None = Field(default=None, ge=1, le=31)
+    hour: int | None = Field(default=None, ge=0, le=23)
+    minute: int | None = Field(default=None, ge=0, le=59)
     timezone: str = "local"
 
 

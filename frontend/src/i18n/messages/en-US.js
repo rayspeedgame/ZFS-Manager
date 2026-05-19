@@ -5,6 +5,7 @@ import dashboard from "./en-US/dashboard.js";
 import disks from "./en-US/disks.js";
 import pools from "./en-US/pools.js";
 import datasets from "./en-US/datasets.js";
+import snapshots from "./en-US/snapshots.js";
 import settings from "./en-US/settings.js";
 import properties from "./en-US/properties.js";
 import login from "./en-US/login.js";
@@ -19,6 +20,7 @@ export default {
   disks,
   pools,
   datasets,
+  snapshots,
   settings,
   properties,
   login,

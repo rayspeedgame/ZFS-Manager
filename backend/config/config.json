@@ -22,7 +22,7 @@
     "keepalive_count_max": 3
   },
   "auth": {
-    "enabled": true,
+    "enabled": false,
     "password": "test"
   }
 }

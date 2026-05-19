@@ -10,6 +10,9 @@ from app.services.pool_remover import PoolRemover
 from app.services.pool_scrubber import PoolScrubber
 from app.services.poller import StatePoller
 from app.services.property_updater import PoolPropertyUpdater
+from app.services.snapshot_creator import SnapshotCreator
+from app.services.snapshot_destroyer import SnapshotDestroyer
+from app.services.snapshot_rollbacker import SnapshotRollbacker
 from app.services.task_manager import TaskManager
 from app.services.task_recovery import TaskRecoveryService, build_default_recovery_registry
 from app.services.task_scheduler import TaskSchedulerService
@@ -27,6 +30,9 @@ pool_remover: PoolRemover
 pool_scrubber: PoolScrubber
 pool_property_updater: PoolPropertyUpdater
 dataset_property_updater: DatasetPropertyUpdater
+snapshot_creator: SnapshotCreator
+snapshot_destroyer: SnapshotDestroyer
+snapshot_rollbacker: SnapshotRollbacker
 pool_topology_updater: PoolTopologyUpdater
 task_manager: TaskManager
 task_recovery_service: TaskRecoveryService
@@ -45,6 +51,9 @@ def _build_runtime(next_config: AppConfig) -> None:
     global pool_scrubber
     global pool_property_updater
     global dataset_property_updater
+    global snapshot_creator
+    global snapshot_destroyer
+    global snapshot_rollbacker
     global pool_topology_updater
     global task_manager
     global task_recovery_service
@@ -60,6 +69,9 @@ def _build_runtime(next_config: AppConfig) -> None:
     pool_scrubber = PoolScrubber(config)
     pool_property_updater = PoolPropertyUpdater(config)
     dataset_property_updater = DatasetPropertyUpdater(config)
+    snapshot_creator = SnapshotCreator(config)
+    snapshot_destroyer = SnapshotDestroyer(config)
+    snapshot_rollbacker = SnapshotRollbacker(config)
     pool_topology_updater = PoolTopologyUpdater(config)
     task_store = SQLiteTaskStore(resolve_task_db_path())
     task_manager = TaskManager(store=task_store)
@@ -69,6 +81,8 @@ def _build_runtime(next_config: AppConfig) -> None:
         task_manager=task_manager,
         task_recovery_service=task_recovery_service,
         pool_scrubber=pool_scrubber,
+        snapshot_creator=snapshot_creator,
+        snapshot_destroyer=snapshot_destroyer,
         refresh_state=poller.refresh_once,
     )
 
@@ -95,6 +109,9 @@ async def stop_runtime() -> None:
     await pool_topology_updater.close()
     await pool_property_updater.close()
     await dataset_property_updater.close()
+    await snapshot_creator.close()
+    await snapshot_destroyer.close()
+    await snapshot_rollbacker.close()
     await poller.stop()
     _runtime_started = False
 

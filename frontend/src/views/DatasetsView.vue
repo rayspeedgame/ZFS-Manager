@@ -29,7 +29,7 @@ export default {
   },
   setup(props) {
     const { t } = useI18n();
-    const { createDataset, destroyDataset, refreshStateOnce, updateDatasetProperties } = useAppState();
+    const { createDataset, createSnapshot, destroyDataset, refreshStateOnce, updateDatasetProperties } = useAppState();
     const selectedDataset = ref(null);
     const drawerOpen = ref(false);
     const fixedAdvancedOpen = ref(false);
@@ -65,6 +65,13 @@ export default {
     const destroyDialogSummary = ref("");
     const destroyDialogResult = ref(null);
     const destroySubmitting = ref(false);
+    const snapshotDraftName = ref("");
+    const snapshotConfirmDialogOpen = ref(false);
+    const snapshotDialogPhase = ref("confirm");
+    const snapshotDialogError = ref("");
+    const snapshotDialogSummary = ref("");
+    const snapshotDialogResult = ref(null);
+    const snapshotSubmitting = ref(false);
 
     const pools = computed(() => {
       const value = props.state.snapshot.value?.data?.pools;
@@ -109,6 +116,11 @@ export default {
       properties: buildCreateDatasetProperties(createDraft.value),
     }));
     const canDestroyDataset = computed(() => Boolean(selectedDataset.value?.name) && !isRootDataset(selectedDataset.value));
+    const canCreateSnapshot = computed(() => {
+      const datasetType = String(selectedDataset.value?.type || "");
+      return Boolean(selectedDataset.value?.name) && datasetType !== "snapshot";
+    });
+    const canSubmitSnapshot = computed(() => Boolean(canCreateSnapshot.value && String(snapshotDraftName.value || "").trim()));
     const canSubmitCreate = computed(() => {
       if (!createPayload.value.parent || !createPayload.value.name) {
         return false;
@@ -125,6 +137,9 @@ export default {
     );
     const destroyTerminalLogLines = computed(() =>
       buildSingleCommandLogLines(destroyDialogResult.value, selectedDataset.value?.name || "dataset")
+    );
+    const snapshotTerminalLogLines = computed(() =>
+      buildSingleCommandLogLines(snapshotDialogResult.value, snapshotDialogResult.value?.snapshot || "snapshot")
     );
 
     watch(
@@ -182,7 +197,9 @@ export default {
       fixedAdvancedOpen.value = false;
       customAdvancedOpen.value = false;
       initializeDraft(row);
+      snapshotDraftName.value = row.type === "snapshot" ? "" : buildDefaultSnapshotName();
       resetDialogState();
+      resetSnapshotDialogState();
       drawerOpen.value = true;
     }
 
@@ -235,6 +252,14 @@ export default {
       destroySubmitting.value = false;
     }
 
+    function resetSnapshotDialogState() {
+      snapshotDialogPhase.value = "confirm";
+      snapshotDialogError.value = "";
+      snapshotDialogSummary.value = "";
+      snapshotDialogResult.value = null;
+      snapshotSubmitting.value = false;
+    }
+
     function propertyInput(propertyName) {
       if (propertyName === "compression") {
         return {
@@ -270,6 +295,11 @@ export default {
       destroyConfirmDialogOpen.value = true;
     }
 
+    function openSnapshotConfirmDialog() {
+      resetSnapshotDialogState();
+      snapshotConfirmDialogOpen.value = true;
+    }
+
     function setDraftValues(value) {
       draftValues.value = value;
       detailDraftDirty.value = true;
@@ -278,6 +308,10 @@ export default {
     function setCreateDraft(value) {
       createDraft.value = value;
       createDraftDirty.value = true;
+    }
+
+    function setSnapshotDraftName(value) {
+      snapshotDraftName.value = String(value || "");
     }
 
     async function confirmPropertyChanges() {
@@ -342,6 +376,40 @@ export default {
       }
     }
 
+    async function confirmCreateSnapshot() {
+      if (!selectedDataset.value?.name || !canSubmitSnapshot.value) {
+        return;
+      }
+
+      snapshotSubmitting.value = true;
+      snapshotDialogPhase.value = "submitting";
+      snapshotDialogError.value = "";
+      snapshotDialogSummary.value = "";
+      snapshotDialogResult.value = null;
+
+      try {
+        const response = await createSnapshot(selectedDataset.value.name, {
+          name: String(snapshotDraftName.value || "").trim(),
+          recursive: false,
+        });
+        snapshotDialogResult.value = response;
+        snapshotDialogSummary.value = response?.refreshed
+          ? t("datasets.summary.snapshotSubmittedAndRefreshed")
+          : t("datasets.summary.snapshotSubmittedRefreshFailed");
+        if (response?.refresh_error) {
+          snapshotDialogError.value = response.refresh_error;
+        }
+        snapshotDialogPhase.value = "result";
+        await refreshStateOnce();
+        snapshotDraftName.value = buildDefaultSnapshotName();
+      } catch (error) {
+        snapshotDialogPhase.value = "result";
+        snapshotDialogError.value = error instanceof Error ? error.message : String(error);
+      } finally {
+        snapshotSubmitting.value = false;
+      }
+    }
+
     async function confirmDestroyDataset() {
       if (!selectedDataset.value?.name || !canDestroyDataset.value) {
         return;
@@ -374,11 +442,14 @@ export default {
     }
 
     return {
+      canCreateSnapshot,
       canDestroyDataset,
       canSubmitCreate,
+      canSubmitSnapshot,
       changedItems,
       confirmDestroyDataset,
       confirmCreateDataset,
+      confirmCreateSnapshot,
       confirmDialogOpen,
       confirmPropertyChanges,
       createAdvancedFields,
@@ -416,6 +487,7 @@ export default {
       openCreateConfirmDialog,
       openCreateDrawer,
       openDestroyConfirmDialog,
+      openSnapshotConfirmDialog,
       openDataset,
       propertyForce,
       propertyInput,
@@ -423,7 +495,16 @@ export default {
       selectedDataset,
       setCreateDraft,
       setDraftValues,
+      setSnapshotDraftName,
       showSnapshots,
+      snapshotConfirmDialogOpen,
+      snapshotDialogError,
+      snapshotDialogPhase,
+      snapshotDialogResult,
+      snapshotDialogSummary,
+      snapshotDraftName,
+      snapshotSubmitting,
+      snapshotTerminalLogLines,
       submitting,
       terminalLogLines,
       t,
@@ -432,6 +513,21 @@ export default {
     };
   },
 };
+
+function buildDefaultSnapshotName() {
+  const now = new Date();
+  const parts = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ];
+  const time = [
+    String(now.getHours()).padStart(2, "0"),
+    String(now.getMinutes()).padStart(2, "0"),
+    String(now.getSeconds()).padStart(2, "0"),
+  ];
+  return `manual-${parts.join("")}-${time.join("")}`;
+}
 
 function createDatasetDraft(parent = "") {
   return {
@@ -789,16 +885,21 @@ function buildSingleCommandLogLines(result, label) {
       :selected-dataset="selectedDataset"
       :draft-values="draftValues"
       :changed-items="changedItems"
+      :snapshot-draft-name="snapshotDraftName"
       :fixed-advanced-open="fixedAdvancedOpen"
       :custom-advanced-open="customAdvancedOpen"
       :can-destroy-dataset="canDestroyDataset"
+      :can-create-snapshot="canCreateSnapshot"
+      :can-submit-snapshot="canSubmitSnapshot"
       :property-force="propertyForce"
       :get-property-input="propertyInput"
       @update:draft-values="setDraftValues"
+      @update:snapshot-draft-name="setSnapshotDraftName"
       @toggle-fixed-advanced="fixedAdvancedOpen = !fixedAdvancedOpen"
       @toggle-custom-advanced="customAdvancedOpen = !customAdvancedOpen"
       @open-confirm="openConfirmDialog"
       @open-destroy-confirm="openDestroyConfirmDialog"
+      @open-snapshot-confirm="openSnapshotConfirmDialog"
     />
 
     <CreateDatasetDrawer
@@ -844,12 +945,23 @@ function buildSingleCommandLogLines(result, label) {
       :can-destroy-dataset="canDestroyDataset"
       :create-draft="createDraft"
       :create-payload="createPayload"
+      :snapshot-draft-name="snapshotDraftName"
+      :snapshot-confirm-dialog-open="snapshotConfirmDialogOpen"
+      :snapshot-submitting="snapshotSubmitting"
+      :snapshot-dialog-phase="snapshotDialogPhase"
+      :snapshot-dialog-summary="snapshotDialogSummary"
+      :snapshot-dialog-error="snapshotDialogError"
+      :snapshot-dialog-result="snapshotDialogResult"
+      :snapshot-terminal-log-lines="snapshotTerminalLogLines"
+      :can-submit-snapshot="canSubmitSnapshot"
       @update:confirmDialogOpen="confirmDialogOpen = $event"
       @update:destroyConfirmDialogOpen="destroyConfirmDialogOpen = $event"
       @update:createConfirmDialogOpen="createConfirmDialogOpen = $event"
+      @update:snapshotConfirmDialogOpen="snapshotConfirmDialogOpen = $event"
       @confirm-property="confirmPropertyChanges"
       @confirm-destroy="confirmDestroyDataset"
       @confirm-create="confirmCreateDataset"
+      @confirm-snapshot="confirmCreateSnapshot"
     />
   </section>
 </template>

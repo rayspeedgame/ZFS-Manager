@@ -2,61 +2,31 @@
 
 > [English Version](./README.md)
 
-后端当前主要负责五件事：采集远端主机状态、整理统一快照、执行 ZFS/ZPool 写操作、持久化运维可见任务，以及在重启后恢复未完成工作流。
+后端负责 SSH 轮询、REST 写操作执行、任务持久化、计划任务执行和恢复逻辑。
 
-## 主要职责
+## 当前职责
 
-- 通过 SSH 执行只读命令，采集：
-  - `lsblk`
-  - `findmnt`
-  - `blkid`
-  - `zpool status/list/get`
-  - `zfs list/get`
-- 将原始命令输出整理为统一的 `meta + data` 快照
-- 暴露 REST 接口：
-  - 状态读取与强制刷新
-  - 设置读取、保存与 SSH 测试
-  - 登录状态、登录、退出
-  - pool 和 dataset 写操作
-  - `scrub` 启动与停止
-  - 任务列表、任务详情和计划任务接口
-- 通过 WebSocket 推送最新快照
-- 使用 `SQLite` 持久化任务与计划任务，并在启动时对未完成工作流做恢复对账
+- 通过 `lsblk`、`blkid`、`zpool`、`zfs` 采集主机状态
+- 将 pool、dataset、disk、property 状态整理成统一应用快照
+- 执行 pool、dataset、snapshot 写操作
+- 使用 SQLite 持久化任务和计划任务
+- 在重启后恢复未完成任务
+- 执行定时 `scrub`
+- 执行定时 `snapshot`
+- 执行按计划归属范围的快照保留清理
 
-## 目录说明
+## 当前重点模块
 
-- `app/api/`
-  - REST 和 WebSocket 入口
-- `app/core/`
-  - 配置、认证、共享状态和运行时基础设施
-- `app/schemas/`
-  - Pydantic 请求、响应、快照、任务和计划任务模型
-- `app/services/`
-  - 轮询、状态聚合、写操作、任务、计划任务与恢复逻辑
-- `app/ssh/`
-  - SSH 客户端、命令定义和解析器
-- `config/`
-  - 当前使用的配置目录，以及 `tasks.sqlite3`
-- `tests/fixtures/`
-  - fixture 模式输入样例
+- `app/api/`：REST 接口层
+- `app/services/poller.py`：状态采集与快照组装
+- `app/services/task_scheduler.py`：周期任务调度器
+- `app/services/snapshot_metadata.py`：定时快照的 ZFS 用户属性定义
+- `app/services/snapshot_retention.py`：短格式定时快照命名与保留规划
+- `app/services/task_store.py`：SQLite 持久化层
+- `app/services/task_recovery.py`：启动恢复与对账
 
-## 当前实现重点
+## 当前定时快照规则
 
-- `StatePoller` 按 `pools / datasets / disks / properties` 分频刷新
-- 写操作完成后仍统一调用 `poller.refresh_once(force_all=True)`
-- `TaskManager + SQLiteTaskStore`
-  - 组合形成“内存运行态 + SQLite 持久化”的任务系统
-- `TaskRecoveryService`
-  - 在启动时和读取任务时对未完成任务做状态对账
-- `TaskScheduler`
-  - 持久化并执行周期性的 `scrub` 计划
-- `poller.py`
-  - 已为每个 pool 生成结构化 `scanStatus`
-- 认证采用轻量 cookie 登录，默认关闭，可由设置页启用
-
-## 启动
-
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+- 定时快照名称保持简短
+- 计划身份写入 ZFS 用户属性
+- 清理逻辑通过计划归属属性匹配快照，而不是解析长名称

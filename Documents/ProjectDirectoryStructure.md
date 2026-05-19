@@ -1,123 +1,66 @@
 # Project Directory Structure
 
-> [中文版本](./ProjectDirectoryStructure.zh-CN.md)
-
-```text
-ZFS-Manager/
-|-- backend/
-|   |-- app/
-|   |   |-- api/
-|   |   |-- core/
-|   |   |-- schemas/
-|   |   |-- services/
-|   |   `-- ssh/
-|   |-- config/
-|   |   |-- config.example.json
-|   |   |-- config.json
-|   |   `-- tasks.sqlite3
-|   |-- scripts/
-|   |-- tests/
-|   |   `-- fixtures/
-|   |-- README.md
-|   `-- requirements.txt
-|-- frontend/
-|   |-- src/
-|   |   |-- components/
-|   |   |   |-- app/
-|   |   |   |-- common/
-|   |   |   |-- datasets/
-|   |   |   `-- pools/
-|   |   |-- i18n/
-|   |   |   `-- messages/
-|   |   |       |-- en-US/
-|   |   |       `-- zh-CN/
-|   |   |-- lib/
-|   |   |-- router/
-|   |   |-- services/
-|   |   |-- store/
-|   |   |-- stores/
-|   |   `-- views/
-|   |-- README.md
-|   |-- index.html
-|   |-- package.json
-|   `-- vite.config.js
-|-- Documents/
-|   |-- README.md
-|   |-- agent.md
-|   |-- target.md
-|   |-- Roadmap.md
-|   |-- TaskSystemArchitecture.md
-|   |-- ProjectStruction.md
-|   `-- ProjectDirectoryStructure.md
-`-- README.md
-```
+> [中文版](./ProjectDirectoryStructure.zh-CN.md)
 
 ## Frontend Hotspots
 
-- `frontend/src/views/TasksView.vue`
-  - Task records and status page
-  - Paged task browsing, status filtering, refresh, and task detail drill-down
+- `frontend/src/views/SnapshotsView.vue`
+  - Dedicated snapshot management page with filtering, delete, rollback, and detail drawer
 - `frontend/src/views/SchedulesView.vue`
-  - Schedule page for recurring workflows
-  - Currently owns scheduled `scrub` creation and the snapshot placeholder panel
-- `frontend/src/views/PoolsView.vue`
-  - Pool overview, topology, property editing, and `scrub` actions
-- `frontend/src/components/pools/PoolDetailDrawer.vue`
-  - Pool detail drawer with `scrub` summary, start/stop controls, and property editing
-- `frontend/src/stores/tasks.js`
-  - Task list cache, pagination state, status filter, selection, and auto-refresh
+  - Recurring workflow page for scheduled `scrub` and scheduled `snapshot`
+  - Supports minutely, hourly, daily, weekly, and monthly snapshot definitions
+- `frontend/src/views/TasksView.vue`
+  - Task records and status page with pagination and status filters
+- `frontend/src/views/DatasetsView.vue`
+  - Dataset tree and quick manual snapshot creation entry
 - `frontend/src/services/api.js`
-  - Pool and dataset writes, task APIs, task schedule APIs, auth APIs, and `scrub` APIs
-- `frontend/src/router/routes.js`
-  - Navigation metadata for dashboard, disks, pools, datasets, schedules, task records, and settings
+  - Snapshot APIs, task APIs, and schedule APIs
 
 ## Backend Hotspots
 
-- `backend/config/tasks.sqlite3`
-  - SQLite database for tasks and task schedules
-- `backend/app/core/config.py`
-  - Configuration loading, saving, and task database path resolution
-- `backend/app/services/task_store.py`
-  - SQLite-backed persistence for tasks and schedules
-- `backend/app/services/task_manager.py`
-  - In-memory runtime task manager with pagination and filtering support
-- `backend/app/services/task_recovery.py`
-  - Recovery registry and active-task reconciliation
 - `backend/app/services/task_scheduler.py`
-  - Background scheduler for recurring workflows
-- `backend/app/services/pool_scrubber.py`
-  - `zpool scrub` / `zpool scrub -s` executor
-- `backend/app/schemas/pool_scrub.py`
-  - `scrub` request-response shape
+  - Recurring workflow scheduler
+  - Executes scheduled `scrub`
+  - Executes scheduled `snapshot`
+  - Coordinates schedule-scoped snapshot retention cleanup
+- `backend/app/services/snapshot_metadata.py`
+  - Defines the ZFS user-property keys used to tag scheduled snapshots
+- `backend/app/services/snapshot_retention.py`
+  - Builds short scheduled snapshot names
+  - Groups schedule-owned snapshots per dataset for keep-latest cleanup
+- `backend/app/services/snapshot_creator.py`
+  - Writes scheduled snapshot user properties through `zfs snapshot -o`
+- `backend/app/services/snapshot_query.py`
+  - Reads schedule ownership fields back from snapshot properties
 - `backend/app/schemas/task_schedule.py`
-  - Schedule create, update, list, and detail models
-- `backend/app/api/rest.py`
-  - State, settings, auth, task list/detail, task schedules, and `scrub` start/stop endpoints
-- `backend/app/services/poller.py`
-  - Generates structured `scanStatus` for each pool
+  - Normalized recurring schedule pattern model
 
-## Related Change Clusters
+## Persistence and Recovery
 
+- `backend/config/tasks.sqlite3`
+  - SQLite storage for tasks and task schedules
+- `backend/app/services/task_store.py`
+  - Persistence layer for tasks and schedules
+- `backend/app/services/task_recovery.py`
+  - Startup recovery and task reconciliation
+
+## Change Clusters
+
+- Snapshot management
+  - `backend/app/services/snapshot_creator.py`
+  - `backend/app/services/snapshot_destroyer.py`
+  - `backend/app/services/snapshot_rollbacker.py`
+  - `backend/app/services/snapshot_query.py`
+  - `frontend/src/views/SnapshotsView.vue`
+- Scheduled snapshot and retention
+  - `backend/app/services/task_scheduler.py`
+  - `backend/app/services/snapshot_metadata.py`
+  - `backend/app/services/snapshot_retention.py`
+  - `backend/app/schemas/task_schedule.py`
+  - `frontend/src/views/SchedulesView.vue`
 - Task system
-  - `backend/app/services/task_store.py`
   - `backend/app/services/task_manager.py`
+  - `backend/app/services/task_store.py`
   - `backend/app/services/task_recovery.py`
-  - `backend/app/schemas/task.py`
   - `frontend/src/stores/tasks.js`
   - `frontend/src/views/TasksView.vue`
-- Scheduled workflows
-  - `backend/app/services/task_scheduler.py`
-  - `backend/app/schemas/task_schedule.py`
-  - `backend/app/api/rest.py`
-  - `frontend/src/views/SchedulesView.vue`
-- Scrub
-  - `backend/app/services/pool_scrubber.py`
-  - `backend/app/schemas/pool_scrub.py`
-  - `backend/app/api/rest.py`
-  - `backend/app/services/poller.py`
-  - `frontend/src/views/PoolsView.vue`
-  - `frontend/src/components/pools/PoolDetailDrawer.vue`
-- Configuration and auth
-  - `backend/app/core/config.py`
-  - `backend/app/core/auth.py`
-  - `backend/app/main.py`

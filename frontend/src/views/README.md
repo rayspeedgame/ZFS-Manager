@@ -1,25 +1,22 @@
 # views
 
-> [中文版本](./README.zh-CN.md)
+> [中文版](./README.zh-CN.md)
 
 Route-level page components.
 
 ## Files
 
-- `DashboardView.vue`: Overview page
-- `DisksView.vue`: Disks and partitions page
-- `PoolsView.vue`: Pool page container for list, drawer, dialog, topology, and scrub flows
-- `DatasetsView.vue`: Dataset page container for tree, drawer, dialog, and create/destroy flows
-- `SchedulesView.vue`: Scheduled workflow page for weekly scrub rules and future snapshot scheduling
-- `TasksView.vue`: Task records and status page with pagination, filters, and detail pane
-- `SettingsView.vue`: Backend settings page for config loading, save, reload, and SSH test
+- `DashboardView.vue`: overview page
+- `DisksView.vue`: disks and partitions page
+- `PoolsView.vue`: pool page container
+- `DatasetsView.vue`: dataset page container with quick manual snapshot creation
+- `SnapshotsView.vue`: dedicated snapshot management page
+- `SchedulesView.vue`: recurring `scrub` and recurring `snapshot` page
+- `TasksView.vue`: task records and status page
+- `SettingsView.vue`: backend settings page
 
 ## Notes
 
-- `Dashboard` renders backend summary data
-- `Disks` supports partition expansion and pool ownership display
-- `Pools` delegates most rendering to `components/pools/`
-- `Datasets` delegates most rendering to `components/datasets/`
-- `Schedules` is the first dedicated page for recurring workflows
-- `Tasks` keeps task filters visible even when the current filter produces zero records
-- `Settings` handles backend connection, polling, and web-login settings
+- `SchedulesView` now supports minutely through monthly snapshot schedules
+- Schedule deletion uses the same in-app confirmation dialog pattern as other destructive flows
+- `SnapshotsView` remains the centralized snapshot management surface

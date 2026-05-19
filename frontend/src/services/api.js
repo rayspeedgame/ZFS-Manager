@@ -69,6 +69,92 @@ export async function getTaskSchedules() {
   return request("/task-schedules", {}, "Failed to load task schedules");
 }
 
+export async function getSnapshots({
+  page = 1,
+  pageSize = 25,
+  search = "",
+  pool = "",
+  dataset = "",
+  snapshotType = "",
+  sortBy = "created_at",
+  sortOrder = "desc",
+} = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+    sort_by: String(sortBy),
+    sort_order: String(sortOrder),
+  });
+  if (search) {
+    query.set("search", String(search));
+  }
+  if (pool) {
+    query.set("pool", String(pool));
+  }
+  if (dataset) {
+    query.set("dataset", String(dataset));
+  }
+  if (snapshotType) {
+    query.set("snapshot_type", String(snapshotType));
+  }
+  return request(`/snapshots?${query.toString()}`, {}, "Failed to load snapshots");
+}
+
+export async function getSnapshot(snapshotName) {
+  return request(`/snapshots/${encodeURIComponent(snapshotName)}`, {}, "Failed to load snapshot");
+}
+
+export async function getSnapshotFilters() {
+  return request("/snapshots/filters", {}, "Failed to load snapshot filters");
+}
+
+export async function getDatasetSnapshots(datasetName, limit = 5) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return request(
+    `/datasets/${encodeURIComponent(datasetName)}/snapshots?${query.toString()}`,
+    {},
+    "Failed to load dataset snapshots"
+  );
+}
+
+export async function createSnapshot(datasetName, payload) {
+  return request(
+    `/datasets/${encodeURIComponent(datasetName)}/snapshots`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to create snapshot"
+  );
+}
+
+export async function destroySnapshot(snapshotName) {
+  return request(
+    `/snapshots/${encodeURIComponent(snapshotName)}`,
+    {
+      method: "DELETE",
+    },
+    "Failed to delete snapshot"
+  );
+}
+
+export async function rollbackSnapshot(snapshotName, payload = { mode: "safe" }) {
+  return request(
+    `/snapshots/${encodeURIComponent(snapshotName)}/rollback`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to roll back snapshot"
+  );
+}
+
 export async function createTaskSchedule(payload) {
   return request(
     "/task-schedules",

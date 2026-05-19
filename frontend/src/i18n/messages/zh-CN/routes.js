@@ -5,26 +5,30 @@ export default {
   },
   disks: {
     label: "磁盘",
-    description: "查看物理设备清单、分区和归属关系。",
+    description: "查看物理设备清单与归属关系。",
   },
   pools: {
     label: "存储池",
-    description: "查看池容量、拓扑、属性与 scrub 状态。",
+    description: "查看存储池容量、拓扑和属性概览。",
   },
   datasets: {
     label: "数据集",
-    description: "查看文件系统、卷和继承关系概览。",
+    description: "查看文件系统、zvol 与继承关系。",
+  },
+  snapshots: {
+    label: "快照",
+    description: "集中管理快照清单与删除操作。",
   },
   schedules: {
     label: "计划任务",
-    description: "配置定时 scrub，并为后续定时 snapshot 预留入口。",
+    description: "管理定时 scrub 规则，并为后续快照计划预留入口。",
   },
   tasks: {
     label: "任务记录和状态",
-    description: "分页查看任务记录、实时执行状态和命令历史。",
+    description: "查看分页任务记录、执行状态与命令历史。",
   },
   settings: {
     label: "设置",
-    description: "配置后端连接、认证和刷新参数。",
+    description: "配置后端连接与刷新参数。",
   },
 };

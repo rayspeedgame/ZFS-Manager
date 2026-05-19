@@ -8,6 +8,7 @@ import CommandResultList from "../common/CommandResultList.vue";
 defineProps({
   selectedDataset: { type: Object, default: null },
   changedItems: { type: Array, required: true },
+  snapshotDraftName: { type: String, default: "" },
   confirmDialogOpen: { type: Boolean, default: false },
   submitting: { type: Boolean, default: false },
   dialogPhase: { type: String, default: "confirm" },
@@ -33,6 +34,14 @@ defineProps({
   canDestroyDataset: { type: Boolean, default: false },
   createDraft: { type: Object, required: true },
   createPayload: { type: Object, required: true },
+  snapshotConfirmDialogOpen: { type: Boolean, default: false },
+  snapshotSubmitting: { type: Boolean, default: false },
+  snapshotDialogPhase: { type: String, default: "confirm" },
+  snapshotDialogSummary: { type: String, default: "" },
+  snapshotDialogError: { type: String, default: "" },
+  snapshotDialogResult: { type: Object, default: null },
+  snapshotTerminalLogLines: { type: Array, default: () => [] },
+  canSubmitSnapshot: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -40,9 +49,11 @@ const emit = defineEmits([
   "update:confirmDialogOpen",
   "update:destroyConfirmDialogOpen",
   "update:createConfirmDialogOpen",
+  "update:snapshotConfirmDialogOpen",
   "confirm-property",
   "confirm-destroy",
   "confirm-create",
+  "confirm-snapshot",
 ]);
 </script>
 
@@ -144,6 +155,60 @@ const emit = defineEmits([
       <section>
         <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="destroyTerminalLogLines" />
+      </section>
+    </div>
+  </ConfirmDialog>
+
+  <ConfirmDialog
+    :model-value="snapshotConfirmDialogOpen"
+    :busy="snapshotSubmitting"
+    :can-confirm="canSubmitSnapshot"
+    :result-mode="snapshotDialogPhase === 'result'"
+    :confirm-text="snapshotDialogPhase === 'submitting' ? t('datasets.dialogs.creatingSnapshotShort') : t('datasets.dialogs.confirmCreateSnapshot')"
+    :title="t('datasets.dialogs.confirmSnapshotCreation')"
+    :description="selectedDataset?.name ? `${selectedDataset.name}@${snapshotDraftName}` : '-'"
+    @update:modelValue="emit('update:snapshotConfirmDialogOpen', $event)"
+    @confirm="emit('confirm-snapshot')"
+  >
+    <div v-if="snapshotDialogPhase === 'confirm'" class="dialog-section-list">
+      <p class="subtle-text">{{ t("datasets.dialogs.snapshotCreateWarning") }}</p>
+      <ul class="result-list">
+        <li class="result-list-item">
+          <strong>{{ t("datasets.columns.parent") }}</strong>
+          <span class="subtle-text">{{ selectedDataset?.name || "-" }}</span>
+        </li>
+        <li class="result-list-item">
+          <strong>{{ t("datasets.snapshot.name") }}</strong>
+          <span class="subtle-text">{{ snapshotDraftName || "-" }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div v-else-if="snapshotDialogPhase === 'submitting'" class="dialog-section-list">
+      <div class="progress-shell">
+        <div class="progress-spinner"></div>
+        <div>
+          <strong>{{ t("datasets.dialogs.creatingSnapshot") }}</strong>
+          <p class="subtle-text">{{ t("datasets.dialogs.creatingSnapshotDescription") }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="dialog-section-list">
+      <p v-if="snapshotDialogSummary" class="notice-text">{{ snapshotDialogSummary }}</p>
+      <p v-if="snapshotDialogError" class="error-text">{{ snapshotDialogError }}</p>
+
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
+        <CommandResultList
+          :items="snapshotDialogResult ? [{ ...snapshotDialogResult, label: snapshotDialogResult.snapshot, key: snapshotDialogResult.snapshot || 'snapshot' }] : []"
+          :empty-text="t('common.noResult')"
+        />
+      </section>
+
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
+        <CommandLogPanel :entries="snapshotTerminalLogLines" />
       </section>
     </div>
   </ConfirmDialog>

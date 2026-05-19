@@ -15,6 +15,10 @@ export default {
     label: "Datasets",
     description: "Filesystem and volume inventory with inheritance hints.",
   },
+  snapshots: {
+    label: "Snapshots",
+    description: "Centralized snapshot inventory and delete workflows.",
+  },
   schedules: {
     label: "Schedules",
     description: "Recurring scrub plans and the future scheduling workspace.",

@@ -12,9 +12,12 @@ const props = defineProps({
   selectedDataset: { type: Object, default: null },
   draftValues: { type: Object, required: true },
   changedItems: { type: Array, required: true },
+  snapshotDraftName: { type: String, default: "" },
   fixedAdvancedOpen: { type: Boolean, default: false },
   customAdvancedOpen: { type: Boolean, default: false },
   canDestroyDataset: { type: Boolean, default: false },
+  canCreateSnapshot: { type: Boolean, default: false },
+  canSubmitSnapshot: { type: Boolean, default: false },
   propertyForce: { type: Boolean, default: false },
   getPropertyInput: { type: Function, required: true },
 });
@@ -25,8 +28,10 @@ const emit = defineEmits([
   "update:draft-values",
   "toggle-fixed-advanced",
   "toggle-custom-advanced",
+  "update:snapshot-draft-name",
   "open-confirm",
   "open-destroy-confirm",
+  "open-snapshot-confirm",
 ]);
 
 function toMetaMap(items, prefix = "") {
@@ -63,6 +68,39 @@ function toMetaMap(items, prefix = "") {
           <div><dt>{{ t("datasets.detail.created") }}</dt><dd>{{ formatDateTime(Number(selectedDataset.creation || 0) * 1000) }}</dd></div>
           <div><dt>{{ t("datasets.detail.readonly") }}</dt><dd>{{ selectedDataset.readonly || "-" }}</dd></div>
         </dl>
+      </section>
+
+      <section v-if="canCreateSnapshot" class="drawer-section">
+        <div class="drawer-section-header">
+          <div>
+            <h4>{{ t("datasets.snapshot.title") }}</h4>
+            <p class="subtle-text">{{ t("datasets.snapshot.description") }}</p>
+          </div>
+          <button
+            type="button"
+            class="primary-button"
+            :disabled="!canSubmitSnapshot"
+            @click="emit('open-snapshot-confirm')"
+          >
+            {{ t("datasets.snapshot.create") }}
+          </button>
+        </div>
+        <div class="detail-grid editable-detail-grid">
+          <label class="editable-property-card">
+            <span>{{ t("datasets.snapshot.name") }}</span>
+            <input
+              class="property-field"
+              type="text"
+              :value="snapshotDraftName"
+              :placeholder="t('datasets.snapshot.placeholder')"
+              @input="emit('update:snapshot-draft-name', $event.target.value)"
+            />
+          </label>
+          <div class="editable-property-card">
+            <span>{{ t("datasets.snapshot.preview") }}</span>
+            <strong>{{ selectedDataset?.name }}@{{ snapshotDraftName || t("datasets.snapshot.placeholderName") }}</strong>
+          </div>
+        </div>
       </section>
 
       <PropertySection

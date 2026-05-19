@@ -21,6 +21,17 @@ from app.schemas.pool_destroy import PoolDestroyResponse
 from app.schemas.pool_remove import PoolRemoveRequest, PoolRemoveResponse
 from app.schemas.pool_scrub import PoolScrubResponse
 from app.schemas.property_update import PoolPropertyUpdateRequest, PoolPropertyUpdateResponse
+from app.schemas.snapshot import (
+    DatasetSnapshotsResponse,
+    SnapshotCreateRequest,
+    SnapshotCreateResponse,
+    SnapshotDestroyResponse,
+    SnapshotDetailResponse,
+    SnapshotFiltersResponse,
+    SnapshotListResponse,
+    SnapshotRollbackRequest,
+    SnapshotRollbackResponse,
+)
 from app.schemas.settings import SettingsSaveResponse
 from app.schemas.ssh_test import SSHConnectionTestRequest, SSHConnectionTestResponse
 from app.schemas.task import TaskCommandLog, TaskDetailResponse, TaskListResponse
@@ -32,6 +43,7 @@ from app.schemas.task_schedule import (
 )
 from app.schemas.topology_update import PoolTopologyUpdateRequest, PoolTopologyUpdateResponse
 from app.schemas.zfs_state import AppState
+from app.services.snapshot_query import get_snapshot, list_dataset_snapshots, list_snapshots, snapshot_exists, snapshot_filters
 from app.ssh.client import SSHClient, SSHConfig
 
 
@@ -229,7 +241,7 @@ async def update_task_schedule(
     existing = await runtime.task_scheduler.get_schedule(schedule_id)
     if existing is None:
         raise HTTPException(status_code=404, detail=f"Task schedule {schedule_id!r} was not found.")
-    await _validate_task_schedule_update(existing.kind, existing.scope_type, existing.scope_name, payload)
+    await _validate_task_schedule_update(existing.kind, existing.scope_type, existing.scope_name, existing.schedule_type, payload)
     schedule = await runtime.task_scheduler.update_schedule(schedule_id, payload)
     if schedule is None:
         raise HTTPException(status_code=404, detail=f"Task schedule {schedule_id!r} was not found.")
@@ -903,6 +915,223 @@ async def update_dataset_properties(
     return response
 
 
+@router.get("/snapshots", response_model=SnapshotListResponse, tags=["snapshots"])
+async def list_snapshot_records(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    search: str = Query(default=""),
+    pool: str = Query(default=""),
+    dataset: str = Query(default=""),
+    snapshot_type: str = Query(default=""),
+    sort_by: str = Query(default="created_at"),
+    sort_order: str = Query(default="desc"),
+) -> SnapshotListResponse:
+    require_authenticated_request(request)
+    state = await state_store.get_state()
+    items, total, normalized_page, normalized_page_size, total_pages = list_snapshots(
+        state,
+        page=page,
+        page_size=page_size,
+        search=search,
+        pool=pool,
+        dataset=dataset,
+        snapshot_type=snapshot_type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    return SnapshotListResponse(
+        items=items,
+        total=total,
+        page=normalized_page,
+        page_size=normalized_page_size,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/snapshots/filters", response_model=SnapshotFiltersResponse, tags=["snapshots"])
+async def list_snapshot_filter_values(request: Request) -> SnapshotFiltersResponse:
+    require_authenticated_request(request)
+    state = await state_store.get_state()
+    pools, datasets, types = snapshot_filters(state)
+    return SnapshotFiltersResponse(pools=pools, datasets=datasets, types=types)
+
+
+@router.get("/snapshots/{snapshot_name:path}", response_model=SnapshotDetailResponse, tags=["snapshots"])
+async def get_snapshot_record(snapshot_name: str, request: Request) -> SnapshotDetailResponse:
+    require_authenticated_request(request)
+    state = await state_store.get_state()
+    snapshot = get_snapshot(state, snapshot_name)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_name!r} was not found in the latest snapshot.")
+    return SnapshotDetailResponse(snapshot=snapshot)
+
+
+@router.get("/datasets/{dataset_name:path}/snapshots", response_model=DatasetSnapshotsResponse, tags=["snapshots"])
+async def get_dataset_snapshots(
+    dataset_name: str,
+    request: Request,
+    limit: int = Query(default=5, ge=1, le=50),
+) -> DatasetSnapshotsResponse:
+    require_authenticated_request(request)
+    state = await state_store.get_state()
+    dataset = _require_dataset(dataset_name=dataset_name, state=state)
+    _validate_snapshot_parent(dataset)
+    return DatasetSnapshotsResponse(snapshots=list_dataset_snapshots(state, dataset_name, limit=limit))
+
+
+@router.post(
+    "/datasets/{dataset_name:path}/snapshots",
+    response_model=SnapshotCreateResponse,
+    tags=["snapshots"],
+)
+async def create_snapshot(dataset_name: str, payload: SnapshotCreateRequest, request: Request) -> SnapshotCreateResponse:
+    require_authenticated_request(request)
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Snapshot creation requires SSH mode.")
+
+    state = await state_store.get_state()
+    dataset = _require_dataset(dataset_name=dataset_name, state=state)
+    _validate_snapshot_parent(dataset)
+    full_name = f"{dataset_name}@{payload.name}"
+    if snapshot_exists(state, full_name):
+        raise HTTPException(status_code=400, detail=f"Snapshot {full_name!r} already exists in the latest snapshot.")
+
+    task = await runtime.task_manager.create_task(
+        title=f"Create snapshot {full_name}",
+        kind="snapshot.create",
+        scope_type="snapshot",
+        scope_name=full_name,
+        message="Queued snapshot creation.",
+        metadata={"dataset": dataset_name, "recursive": payload.recursive},
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Creating snapshot {full_name}...", progress=25)
+
+    result = await runtime.snapshot_creator.create_snapshot(dataset_name, payload)
+
+    refreshed = False
+    refresh_error: str | None = None
+    try:
+        await runtime.poller.refresh_once(force_all=True)
+        refreshed = True
+    except Exception as exc:
+        refresh_error = str(exc)
+
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Snapshot {full_name} created.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=full_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
+
+
+@router.delete("/snapshots/{snapshot_name:path}", response_model=SnapshotDestroyResponse, tags=["snapshots"])
+async def delete_snapshot(snapshot_name: str, request: Request) -> SnapshotDestroyResponse:
+    require_authenticated_request(request)
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Snapshot destroy requires SSH mode.")
+
+    state = await state_store.get_state()
+    snapshot = _require_snapshot(snapshot_name=snapshot_name, state=state)
+    _validate_snapshot_destroy(snapshot)
+
+    task = await runtime.task_manager.create_task(
+        title=f"Delete snapshot {snapshot_name}",
+        kind="snapshot.delete",
+        scope_type="snapshot",
+        scope_name=snapshot_name,
+        message="Queued snapshot delete.",
+    )
+    await runtime.task_manager.mark_running(task.id, message=f"Deleting snapshot {snapshot_name}...", progress=25)
+
+    result = await runtime.snapshot_destroyer.destroy_snapshot(snapshot_name)
+
+    refreshed = False
+    refresh_error: str | None = None
+    try:
+        await runtime.poller.refresh_once(force_all=True)
+        refreshed = True
+    except Exception as exc:
+        refresh_error = str(exc)
+
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Snapshot {snapshot_name} deleted.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=snapshot_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error},
+    )
+    return finalized
+
+
+@router.post("/snapshots/{snapshot_name:path}/rollback", response_model=SnapshotRollbackResponse, tags=["snapshots"])
+async def rollback_snapshot(
+    snapshot_name: str,
+    payload: SnapshotRollbackRequest,
+    request: Request,
+) -> SnapshotRollbackResponse:
+    require_authenticated_request(request)
+    if runtime.config.poller.mode != "ssh":
+        raise HTTPException(status_code=503, detail="Snapshot rollback requires SSH mode.")
+
+    state = await state_store.get_state()
+    snapshot = _require_snapshot(snapshot_name=snapshot_name, state=state)
+    _validate_snapshot_rollback(snapshot=snapshot, state=state)
+
+    task = await runtime.task_manager.create_task(
+        title=f"Rollback snapshot {snapshot_name}",
+        kind="snapshot.rollback",
+        scope_type="snapshot",
+        scope_name=snapshot_name,
+        message="Queued snapshot rollback.",
+        metadata={"rollback_mode": payload.mode},
+    )
+    await runtime.task_manager.mark_running(
+        task.id,
+        message=f"Rolling back snapshot {snapshot_name} with mode {payload.mode}...",
+        progress=25,
+    )
+
+    result = await runtime.snapshot_rollbacker.rollback_snapshot(snapshot_name, payload.mode)
+
+    refreshed = False
+    refresh_error: str | None = None
+    try:
+        await runtime.poller.refresh_once(force_all=True)
+        refreshed = True
+    except Exception as exc:
+        refresh_error = str(exc)
+
+    finalized = result.model_copy(update={"task_id": task.id, "refreshed": refreshed, "refresh_error": refresh_error})
+    await runtime.task_manager.mark_finished(
+        task.id,
+        success=result.success,
+        message=_build_single_result_task_message(
+            success=result.success,
+            success_text=f"Snapshot {snapshot_name} rolled back with mode {payload.mode}.",
+            failure_text=result.message,
+            refresh_error=refresh_error,
+        ),
+        command_logs=[_task_log_from_single_result(label=snapshot_name, result=result)],
+        metadata={"refreshed": refreshed, "refresh_error": refresh_error, "rollback_mode": payload.mode},
+    )
+    return finalized
+
+
 @router.get("/health", tags=["system"])
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
@@ -1009,47 +1238,98 @@ def _pool_has_active_scrub(pool: dict) -> bool:
 async def _validate_task_schedule_payload(payload: TaskScheduleCreateRequest) -> None:
     if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Task schedules require SSH mode.")
-    if payload.kind != "pool.scrub.schedule":
-        raise HTTPException(status_code=400, detail=f"Unsupported schedule kind: {payload.kind!r}.")
-    if payload.scope_type != "pool":
-        raise HTTPException(status_code=400, detail="Scheduled scrub currently only supports pool scope.")
-    if payload.schedule_type != "weekly":
-        raise HTTPException(status_code=400, detail=f"Unsupported schedule type: {payload.schedule_type!r}.")
     if not payload.title.strip():
         raise HTTPException(status_code=400, detail="A schedule title is required.")
     if not payload.scope_name.strip():
-        raise HTTPException(status_code=400, detail="A pool name is required for scheduled scrub.")
-    _validate_weekly_pattern_fields(payload.pattern.weekday, payload.pattern.hour, payload.pattern.minute)
+        raise HTTPException(status_code=400, detail="A schedule scope name is required.")
+    _validate_schedule_pattern_fields(payload.schedule_type, payload.pattern)
     state = await state_store.get_state()
-    _require_pool(pool_name=payload.scope_name, state=state)
+    if payload.kind == "pool.scrub.schedule":
+        if payload.scope_type != "pool":
+            raise HTTPException(status_code=400, detail="Scheduled scrub currently only supports pool scope.")
+        if payload.schedule_type != "weekly":
+            raise HTTPException(status_code=400, detail="Scheduled scrub currently only supports weekly recurrence.")
+        _require_pool(pool_name=payload.scope_name, state=state)
+        return
+    if payload.kind == "snapshot.schedule":
+        if payload.scope_type != "dataset":
+            raise HTTPException(status_code=400, detail="Scheduled snapshots currently only support dataset scope.")
+        dataset = _require_dataset(dataset_name=payload.scope_name, state=state)
+        _validate_snapshot_parent(dataset)
+        _validate_snapshot_schedule_metadata(payload.metadata)
+        return
+    raise HTTPException(status_code=400, detail=f"Unsupported schedule kind: {payload.kind!r}.")
 
 
 async def _validate_task_schedule_update(
     kind: str,
     scope_type: str,
     scope_name: str,
+    schedule_type: str,
     payload: TaskScheduleUpdateRequest,
 ) -> None:
     if runtime.config.poller.mode != "ssh":
         raise HTTPException(status_code=503, detail="Task schedules require SSH mode.")
-    if kind != "pool.scrub.schedule" or scope_type != "pool":
-        raise HTTPException(status_code=400, detail="Only pool scrub schedules can be updated in this version.")
-    if not scope_name:
-        raise HTTPException(status_code=400, detail="Schedule scope is missing a pool name.")
     state = await state_store.get_state()
-    _require_pool(pool_name=scope_name, state=state)
+    if kind == "pool.scrub.schedule":
+        if scope_type != "pool":
+            raise HTTPException(status_code=400, detail="Scheduled scrub currently only supports pool scope.")
+        if not scope_name:
+            raise HTTPException(status_code=400, detail="Schedule scope is missing a pool name.")
+        _require_pool(pool_name=scope_name, state=state)
+    elif kind == "snapshot.schedule":
+        if scope_type != "dataset":
+            raise HTTPException(status_code=400, detail="Scheduled snapshots currently only support dataset scope.")
+        if not scope_name:
+            raise HTTPException(status_code=400, detail="Schedule scope is missing a dataset name.")
+        dataset = _require_dataset(dataset_name=scope_name, state=state)
+        _validate_snapshot_parent(dataset)
+        if payload.metadata is not None:
+            _validate_snapshot_schedule_metadata(payload.metadata)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported schedule kind: {kind!r}.")
     if payload.pattern is None:
         return
-    _validate_weekly_pattern_fields(payload.pattern.weekday, payload.pattern.hour, payload.pattern.minute)
+    _validate_schedule_pattern_fields(schedule_type, payload.pattern)
 
 
-def _validate_weekly_pattern_fields(weekday: int, hour: int, minute: int) -> None:
-    if weekday < 0 or weekday > 6:
-        raise HTTPException(status_code=400, detail="Schedule weekday must be between 0 and 6.")
-    if hour < 0 or hour > 23:
-        raise HTTPException(status_code=400, detail="Schedule hour must be between 0 and 23.")
-    if minute < 0 or minute > 59:
-        raise HTTPException(status_code=400, detail="Schedule minute must be between 0 and 59.")
+def _validate_schedule_pattern_fields(schedule_type: str, pattern) -> None:
+    normalized_type = str(schedule_type or "").lower()
+    if normalized_type not in {"minutely", "hourly", "daily", "weekly", "monthly"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported schedule type: {schedule_type!r}.")
+    if normalized_type == "minutely":
+        if pattern.interval is None:
+            raise HTTPException(status_code=400, detail="Minutely schedules require an interval.")
+        return
+    if normalized_type == "hourly":
+        if pattern.interval is None:
+            raise HTTPException(status_code=400, detail="Hourly schedules require an interval.")
+        if pattern.minute is None:
+            raise HTTPException(status_code=400, detail="Hourly schedules require a minute value.")
+        return
+    if normalized_type == "daily":
+        if pattern.hour is None or pattern.minute is None:
+            raise HTTPException(status_code=400, detail="Daily schedules require hour and minute values.")
+        return
+    if normalized_type == "weekly":
+        if pattern.weekday is None or pattern.hour is None or pattern.minute is None:
+            raise HTTPException(status_code=400, detail="Weekly schedules require weekday, hour, and minute values.")
+        return
+    if normalized_type == "monthly":
+        if pattern.day_of_month is None or pattern.hour is None or pattern.minute is None:
+            raise HTTPException(status_code=400, detail="Monthly schedules require day, hour, and minute values.")
+        return
+
+
+def _validate_snapshot_schedule_metadata(metadata: dict | None) -> None:
+    payload = metadata if isinstance(metadata, dict) else {}
+    keep_latest = payload.get("keep_latest", 0)
+    try:
+        keep_latest_value = int(keep_latest)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Snapshot retention keep_latest must be an integer.") from exc
+    if keep_latest_value < 0:
+        raise HTTPException(status_code=400, detail="Snapshot retention keep_latest cannot be negative.")
 
 
 def _require_dataset(*, dataset_name: str, state: AppState) -> dict:
@@ -1058,6 +1338,21 @@ def _require_dataset(*, dataset_name: str, state: AppState) -> dict:
     if dataset is None:
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_name!r} was not found in the latest snapshot.")
     return dataset
+
+
+def _require_snapshot(*, snapshot_name: str, state: AppState) -> dict:
+    snapshots = state.data.datasets or []
+    snapshot = next(
+        (
+            item
+            for item in snapshots
+            if str(item.get("name") or "") == snapshot_name and str(item.get("type") or "") == "snapshot"
+        ),
+        None,
+    )
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_name!r} was not found in the latest snapshot.")
+    return snapshot
 
 
 def _validate_dataset_property_changes(
@@ -1135,6 +1430,42 @@ def _validate_dataset_destroy(*, dataset: dict) -> None:
         )
 
 
+def _validate_snapshot_parent(dataset: dict) -> None:
+    dataset_type = str(dataset.get("type") or "")
+    if dataset_type == "snapshot":
+        raise HTTPException(status_code=400, detail="Cannot create a snapshot from another snapshot in this workflow.")
+
+
+def _validate_snapshot_destroy(snapshot: dict) -> None:
+    properties = snapshot.get("properties")
+    if not isinstance(properties, dict):
+        return
+    userrefs_entry = properties.get("userrefs")
+    userrefs_value = userrefs_entry.get("value") if isinstance(userrefs_entry, dict) else None
+    userrefs = _coerce_int(userrefs_value, default=0)
+    if userrefs > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="This snapshot currently has active user references and cannot be deleted in this workflow.",
+        )
+
+
+def _validate_snapshot_rollback(*, snapshot: dict, state: AppState) -> None:
+    snapshot_name = str(snapshot.get("name") or "")
+    dataset_name = snapshot_name.split("@", 1)[0] if "@" in snapshot_name else ""
+    if not dataset_name:
+        raise HTTPException(status_code=400, detail="Snapshot rollback target is missing its parent dataset name.")
+    dataset = next((item for item in (state.data.datasets or []) if str(item.get("name") or "") == dataset_name), None)
+    if dataset is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The parent dataset is not available in the latest snapshot, so rollback cannot be offered here.",
+        )
+    dataset_type = str(dataset.get("type") or "")
+    if dataset_type == "snapshot":
+        raise HTTPException(status_code=400, detail="Snapshot rollback requires a live parent dataset.")
+
+
 def _validate_pool_removal(
     *,
     pool_name: str,
@@ -1192,6 +1523,15 @@ def _validate_pool_creation(*, payload: PoolCreateRequest, state: AppState) -> N
             if device is None:
                 raise HTTPException(status_code=400, detail=f"Device {device_path!r} is not available for pool creation.")
             selected_devices.add(device_path)
+
+
+def _coerce_int(value, *, default: int = 0) -> int:
+    if value in (None, "", "-"):
+        return default
+    try:
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _disk_is_available_for_creation(disk: dict) -> bool:
