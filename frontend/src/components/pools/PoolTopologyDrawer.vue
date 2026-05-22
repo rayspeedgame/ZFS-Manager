@@ -18,6 +18,7 @@ const props = defineProps({
   topologyForce: { type: Boolean, default: false },
   topologySubmitting: { type: Boolean, default: false },
   removeSubmitting: { type: Boolean, default: false },
+  deviceMaintenanceSubmitting: { type: Boolean, default: false },
   topologyDeviceSelected: { type: Function, required: true },
   formatTopologyDeviceLabel: { type: Function, required: true },
   getRemovalTarget: { type: Function, required: true },
@@ -31,6 +32,9 @@ const emit = defineEmits([
   "toggle-device",
   "open-confirm",
   "remove-target",
+  "device-action",
+  "replace-device",
+  "raidz-expand",
 ]);
 
 function optionText(option) {
@@ -65,28 +69,71 @@ function updateDraft(key, value) {
             <ul class="simple-detail-list" v-if="group.items.length">
               <li v-for="item in group.items" :key="group.name + ':' + item.name">
                 <div class="result-list-head">
-                  <strong>{{ item.name }}</strong>
-                  <button
-                    v-if="getRemovalTarget(item)"
-                    type="button"
-                    class="danger-button"
-                    :disabled="removeSubmitting"
-                    @click="emit('remove-target', getRemovalTarget(item))"
-                  >
-                    {{ t("pools.remove") }}
-                  </button>
+                  <strong>{{ item.displayLabel || item.name }}</strong>
+                  <div class="inline-action-controls">
+                    <button
+                      v-if="item.nodeKind === 'vdev'"
+                      type="button"
+                      class="ghost-button"
+                      :disabled="deviceMaintenanceSubmitting || !item.canRaidzExpand"
+                      :title="item.raidzExpandReason || ''"
+                      @click="emit('raidz-expand', { item })"
+                    >
+                      {{ t("pools.deviceActions.raidzExpand") }}
+                    </button>
+                    <button
+                      v-if="getRemovalTarget(item)"
+                      type="button"
+                      class="danger-button"
+                      :disabled="removeSubmitting"
+                      @click="emit('remove-target', getRemovalTarget(item))"
+                    >
+                      {{ t("pools.remove") }}
+                    </button>
+                  </div>
                 </div>
                 <span class="subtle-text">{{ t("pools.layoutValue", { value: item.layout }) }} / {{ t("pools.stateValue", { value: item.state || "UNKNOWN" }) }}</span>
                 <div class="topology-member-card-list">
                   <article v-for="member in item.members" :key="member.path + ':' + member.diskId" class="topology-member-card">
-                    <strong>{{ member.path }}</strong>
+                    <strong>{{ member.displayLabel || member.path }}</strong>
                     <div class="subtle-text">{{ member.diskId }}</div>
+                    <div class="subtle-text">{{ member.kernelPath || member.path }}</div>
+                    <div v-if="member.byIdPath" class="subtle-text">{{ member.byIdPath }}</div>
                     <div class="subtle-text">{{ member.model || t("common.unknownModel") }}</div>
                     <div class="topology-member-meta">
                       <span class="inline-status" :data-health="member.state || 'UNKNOWN'">{{ member.state || "UNKNOWN" }}</span>
                       <span class="subtle-text">R {{ member.read ?? 0 }}</span>
                       <span class="subtle-text">W {{ member.write ?? 0 }}</span>
                       <span class="subtle-text">C {{ member.cksum ?? 0 }}</span>
+                    </div>
+                    <div class="inline-action-controls">
+                      <button
+                        type="button"
+                        class="ghost-button"
+                        :disabled="deviceMaintenanceSubmitting || !member.canReplace"
+                        :title="member.replaceReason || ''"
+                        @click="emit('replace-device', { member, item })"
+                      >
+                        {{ t("pools.deviceActions.replace") }}
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost-button"
+                        :disabled="deviceMaintenanceSubmitting || !member.canOnline"
+                        :title="member.onlineReason || ''"
+                        @click="emit('device-action', { action: 'online', member, item })"
+                      >
+                        {{ t("pools.deviceActions.online") }}
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost-button"
+                        :disabled="deviceMaintenanceSubmitting || !member.canOffline"
+                        :title="member.offlineReason || ''"
+                        @click="emit('device-action', { action: 'offline', member, item })"
+                      >
+                        {{ t("pools.deviceActions.offline") }}
+                      </button>
                     </div>
                   </article>
                 </div>
@@ -160,19 +207,21 @@ function updateDraft(key, value) {
           <div v-if="availableTopologyDevices.length" class="topology-device-list">
             <label
               v-for="device in availableTopologyDevices"
-              :key="device.path"
+              :key="device.commandPath || device.path"
               class="topology-device-option"
-              :data-selected="topologyDeviceSelected(device.path)"
+              :data-selected="topologyDeviceSelected(device.commandPath || device.path)"
             >
               <input
                 type="checkbox"
-                :checked="topologyDeviceSelected(device.path)"
+                :checked="topologyDeviceSelected(device.commandPath || device.path)"
                 :disabled="topologySubmitting"
-                @change="emit('toggle-device', device.path)"
+                @change="emit('toggle-device', device.commandPath || device.path)"
               />
               <div>
-                <strong>{{ device.path }}</strong>
+                <strong>{{ device.displayName || device.path }}</strong>
                 <div class="subtle-text">{{ device.diskId }}</div>
+                <div class="subtle-text">{{ device.kernelPath || device.path }}</div>
+                <div v-if="device.byIdPath" class="subtle-text">{{ device.byIdPath }}</div>
                 <div class="subtle-text">{{ device.model || t("common.unknownModel") }}</div>
                 <div class="subtle-text">{{ formatBytes(device.size) }}</div>
               </div>

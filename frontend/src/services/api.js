@@ -227,6 +227,93 @@ export async function stopPoolScrub(poolName) {
   );
 }
 
+export async function offlinePoolDevice(poolName, commandTarget) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/offline`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ command_target: commandTarget }),
+    },
+    "Failed to offline pool device"
+  );
+}
+
+export async function onlinePoolDevice(poolName, commandTarget) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/online`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ command_target: commandTarget }),
+    },
+    "Failed to online pool device"
+  );
+}
+
+export async function replacePoolDevice(poolName, commandTarget, replacementTarget) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/replace`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        command_target: commandTarget,
+        replacement_target: replacementTarget,
+      }),
+    },
+    "Failed to replace pool device"
+  );
+}
+
+export async function expandPoolRaidz(poolName, vdevTarget, newDeviceTarget) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/raidz-expand`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        vdev_target: vdevTarget,
+        new_device_target: newDeviceTarget,
+      }),
+    },
+    "Failed to expand RAID-Z vdev"
+  );
+}
+
+
+export async function clearPool(poolName) {
+  return request(
+    `/pools/${encodeURIComponent(poolName)}/clear`,
+    {
+      method: "POST",
+    },
+    "Failed to clear pool errors"
+  );
+}
+
+export async function updateDiskLabel(diskKey, label) {
+  return request(
+    `/disks/${encodeURIComponent(diskKey)}/label`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ label }),
+    },
+    "Failed to update disk label"
+  );
+}
+
 export async function getSettings() {
   return request("/settings", {}, "Failed to load settings");
 }

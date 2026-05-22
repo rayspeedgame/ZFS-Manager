@@ -1,22 +1,55 @@
 # services
 
-> [中文版](./README.zh-CN.md)
+> [中文版本](./README.zh-CN.md)
 
-This layer owns backend runtime behavior, especially polling, write execution, task persistence, recurring scheduling, and recovery.
+This directory holds backend services for polling, task orchestration, scheduling, snapshot policy, and pool-maintenance execution.
 
-## Important Files
+## Main Files
 
-- `poller.py`: collects SSH state and assembles the shared app snapshot
-- `task_manager.py`: runtime task lifecycle management
-- `task_store.py`: SQLite-backed task and schedule persistence
-- `task_recovery.py`: startup recovery and reconciliation
-- `task_scheduler.py`: recurring workflow scheduler for `scrub` and `snapshot`
-- `snapshot_metadata.py`: ZFS user-property keys for scheduled snapshots
-- `snapshot_retention.py`: scheduled snapshot naming and keep-latest retention planning
-- `snapshot_query.py`: reads snapshot ownership fields back from properties
+- `poller.py`
+  - collects SSH state, normalizes disk identity, and builds the shared snapshot
+- `task_manager.py`
+  - task registration, updates, and query helpers
+- `task_store.py`
+  - SQLite-backed persistence
+- `task_recovery.py`
+  - startup recovery and reconciliation
+- `task_scheduler.py`
+  - recurring `scrub` and recurring `snapshot`
+- `snapshot_metadata.py`
+  - ZFS user-property definitions
+- `snapshot_retention.py`
+  - short recurring snapshot naming and retention cleanup
+- `pool_scrubber.py`
+  - `scrub` submission
+- `pool_maintainer.py`
+  - `clear`, `offline`, and `online`
+- `pool_replacer.py`
+  - `replace`
+- `pool_raidz_expander.py`
+  - RAID-Z `expansion`
 
-## Current Design Notes
+## Current Conventions
 
-- Scheduled snapshots now rely on ZFS user properties for ownership and retention identity
-- Retention cleanup is schedule-scoped and dataset-aware
-- Write endpoints always refresh live state instead of mutating frontend assumptions directly
+### Disk and member identity
+
+`poller.py` builds both disk-level and pool-member-level identity:
+
+- disk rows expose `displayName`, `kernelPath`, `byIdPath`, `commandPath`, `diskId`, `diskKey`, and `aliases`
+- pool leaf members expose `displayLabel`, `kernelPath`, `byIdPath`, `commandTarget`, `rawCommandTarget`, and `aliases`
+
+Partition-backed members also inherit the parent disk’s whole-disk `by-id` aliases so recovery code can still match the same physical disk when one side uses the whole-disk path and the other side uses a `-part1` path.
+
+### Pool maintenance commands
+
+- new-device operations prefer `commandPath`
+- existing pool-member maintenance must use `commandTarget`
+
+### RAID-Z expansion recovery
+
+`task_recovery.py` now observes all of the following before closing the task:
+
+- the `expand:` section
+- the automatic `scrub` section
+- the new member appearing in the target vdev
+- the member count increasing

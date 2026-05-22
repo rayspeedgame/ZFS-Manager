@@ -6,6 +6,9 @@ from app.services.dataset_destroyer import DatasetDestroyer
 from app.services.dataset_property_updater import DatasetPropertyUpdater
 from app.services.pool_creator import PoolCreator
 from app.services.pool_destroyer import PoolDestroyer
+from app.services.pool_maintainer import PoolMaintainer
+from app.services.pool_raidz_expander import PoolRaidzExpander
+from app.services.pool_replacer import PoolReplacer
 from app.services.pool_remover import PoolRemover
 from app.services.pool_scrubber import PoolScrubber
 from app.services.poller import StatePoller
@@ -26,6 +29,9 @@ dataset_creator: DatasetCreator
 dataset_destroyer: DatasetDestroyer
 pool_creator: PoolCreator
 pool_destroyer: PoolDestroyer
+pool_maintainer: PoolMaintainer
+pool_raidz_expander: PoolRaidzExpander
+pool_replacer: PoolReplacer
 pool_remover: PoolRemover
 pool_scrubber: PoolScrubber
 pool_property_updater: PoolPropertyUpdater
@@ -47,6 +53,9 @@ def _build_runtime(next_config: AppConfig) -> None:
     global dataset_destroyer
     global pool_creator
     global pool_destroyer
+    global pool_maintainer
+    global pool_raidz_expander
+    global pool_replacer
     global pool_remover
     global pool_scrubber
     global pool_property_updater
@@ -65,6 +74,9 @@ def _build_runtime(next_config: AppConfig) -> None:
     dataset_destroyer = DatasetDestroyer(config)
     pool_creator = PoolCreator(config)
     pool_destroyer = PoolDestroyer(config)
+    pool_maintainer = PoolMaintainer(config)
+    pool_raidz_expander = PoolRaidzExpander(config)
+    pool_replacer = PoolReplacer(config)
     pool_remover = PoolRemover(config)
     pool_scrubber = PoolScrubber(config)
     pool_property_updater = PoolPropertyUpdater(config)
@@ -104,6 +116,9 @@ async def stop_runtime() -> None:
     await dataset_destroyer.close()
     await pool_creator.close()
     await pool_destroyer.close()
+    await pool_maintainer.close()
+    await pool_raidz_expander.close()
+    await pool_replacer.close()
     await pool_remover.close()
     await pool_scrubber.close()
     await pool_topology_updater.close()

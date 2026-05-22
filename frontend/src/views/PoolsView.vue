@@ -35,8 +35,13 @@ export default {
   setup(props) {
     const { t } = useI18n();
     const {
+      clearPool,
       createPool,
       destroyPool,
+      expandPoolRaidz,
+      offlinePoolDevice,
+      onlinePoolDevice,
+      replacePoolDevice,
       removePoolTarget,
       updatePoolProperties,
       updatePoolTopology,
@@ -93,9 +98,38 @@ export default {
     const removeDialogResult = ref(null);
     const removeSubmitting = ref(false);
     const selectedRemovalTarget = ref(null);
+    const maintenanceConfirmDialogOpen = ref(false);
+    const maintenanceDialogPhase = ref("confirm");
+    const maintenanceDialogError = ref("");
+    const maintenanceDialogSummary = ref("");
+    const maintenanceDialogResult = ref(null);
+    const maintenanceSubmitting = ref(false);
+    const selectedMaintenanceAction = ref(null);
+    const replaceConfirmDialogOpen = ref(false);
+    const replaceDialogPhase = ref("confirm");
+    const replaceDialogError = ref("");
+    const replaceDialogSummary = ref("");
+    const replaceDialogResult = ref(null);
+    const replaceSubmitting = ref(false);
+    const selectedReplaceAction = ref(null);
+    const raidzExpandConfirmDialogOpen = ref(false);
+    const raidzExpandDialogPhase = ref("confirm");
+    const raidzExpandDialogError = ref("");
+    const raidzExpandDialogSummary = ref("");
+    const raidzExpandDialogResult = ref(null);
+    const raidzExpandSubmitting = ref(false);
+    const selectedRaidzExpandAction = ref(null);
+    const clearConfirmDialogOpen = ref(false);
+    const clearDialogPhase = ref("confirm");
+    const clearDialogError = ref("");
+    const clearDialogSummary = ref("");
+    const clearDialogResult = ref(null);
+    const clearSubmitting = ref(false);
     const scrubSubmitting = ref(false);
     const scrubSummary = ref("");
     const scrubError = ref("");
+    const clearSummary = ref("");
+    const clearError = ref("");
 
     const pools = computed(() => {
       const value = props.state.snapshot.value?.data?.pools;
@@ -195,14 +229,14 @@ export default {
     });
 
     const topologySelectionSummary = computed(() =>
-      availableTopologyDevices.value.filter((device) => topologyDraft.value.devices.includes(device.path))
+      availableTopologyDevices.value.filter((device) => topologyDraft.value.devices.includes(device.commandPath || device.path))
     );
 
     const topologyConfirmSummary = computed(() =>
       topologyPendingAdditions.value.map((item) => ({
         ...item,
         deviceLabels: item.devices.map((path) => {
-          const device = availableTopologyDevices.value.find((entry) => entry.path === path);
+          const device = availableTopologyDevices.value.find((entry) => (entry.commandPath || entry.path) === path);
           return device ? formatTopologyDeviceLabel(device) : path;
         }),
       }))
@@ -211,9 +245,10 @@ export default {
     const selectedPoolScrubStatus = computed(() => {
       const scanStatus = selectedPool.value?.scanStatus || null;
       const activeScrub = Boolean(scanStatus && scanStatus.kind === "scrub" && scanStatus.active);
+      const activeScan = Boolean(scanStatus && scanStatus.active);
       return {
         ...(scanStatus || {}),
-        canStart: !activeScrub,
+        canStart: !activeScan,
         canStop: activeScrub,
       };
     });
@@ -250,19 +285,27 @@ export default {
     });
 
     const createPoolAvailableDataDevices = computed(() =>
-      allDisks.value.filter((disk) => isDiskAvailableForCreate(disk) && allowPathForBuilder(disk.path, createPoolUsedPaths.value, createPoolDraft.value.dataBuilder.devices))
+      allDisks.value.filter(
+        (disk) =>
+          isDiskAvailableForCreate(disk) &&
+          allowPathForBuilder(disk.commandPath || disk.path, createPoolUsedPaths.value, createPoolDraft.value.dataBuilder.devices)
+      )
     );
 
     const createPoolAvailableAuxDevices = computed(() =>
-      allDisks.value.filter((disk) => isDiskAvailableForCreate(disk) && allowPathForBuilder(disk.path, createPoolUsedPaths.value, createPoolDraft.value.auxBuilder.devices))
+      allDisks.value.filter(
+        (disk) =>
+          isDiskAvailableForCreate(disk) &&
+          allowPathForBuilder(disk.commandPath || disk.path, createPoolUsedPaths.value, createPoolDraft.value.auxBuilder.devices)
+      )
     );
 
     const createPoolDataSelectionSummary = computed(() =>
-      createPoolAvailableDataDevices.value.filter((device) => createPoolDraft.value.dataBuilder.devices.includes(device.path))
+      createPoolAvailableDataDevices.value.filter((device) => createPoolDraft.value.dataBuilder.devices.includes(device.commandPath || device.path))
     );
 
     const createPoolAuxSelectionSummary = computed(() =>
-      createPoolAvailableAuxDevices.value.filter((device) => createPoolDraft.value.auxBuilder.devices.includes(device.path))
+      createPoolAvailableAuxDevices.value.filter((device) => createPoolDraft.value.auxBuilder.devices.includes(device.commandPath || device.path))
     );
 
     const createPoolPayload = computed(() => ({
@@ -302,6 +345,16 @@ export default {
     const createPoolTerminalLogLines = computed(() => buildSingleCommandLogLines(createPoolDialogResult.value, createPoolDraft.value.name || "pool"));
     const destroyTerminalLogLines = computed(() => buildSingleCommandLogLines(destroyDialogResult.value, selectedPool.value?.name || "pool"));
     const removeTerminalLogLines = computed(() => buildSingleCommandLogLines(removeDialogResult.value, selectedRemovalTarget.value?.displayLabel || "target"));
+    const maintenanceTerminalLogLines = computed(() =>
+      buildSingleCommandLogLines(maintenanceDialogResult.value, selectedMaintenanceAction.value?.displayLabel || "device")
+    );
+    const replaceTerminalLogLines = computed(() =>
+      buildSingleCommandLogLines(replaceDialogResult.value, selectedReplaceAction.value?.displayLabel || "device")
+    );
+    const raidzExpandTerminalLogLines = computed(() =>
+      buildSingleCommandLogLines(raidzExpandDialogResult.value, selectedRaidzExpandAction.value?.displayLabel || "raidz")
+    );
+    const clearTerminalLogLines = computed(() => buildSingleCommandLogLines(clearDialogResult.value, selectedPool.value?.name || "pool"));
 
     const terminalLogLines = computed(() => buildCommandLogLines(dialogResults.value, "property"));
     const topologyTerminalLogLines = computed(() => buildCommandLogLines(topologyDialogResults.value, "category"));
@@ -371,6 +424,8 @@ export default {
       poolPropertyForce.value = false;
       scrubSummary.value = "";
       scrubError.value = "";
+      clearSummary.value = "";
+      clearError.value = "";
       initializeDraft(pool);
       resetDialogState();
       drawerOpen.value = true;
@@ -416,7 +471,7 @@ export default {
         : (layoutOptions[0]?.value || "stripe");
       const availablePaths = new Set(
         Array.isArray(pool?.availableTopologyDevices)
-          ? pool.availableTopologyDevices.map((device) => device.path)
+          ? pool.availableTopologyDevices.map((device) => device.commandPath || device.path)
           : []
       );
 
@@ -471,6 +526,38 @@ export default {
       removeDialogSummary.value = "";
       removeDialogResult.value = null;
       removeSubmitting.value = false;
+    }
+
+    function resetMaintenanceDialogState() {
+      maintenanceDialogPhase.value = "confirm";
+      maintenanceDialogError.value = "";
+      maintenanceDialogSummary.value = "";
+      maintenanceDialogResult.value = null;
+      maintenanceSubmitting.value = false;
+    }
+
+    function resetReplaceDialogState() {
+      replaceDialogPhase.value = "confirm";
+      replaceDialogError.value = "";
+      replaceDialogSummary.value = "";
+      replaceDialogResult.value = null;
+      replaceSubmitting.value = false;
+    }
+
+    function resetRaidzExpandDialogState() {
+      raidzExpandDialogPhase.value = "confirm";
+      raidzExpandDialogError.value = "";
+      raidzExpandDialogSummary.value = "";
+      raidzExpandDialogResult.value = null;
+      raidzExpandSubmitting.value = false;
+    }
+
+    function resetClearDialogState() {
+      clearDialogPhase.value = "confirm";
+      clearDialogError.value = "";
+      clearDialogSummary.value = "";
+      clearDialogResult.value = null;
+      clearSubmitting.value = false;
     }
 
     function toggleRow(pool) {
@@ -536,6 +623,59 @@ export default {
       selectedRemovalTarget.value = target;
       resetRemoveDialogState();
       removeConfirmDialogOpen.value = true;
+    }
+
+    function openDeviceMaintenanceDialog(payload) {
+      if (!payload?.member || !payload?.action || maintenanceSubmitting.value) {
+        return;
+      }
+      selectedMaintenanceAction.value = {
+        action: payload.action,
+        commandTarget: payload.member.commandTarget,
+        displayLabel: payload.member.displayLabel || payload.member.path || payload.member.commandTarget,
+        state: payload.member.state,
+      };
+      resetMaintenanceDialogState();
+      maintenanceConfirmDialogOpen.value = true;
+    }
+
+    function openReplaceDeviceDialog(payload) {
+      if (!payload?.member || replaceSubmitting.value) {
+        return;
+      }
+      const candidates = Array.isArray(payload.member.replaceCandidates) ? payload.member.replaceCandidates : [];
+      selectedReplaceAction.value = {
+        commandTarget: payload.member.commandTarget,
+        displayLabel: payload.member.displayLabel || payload.member.path || payload.member.commandTarget,
+        candidates,
+        replacementTarget: candidates[0]?.commandPath || candidates[0]?.path || "",
+      };
+      resetReplaceDialogState();
+      replaceConfirmDialogOpen.value = true;
+    }
+
+    function openRaidzExpandDialog(payload) {
+      if (!payload?.item || raidzExpandSubmitting.value) {
+        return;
+      }
+      const candidates = Array.isArray(payload.item.raidzExpandCandidates) ? payload.item.raidzExpandCandidates : [];
+      selectedRaidzExpandAction.value = {
+        vdevTarget: payload.item.commandTarget,
+        displayLabel: payload.item.displayLabel || payload.item.name || payload.item.commandTarget,
+        memberCount: Array.isArray(payload.item.members) ? payload.item.members.length : 0,
+        candidates,
+        newDeviceTarget: candidates[0]?.commandPath || candidates[0]?.path || "",
+      };
+      resetRaidzExpandDialogState();
+      raidzExpandConfirmDialogOpen.value = true;
+    }
+
+    function openClearConfirmDialog() {
+      if (!selectedPool.value?.name || clearSubmitting.value) {
+        return;
+      }
+      resetClearDialogState();
+      clearConfirmDialogOpen.value = true;
     }
 
     function toggleTopologyDevice(path) {
@@ -624,7 +764,12 @@ export default {
       const targets = Array.isArray(selectedPool.value?.removalTargets) ? selectedPool.value.removalTargets : [];
       return (
         targets.find(
-          (target) => target.commandTarget === item.name && target.vdevClass === item.vdevClass && target.nodeKind === item.nodeKind
+          (target) =>
+            (target.name === item.name ||
+              target.commandTarget === item.commandTarget ||
+              target.rawCommandTarget === item.rawCommandTarget) &&
+            target.vdevClass === item.vdevClass &&
+            target.nodeKind === item.nodeKind
         ) || null
       );
     }
@@ -894,6 +1039,165 @@ export default {
       }
     }
 
+    async function confirmMaintenanceAction() {
+      if (!selectedPool.value?.name || !selectedMaintenanceAction.value?.commandTarget || !selectedMaintenanceAction.value?.action) {
+        return;
+      }
+
+      maintenanceDialogPhase.value = "submitting";
+      maintenanceDialogError.value = "";
+      maintenanceDialogSummary.value = "";
+      maintenanceDialogResult.value = null;
+      maintenanceSubmitting.value = true;
+
+      try {
+        const response = selectedMaintenanceAction.value.action === "online"
+          ? await onlinePoolDevice(selectedPool.value.name, selectedMaintenanceAction.value.commandTarget)
+          : await offlinePoolDevice(selectedPool.value.name, selectedMaintenanceAction.value.commandTarget);
+        maintenanceDialogResult.value = response;
+        maintenanceDialogSummary.value = response.success
+          ? t("pools.summary.maintenanceSucceeded")
+          : t("pools.summary.maintenanceFailed");
+
+        if (response.refresh_error) {
+          maintenanceDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
+        }
+
+        await rebindSelectedPool();
+      } catch (error) {
+        maintenanceDialogError.value = error instanceof Error ? error.message : String(error);
+        try {
+          await refreshStateOnce();
+        } catch {
+          // Keep maintenance error as primary.
+        }
+      } finally {
+        maintenanceSubmitting.value = false;
+        maintenanceDialogPhase.value = "result";
+      }
+    }
+
+    async function confirmReplaceAction() {
+      if (!selectedPool.value?.name || !selectedReplaceAction.value?.commandTarget || !selectedReplaceAction.value?.replacementTarget) {
+        return;
+      }
+
+      replaceDialogPhase.value = "submitting";
+      replaceDialogError.value = "";
+      replaceDialogSummary.value = "";
+      replaceDialogResult.value = null;
+      replaceSubmitting.value = true;
+
+      try {
+        const response = await replacePoolDevice(
+          selectedPool.value.name,
+          selectedReplaceAction.value.commandTarget,
+          selectedReplaceAction.value.replacementTarget
+        );
+        replaceDialogResult.value = response;
+        replaceDialogSummary.value = response.success
+          ? t("pools.summary.replaceSucceeded")
+          : t("pools.summary.replaceFailed");
+
+        if (response.refresh_error) {
+          replaceDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
+        }
+
+        await rebindSelectedPool();
+      } catch (error) {
+        replaceDialogError.value = error instanceof Error ? error.message : String(error);
+        try {
+          await refreshStateOnce();
+        } catch {
+          // Keep replace error as primary.
+        }
+      } finally {
+        replaceSubmitting.value = false;
+        replaceDialogPhase.value = "result";
+      }
+    }
+
+    async function confirmRaidzExpandAction() {
+      if (!selectedPool.value?.name || !selectedRaidzExpandAction.value?.vdevTarget || !selectedRaidzExpandAction.value?.newDeviceTarget) {
+        return;
+      }
+
+      raidzExpandDialogPhase.value = "submitting";
+      raidzExpandDialogError.value = "";
+      raidzExpandDialogSummary.value = "";
+      raidzExpandDialogResult.value = null;
+      raidzExpandSubmitting.value = true;
+
+      try {
+        const response = await expandPoolRaidz(
+          selectedPool.value.name,
+          selectedRaidzExpandAction.value.vdevTarget,
+          selectedRaidzExpandAction.value.newDeviceTarget
+        );
+        raidzExpandDialogResult.value = response;
+        raidzExpandDialogSummary.value = response.success
+          ? t("pools.summary.raidzExpandSucceeded")
+          : t("pools.summary.raidzExpandFailed");
+
+        if (response.refresh_error) {
+          raidzExpandDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
+        }
+
+        await rebindSelectedPool();
+      } catch (error) {
+        raidzExpandDialogError.value = error instanceof Error ? error.message : String(error);
+        try {
+          await refreshStateOnce();
+        } catch {
+          // Keep expansion error as primary.
+        }
+      } finally {
+        raidzExpandSubmitting.value = false;
+        raidzExpandDialogPhase.value = "result";
+      }
+    }
+
+    async function confirmClearPool() {
+      if (!selectedPool.value?.name) {
+        return;
+      }
+
+      clearDialogPhase.value = "submitting";
+      clearDialogError.value = "";
+      clearDialogSummary.value = "";
+      clearDialogResult.value = null;
+      clearSubmitting.value = true;
+
+      try {
+        const response = await clearPool(selectedPool.value.name);
+        clearDialogResult.value = response;
+        clearDialogSummary.value = response.success
+          ? t("pools.summary.clearSucceeded")
+          : t("pools.summary.clearFailed");
+        clearSummary.value = response.message || "";
+
+        if (response.refresh_error) {
+          clearDialogError.value = t("pools.summary.stateRefreshFailed", { error: response.refresh_error });
+          clearError.value = clearDialogError.value;
+        } else {
+          clearError.value = "";
+        }
+
+        await rebindSelectedPool();
+      } catch (error) {
+        clearDialogError.value = error instanceof Error ? error.message : String(error);
+        clearError.value = clearDialogError.value;
+        try {
+          await refreshStateOnce();
+        } catch {
+          // Keep clear error as primary.
+        }
+      } finally {
+        clearSubmitting.value = false;
+        clearDialogPhase.value = "result";
+      }
+    }
+
     async function rebindSelectedPool() {
       try {
         await refreshStateOnce();
@@ -959,8 +1263,20 @@ export default {
       availableTopologyDevices,
       canAdvanceCreatePool,
       canSubmitCreatePool,
+      clearConfirmDialogOpen,
+      clearDialogError,
+      clearDialogPhase,
+      clearDialogResult,
+      clearDialogSummary,
+      clearError,
+      clearSubmitting,
+      clearSummary,
       changedItems,
       confirmDialogOpen,
+      confirmClearPool,
+      confirmMaintenanceAction,
+      confirmRaidzExpandAction,
+      confirmReplaceAction,
       confirmCreatePool,
       confirmDestroyPool,
       confirmRemoveTarget,
@@ -1005,13 +1321,24 @@ export default {
       draftValues,
       drawerOpen,
       isExpanded,
+      maintenanceConfirmDialogOpen,
+      maintenanceDialogError,
+      maintenanceDialogPhase,
+      maintenanceDialogResult,
+      maintenanceDialogSummary,
+      maintenanceSubmitting,
+      maintenanceTerminalLogLines,
       normalizedPools,
       nextCreatePoolStep,
+      openClearConfirmDialog,
       openConfirmDialog,
       openCreatePoolConfirmDialog,
       openCreatePoolWizard,
+      openDeviceMaintenanceDialog,
+      openReplaceDeviceDialog,
       openDestroyPoolConfirmDialog,
       openPool,
+      openRaidzExpandDialog,
       openRemoveTargetConfirmDialog,
       openTopologyConfirmDialog,
       openTopologyEditor,
@@ -1029,7 +1356,24 @@ export default {
       removeDialogSummary,
       removeSubmitting,
       removeTerminalLogLines,
+      replaceConfirmDialogOpen,
+      replaceDialogError,
+      replaceDialogPhase,
+      replaceDialogResult,
+      replaceDialogSummary,
+      replaceSubmitting,
+      replaceTerminalLogLines,
+      raidzExpandConfirmDialogOpen,
+      raidzExpandDialogError,
+      raidzExpandDialogPhase,
+      raidzExpandDialogResult,
+      raidzExpandDialogSummary,
+      raidzExpandSubmitting,
+      raidzExpandTerminalLogLines,
       rootDatasetPropertyInput,
+      selectedRaidzExpandAction,
+      selectedReplaceAction,
+      selectedMaintenanceAction,
       selectedPool,
       selectedPoolScrubStatus,
       selectedRemovalTarget,
@@ -1041,6 +1385,7 @@ export default {
       scrubSubmitting,
       scrubSummary,
       submitting,
+      clearTerminalLogLines,
       terminalLogLines,
       toggleCreatePoolDevice,
       toggleRow,
@@ -1263,7 +1608,7 @@ function allowPathForBuilder(path, usedPaths, currentBuilderPaths) {
 }
 
 function formatTopologyDeviceLabel(device) {
-  return `${device.path} [${device.diskId}]`;
+  return `${device.displayName || device.path} [${device.diskId}]`;
 }
 
 function buildCommandLogLines(results, primaryKey) {
@@ -1327,6 +1672,10 @@ function buildSingleCommandLogLines(result, label) {
       :scrub-submitting="scrubSubmitting"
       :scrub-summary="scrubSummary"
       :scrub-error="scrubError"
+      :clear-submitting="clearSubmitting"
+      :clear-summary="clearSummary"
+      :clear-error="clearError"
+      :can-clear="Boolean(selectedPool && selectedPool.name)"
       :advanced-readonly-open="advancedReadonlyOpen"
       :pool-property-force="poolPropertyForce"
       :changed-items="changedItems"
@@ -1338,6 +1687,7 @@ function buildSingleCommandLogLines(result, label) {
       @toggle-advanced="advancedReadonlyOpen = !advancedReadonlyOpen"
       @open-confirm="openConfirmDialog"
       @open-destroy="openDestroyPoolConfirmDialog"
+      @open-clear="openClearConfirmDialog"
       @start-scrub="handleStartScrub"
       @stop-scrub="handleStopScrub"
     />
@@ -1355,6 +1705,7 @@ function buildSingleCommandLogLines(result, label) {
       :topology-force="topologyForce"
       :topology-submitting="topologySubmitting"
       :remove-submitting="removeSubmitting"
+      :device-maintenance-submitting="maintenanceSubmitting || replaceSubmitting || raidzExpandSubmitting"
       :topology-device-selected="topologyDeviceSelected"
       :format-topology-device-label="formatTopologyDeviceLabel"
       :get-removal-target="getRemovalTarget"
@@ -1363,6 +1714,9 @@ function buildSingleCommandLogLines(result, label) {
       @toggle-device="toggleTopologyDevice"
       @open-confirm="openTopologyConfirmDialog"
       @remove-target="openRemoveTargetConfirmDialog"
+      @device-action="openDeviceMaintenanceDialog"
+      @replace-device="openReplaceDeviceDialog"
+      @raidz-expand="openRaidzExpandDialog"
     />
 
     <CreatePoolDrawer
@@ -1446,16 +1800,57 @@ function buildSingleCommandLogLines(result, label) {
       :remove-dialog-error="removeDialogError"
       :remove-dialog-result="removeDialogResult"
       :remove-terminal-log-lines="removeTerminalLogLines"
+      :selected-maintenance-action="selectedMaintenanceAction"
+      :maintenance-confirm-dialog-open="maintenanceConfirmDialogOpen"
+      :maintenance-submitting="maintenanceSubmitting"
+      :maintenance-dialog-phase="maintenanceDialogPhase"
+      :maintenance-dialog-summary="maintenanceDialogSummary"
+      :maintenance-dialog-error="maintenanceDialogError"
+      :maintenance-dialog-result="maintenanceDialogResult"
+      :maintenance-terminal-log-lines="maintenanceTerminalLogLines"
+      :selected-replace-action="selectedReplaceAction"
+      :replace-confirm-dialog-open="replaceConfirmDialogOpen"
+      :replace-submitting="replaceSubmitting"
+      :replace-dialog-phase="replaceDialogPhase"
+      :replace-dialog-summary="replaceDialogSummary"
+      :replace-dialog-error="replaceDialogError"
+      :replace-dialog-result="replaceDialogResult"
+      :replace-terminal-log-lines="replaceTerminalLogLines"
+      :selected-raidz-expand-action="selectedRaidzExpandAction"
+      :raidz-expand-confirm-dialog-open="raidzExpandConfirmDialogOpen"
+      :raidz-expand-submitting="raidzExpandSubmitting"
+      :raidz-expand-dialog-phase="raidzExpandDialogPhase"
+      :raidz-expand-dialog-summary="raidzExpandDialogSummary"
+      :raidz-expand-dialog-error="raidzExpandDialogError"
+      :raidz-expand-dialog-result="raidzExpandDialogResult"
+      :raidz-expand-terminal-log-lines="raidzExpandTerminalLogLines"
+      :clear-confirm-dialog-open="clearConfirmDialogOpen"
+      :clear-submitting="clearSubmitting"
+      :clear-dialog-phase="clearDialogPhase"
+      :clear-dialog-summary="clearDialogSummary"
+      :clear-dialog-error="clearDialogError"
+      :clear-dialog-result="clearDialogResult"
+      :clear-terminal-log-lines="clearTerminalLogLines"
       @update:confirmDialogOpen="confirmDialogOpen = $event"
       @update:topologyConfirmDialogOpen="topologyConfirmDialogOpen = $event"
       @update:createPoolConfirmDialogOpen="createPoolConfirmDialogOpen = $event"
       @update:destroyConfirmDialogOpen="destroyConfirmDialogOpen = $event"
       @update:removeConfirmDialogOpen="removeConfirmDialogOpen = $event"
+      @update:maintenanceConfirmDialogOpen="maintenanceConfirmDialogOpen = $event"
+      @update:selectedReplaceAction="selectedReplaceAction = $event"
+      @update:replaceConfirmDialogOpen="replaceConfirmDialogOpen = $event"
+      @update:selectedRaidzExpandAction="selectedRaidzExpandAction = $event"
+      @update:raidzExpandConfirmDialogOpen="raidzExpandConfirmDialogOpen = $event"
+      @update:clearConfirmDialogOpen="clearConfirmDialogOpen = $event"
       @confirm-save="confirmSave"
       @confirm-topology="confirmTopologySave"
       @confirm-create-pool="confirmCreatePool"
       @confirm-destroy-pool="confirmDestroyPool"
       @confirm-remove-target="confirmRemoveTarget"
+      @confirm-maintenance-action="confirmMaintenanceAction"
+      @confirm-replace-action="confirmReplaceAction"
+      @confirm-raidz-expand-action="confirmRaidzExpandAction"
+      @confirm-clear-pool="confirmClearPool"
     />
   </section>
 </template>

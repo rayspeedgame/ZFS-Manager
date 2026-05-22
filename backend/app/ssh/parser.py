@@ -21,6 +21,7 @@ from app.ssh.commands import (
 _POOL_HEADER_RE = re.compile(r"^\s*pool:\s*(?P<name>\S+)\s*$")
 _STATE_RE = re.compile(r"^\s*state:\s*(?P<state>.+?)\s*$")
 _SCAN_RE = re.compile(r"^\s*scan:\s*(?P<scan>.+?)\s*$")
+_EXPAND_RE = re.compile(r"^\s*expand:\s*(?P<expand>.+?)\s*$")
 _CONFIG_HEADER_RE = re.compile(r"^\s*NAME\s+STATE\s+READ\s+WRITE\s+CKSUM\s*$")
 _DEVICE_LINE_RE = re.compile(
     r"^(?P<indent>\s*)(?P<name>\S+)\s+"
@@ -131,9 +132,11 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
     result: dict[str, Any] | None = None
     in_config = False
     stack: list[tuple[int, dict[str, Any]]] = []
+    multiline_key: str | None = None
 
     def commit_current() -> None:
         nonlocal result
+        nonlocal multiline_key
         if result is None:
             return
         result["config"] = _normalize_top_level_topology(
@@ -144,6 +147,7 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
         if pool_name:
             statuses[str(pool_name)] = result
         result = None
+        multiline_key = None
 
     for line in lines:
         if match := _POOL_HEADER_RE.match(line):
@@ -152,23 +156,37 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
                 "pool": match.group("name"),
                 "state": None,
                 "scan": None,
+                "expand": None,
                 "config": [],
                 "errors": None,
             }
             in_config = False
             stack.clear()
+            multiline_key = None
             continue
         if result is None:
             continue
         if match := _STATE_RE.match(line):
             result["state"] = match.group("state")
+            multiline_key = None
             continue
         if match := _SCAN_RE.match(line):
             result["scan"] = match.group("scan")
+            multiline_key = "scan"
+            continue
+        if match := _EXPAND_RE.match(line):
+            result["expand"] = match.group("expand")
+            multiline_key = "expand"
+            continue
+        if not in_config and multiline_key and line.startswith(" ") and line.strip() and not line.lstrip().startswith("errors:"):
+            existing = str(result.get(multiline_key) or "").strip()
+            addition = line.strip()
+            result[multiline_key] = f"{existing}\n{addition}" if existing else addition
             continue
         if _CONFIG_HEADER_RE.match(line):
             in_config = True
             stack.clear()
+            multiline_key = None
             continue
         if in_config and (not line.strip() or line.strip() == "config:"):
             continue
@@ -228,6 +246,7 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
         if match := _ERRORS_RE.match(line):
             result["errors"] = match.group("errors")
             in_config = False
+            multiline_key = None
             commit_current()
 
     commit_current()

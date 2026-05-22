@@ -41,6 +41,7 @@ class AppConfig(BaseModel):
     poller: PollerSettings = Field(default_factory=PollerSettings)
     ssh: SSHSettings = Field(default_factory=SSHSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    disk_labels: dict[str, str] = Field(default_factory=dict)
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]

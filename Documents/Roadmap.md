@@ -1,64 +1,68 @@
 # Roadmap
 
-> [中文版](./Roadmap.zh-CN.md)
+> [中文版本](./Roadmap.zh-CN.md)
 
 ## Completed or Active Foundations
 
-- Unified task records and status page
+- task records and status page
 - SQLite-backed task and schedule persistence
-- Startup recovery and task reconciliation
-- Manual `scrub` with progress display and recovery
-- Scheduled `scrub`
-- Dedicated snapshot page
-- Snapshot create, delete, rollback, and advanced rollback modes
-- Scheduled snapshot workflows
-- Snapshot retention cleanup based on schedule-scoped ownership
+- startup recovery and task reconciliation
+- manual `scrub`
+- recurring `scrub`
+- dedicated snapshot page
+- snapshot create, delete, rollback, and advanced rollback
+- recurring snapshot workflows
+- schedule-scoped snapshot retention cleanup
+- pool-level `clear`
+- device-level `offline / online`
+- `replace` plus `resilver` tracking
+- RAID-Z `expansion`
 
 ## Current Snapshot Direction
 
-The current snapshot direction is now stable enough to treat as the baseline:
-
-- Manual snapshots can still be created directly from `DatasetsView`
-- Centralized snapshot management lives in `SnapshotsView`
-- Scheduled snapshots use short names such as `scheduled-YYYYMMDD-HHMMSS-random`
-- Strategy ownership, level, recursion, and retention identity are stored in ZFS user properties
-- Retention cleanup matches snapshots by schedule identity, not by long names
-- Supported schedule levels now include:
+- `DatasetsView` still owns quick manual snapshot creation
+- `SnapshotsView` is the centralized management surface
+- scheduled snapshots use short names such as `scheduled-YYYYMMDD-HHMMSS-random`
+- ownership, level, recursion, and retention identity live in ZFS user properties
+- cleanup is grouped by schedule identity, so manual snapshots and other schedules stay untouched
+- supported schedule levels are:
   - minutely
   - hourly
   - daily
   - weekly
   - monthly
 
-## Next Development Priorities
+## Current Pool-Maintenance Direction
+
+- new-device operations prefer `by-id`
+- existing pool-member maintenance must use `commandTarget`
+- RAID-Z expansion is exposed at the vdev level, not the leaf-disk level
+- RAID-Z expansion recovery now considers:
+  - the `expand:` phase
+  - the automatic `scrub` phase
+  - observed member identity and member-count growth
+
+## Next Priorities
 
 ### 1. Snapshot schedule refinement
 
-- Edit existing snapshot schedules
-- Surface strategy metadata more clearly in the UI
-- Add operator-facing visibility into which snapshots belong to which schedule
+- edit existing snapshot schedules
+- surface strategy ownership and metadata more clearly
+- add operator-facing visibility into which snapshots belong to which schedule
 
 ### 2. Snapshot retention growth
 
-- Keep-latest is the current baseline
-- Add richer tiered retention only when needed
-- Preserve the rule that scheduled cleanup must not affect manual snapshots
+- `keep latest N` remains the baseline
+- add richer tiered retention only when truly needed
+- keep the rule that automated cleanup must not affect manual snapshots
 
 ### 3. Pool maintenance growth
 
-- Device replace
-- Resilver progress and recovery
-- Single-disk expansion
-- Additional pool maintenance actions such as offline and online
+- clearer candidate-disk eligibility for `replace`
+- clearer candidate-disk eligibility for RAID-Z `expansion`
+- richer maintenance summary and audit context
 
 ### 4. Documentation and audit depth
 
-- Keep schedule, retention, and task behavior aligned across docs
-- Expand task logs and operator-visible audit context
-
-## Design Rules To Keep
-
-- Prefer ZFS and host state as the source of truth for long-running workflows
-- Keep snapshot names short and low-risk
-- Store scheduled snapshot ownership and cleanup identity in ZFS user properties
-- Keep scheduled cleanup isolated to the schedule that created the snapshots
+- keep schedule, retention, task recovery, and pool-maintenance docs aligned
+- continue improving operator-visible task logs and audit details

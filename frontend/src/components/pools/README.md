@@ -2,23 +2,48 @@
 
 > [中文版本](./README.zh-CN.md)
 
-Pool-specific workflow components.
+This directory holds pool-specific workflow components.
 
-## Files
+## Main Files
 
-- `PoolListPanel.vue`: Pool inventory list and entry-point actions
-- `PoolDetailDrawer.vue`: Pool facts, editable properties, and scrub status/actions
-- `PoolTopologyDrawer.vue`: Topology add/remove workflows
-- `CreatePoolDrawer.vue`: Step-based pool creation UI
-- `PoolActionDialogs.vue`: Confirmation and result dialogs for pool writes
-- `TopologyNode.vue`: Recursive topology presentation
-- `pool-form-config.js`: Pool property fields, topology options, and create-pool config
+- `PoolListPanel.vue`
+  - pool inventory list and entry-point actions
+- `PoolDetailDrawer.vue`
+  - pool details, properties, `scrub`, and `clear`
+- `PoolTopologyDrawer.vue`
+  - topology edits, device maintenance, replace, and RAID-Z expansion
+- `CreatePoolDrawer.vue`
+  - step-based pool creation UI
+- `PoolActionDialogs.vue`
+  - shared confirmation and result dialogs for pool writes
+- `TopologyNode.vue`
+  - recursive topology presentation
+- `pool-form-config.js`
+  - pool property fields, topology options, and create-pool config
 
-## Notes
+## Current Conventions
 
-- These components render UI and emit events upward
-- `PoolDetailDrawer.vue` now includes a dedicated scrub section with:
-  - status summary
-  - progress and ETA
-  - start and stop controls
-- `PoolsView.vue` still owns API calls, live snapshot rebinding, and draft safety
+- these components mainly render UI and emit events upward
+- `PoolDetailDrawer.vue` owns pool-level maintenance summary
+- `PoolTopologyDrawer.vue` owns device-level and vdev-level maintenance entry points
+
+### Topology identity fields
+
+Topology components now use three kinds of fields together:
+
+- display fields
+  - `displayLabel`
+- helper identity fields
+  - `kernelPath`
+  - `byIdPath`
+  - `aliases`
+- execution field
+  - `commandTarget`
+
+### Delivered maintenance actions
+
+- `offline / online`
+- `replace`
+- RAID-Z `expansion`
+
+The RAID-Z expansion button lives on the vdev item, not on an individual leaf disk.

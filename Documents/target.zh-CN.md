@@ -4,59 +4,64 @@
 
 ## 当前产品目标
 
-将 ZFS Manager 打造成适合单机或小型实验环境的实用 ZFS Web 管理界面，让运维人员可以在不频繁切回命令行的情况下完成常见的 pool、dataset、snapshot、任务和计划任务操作。
+将 ZFS Manager 打造成适合单机或小型实验环境的 ZFS Web 管理界面，让常见的 pool、dataset、snapshot、task 和 schedule 工作流不必频繁切换到命令行。
 
 ## 已交付能力
 
-### 存储池能力
+### Pool 工作流
 
-- 存储池健康、容量和状态总览
-- 拓扑可视化
-- 可编辑的 pool 属性
-- 添加 `log`、`cache`、`special`、`dedup`、`spare` 设备
-- 创建与销毁 pool
+- pool 健康、容量和状态概览
+- pool 拓扑可视化
+- pool 属性编辑
+- 增加 `log`、`cache`、`special`、`dedup`、`spare` 设备
+- 创建和销毁 pool
 - 移除支持的拓扑目标
-- 启动与停止 `scrub`
-- 在 pool 详情中显示 `scrub` 状态、进度和 ETA
+- 启动和停止 `scrub`
+- 在 pool 详情中展示 `scrub` 状态、进度和 ETA
+- pool 级 `clear`
+- 设备级 `offline / online`
+- 设备级 `replace`
+- `resilver` 跟踪与恢复
+- RAID-Z `expansion`
 
-### 数据集与快照能力
+### Dataset 与快照工作流
 
-- dataset 与 zvol 清单
-- 可展开的数据集树
-- 创建与销毁 dataset / zvol 子项
+- dataset 和 zvol 清单
+- 可展开的 dataset 树
+- 创建和销毁 dataset / zvol 子项
 - 编辑 dataset 属性
-- 从 `DatasetsView` 快速创建快照
-- 独立的 `SnapshotsView`
-- 快照列表分页、筛选、详情、删除与回滚
-- 支持安全回滚、`-r`、`-R` 的高级回滚模式
+- 在 `DatasetsView` 中快速创建快照
+- 独立 `SnapshotsView`
+- 快照分页、筛选、详情、删除与回滚
+- 高级回滚模式：普通、`-r`、`-R`
 
-### 任务与计划任务能力
+### 任务与计划任务工作流
 
-- 独立的任务记录与状态页面
-- pool、dataset、snapshot 写操作统一进入任务系统
-- 基于 SQLite 的任务持久化
+- 独立任务记录和状态页
+- pool、dataset、snapshot 写操作统一纳入任务系统
+- SQLite 任务持久化
 - 未完成任务的启动恢复与对账
 - 定时 `scrub`
 - 定时 `snapshot`
-- 按计划归属执行的快照保留清理
-- 定时快照级别：
-  - 分钟级
-  - 小时级
-  - 天级
-  - 周级
-  - 月级
+- 基于计划归属的快照保留清理
+- 快照计划级别：
+  - minutely
+  - hourly
+  - daily
+  - weekly
+  - monthly
 
 ## 当前架构方向
 
-- `SnapshotsView` 作为快照集中管理界面
-- `DatasetsView` 保持为轻量的快照发起入口
-- 定时快照现在采用短快照名，并通过 ZFS 用户属性记录策略归属
-- 保留策略按计划身份匹配，因此不会误删手动快照，也不会影响其他计划生成的快照
-- 计划任务页面现在同时承载定时 `scrub` 和定时 `snapshot`
+- `SnapshotsView` 是集中快照管理入口
+- `DatasetsView` 保留轻量快照发起入口
+- 定时快照使用短名称，将归属信息写入 ZFS 用户属性
+- 保留策略按计划身份匹配，不会误伤手动快照或其他计划生成的快照
+- `SchedulesView` 统一承载定时 `scrub` 和定时 `snapshot`
+- pool 维护中的设备显示名与执行名已拆分，避免路径变化影响命令提交
 
 ## 下一步
 
-- 将当前定时快照与保留策略行为继续同步进运维文档
-- 增强定时快照编辑与策略可视化
-- 在需要时从 keep-latest 扩展到更完整的日/周/月分层保留
-- 继续推进 replace、resilver 跟踪、expansion 等 pool 维护能力
+- 继续补强定时快照编辑与策略可见性
+- 在确有需求时扩展更复杂的分层保留规则
+- 继续补强 replace / RAID-Z expansion 的候选盘说明和审计信息

@@ -82,6 +82,10 @@ function topologyStateSeverity(state) {
         <strong>{{ node.displayName || node.name }}</strong>
         <span v-if="isLeaf && node.diskId" class="topology-disk-id">{{ node.diskId }}</span>
       </div>
+      <div v-if="isLeaf && (node.kernelPath || node.byIdPath)" class="topology-meta-line">
+        <span v-if="node.kernelPath" class="subtle-text">{{ node.kernelPath }}</span>
+        <span v-if="node.byIdPath" class="subtle-text">{{ node.byIdPath }}</span>
+      </div>
       <div class="topology-meta-line">
         <span class="inline-status" :data-health="displayState">{{ displayState }}</span>
         <span v-if="isLeaf" class="subtle-text">{{ t("pools.topologyNode.poolStatus") }}</span>

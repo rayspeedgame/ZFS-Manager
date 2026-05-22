@@ -93,7 +93,7 @@ const emit = defineEmits([
 
                   <section class="pool-expand-panel">
                     <div class="pool-panel-header">
-                      <h4>{{ t("pools.quickFacts") }}</h4>
+                      <h4>{{ t("pools.quickFacts.title") }}</h4>
                       <button
                         type="button"
                         class="danger-button"

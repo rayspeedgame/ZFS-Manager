@@ -199,19 +199,21 @@ function updatePropertyMap(path, value) {
           <div v-if="createPoolAvailableDataDevices.length" class="topology-device-list">
             <label
               v-for="device in createPoolAvailableDataDevices"
-              :key="'data-' + device.path"
+              :key="'data-' + (device.commandPath || device.path)"
               class="topology-device-option"
-              :data-selected="createPoolDeviceSelected('dataBuilder', device.path)"
+              :data-selected="createPoolDeviceSelected('dataBuilder', device.commandPath || device.path)"
             >
               <input
                 type="checkbox"
-                :checked="createPoolDeviceSelected('dataBuilder', device.path)"
+                :checked="createPoolDeviceSelected('dataBuilder', device.commandPath || device.path)"
                 :disabled="createPoolSubmitting"
-                @change="emit('toggle-device', 'dataBuilder', device.path)"
+                @change="emit('toggle-device', 'dataBuilder', device.commandPath || device.path)"
               />
               <div>
-                <strong>{{ device.path }}</strong>
+                <strong>{{ device.displayName || device.path }}</strong>
                 <div class="subtle-text">{{ device.diskId }}</div>
+                <div class="subtle-text">{{ device.kernelPath || device.path }}</div>
+                <div v-if="device.byIdPath" class="subtle-text">{{ device.byIdPath }}</div>
                 <div class="subtle-text">{{ device.model || t("common.unknownModel") }}</div>
                 <div class="subtle-text">{{ formatBytes(device.size) }}</div>
               </div>
@@ -280,19 +282,21 @@ function updatePropertyMap(path, value) {
           <div v-if="createPoolAvailableAuxDevices.length" class="topology-device-list">
             <label
               v-for="device in createPoolAvailableAuxDevices"
-              :key="'aux-' + device.path"
+              :key="'aux-' + (device.commandPath || device.path)"
               class="topology-device-option"
-              :data-selected="createPoolDeviceSelected('auxBuilder', device.path)"
+              :data-selected="createPoolDeviceSelected('auxBuilder', device.commandPath || device.path)"
             >
               <input
                 type="checkbox"
-                :checked="createPoolDeviceSelected('auxBuilder', device.path)"
+                :checked="createPoolDeviceSelected('auxBuilder', device.commandPath || device.path)"
                 :disabled="createPoolSubmitting"
-                @change="emit('toggle-device', 'auxBuilder', device.path)"
+                @change="emit('toggle-device', 'auxBuilder', device.commandPath || device.path)"
               />
               <div>
-                <strong>{{ device.path }}</strong>
+                <strong>{{ device.displayName || device.path }}</strong>
                 <div class="subtle-text">{{ device.diskId }}</div>
+                <div class="subtle-text">{{ device.kernelPath || device.path }}</div>
+                <div v-if="device.byIdPath" class="subtle-text">{{ device.byIdPath }}</div>
                 <div class="subtle-text">{{ device.model || t("common.unknownModel") }}</div>
                 <div class="subtle-text">{{ formatBytes(device.size) }}</div>
               </div>

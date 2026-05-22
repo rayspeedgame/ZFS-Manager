@@ -400,8 +400,13 @@ svg {
 
 .tasks-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(380px, 1.05fr) minmax(0, 0.95fr);
   gap: 20px;
+}
+
+.task-list-panel,
+.task-detail-panel {
+  min-width: 0;
 }
 
 .task-list {
@@ -413,6 +418,7 @@ svg {
   display: grid;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   padding: 14px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -420,6 +426,7 @@ svg {
   color: #edf5ff;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .task-card[data-selected="true"] {
@@ -436,10 +443,29 @@ svg {
   gap: 12px;
 }
 
+.task-card-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.task-card-head strong {
+  min-width: 0;
+  flex: 1 1 240px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: left;
+}
+
 .task-card-meta {
   color: #95a9cc;
   font-size: 12px;
   flex-wrap: wrap;
+}
+
+.task-card-meta span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .schedule-card-list {
@@ -495,6 +521,21 @@ svg {
 .task-progress-row strong {
   min-width: 48px;
   text-align: right;
+}
+
+.task-progress-row .usage-bar {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.task-detail-panel .section-header > div {
+  min-width: 0;
+}
+
+.task-detail-panel .section-header h3,
+.task-detail-panel .section-header p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .section-header {

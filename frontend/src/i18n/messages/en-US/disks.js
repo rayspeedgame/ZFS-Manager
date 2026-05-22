@@ -1,11 +1,16 @@
 export default {
   inventory: "Disk Inventory",
-  inventoryDescription: "Physical devices, partitions, and detected ZFS membership.",
+  inventoryDescription: "Physical devices, aliases, partitions, and detected ZFS membership.",
   emptyTitle: "No disks discovered",
   emptyDescription: "The current snapshot did not report any block devices.",
   detailTitle: "Disk Details",
   identity: "Identity",
   filesystemRelation: "Filesystem Relation",
+  customName: "Custom Name",
+  labelDescription: "Set a friendly name for the disk. When empty, the kernel path is used as the default display name.",
+  byIdPath: "by-id Path",
+  commandPath: "Preferred Command Path",
+  diskId: "Disk ID",
   columns: {
     device: "Device",
     model: "Model",

@@ -13,6 +13,10 @@ const props = defineProps({
   scrubSubmitting: { type: Boolean, default: false },
   scrubSummary: { type: String, default: "" },
   scrubError: { type: String, default: "" },
+  clearSubmitting: { type: Boolean, default: false },
+  clearSummary: { type: String, default: "" },
+  clearError: { type: String, default: "" },
+  canClear: { type: Boolean, default: true },
   advancedReadonlyOpen: { type: Boolean, default: false },
   poolPropertyForce: { type: Boolean, default: false },
   changedItems: { type: Array, required: true },
@@ -31,6 +35,7 @@ const emit = defineEmits([
   "open-destroy",
   "start-scrub",
   "stop-scrub",
+  "open-clear",
 ]);
 
 function toMetaMap(items, prefix = "") {
@@ -124,6 +129,25 @@ function toMetaMap(items, prefix = "") {
         </dl>
         <p v-if="scrubSummary" class="notice-text">{{ scrubSummary }}</p>
         <p v-if="scrubError" class="error-text">{{ scrubError }}</p>
+      </section>
+
+      <section class="drawer-section">
+        <div class="drawer-section-header">
+          <div>
+            <h4>{{ t("pools.maintenance.title") }}</h4>
+            <p class="subtle-text">{{ t("pools.maintenance.description") }}</p>
+          </div>
+          <button
+            type="button"
+            class="ghost-button"
+            :disabled="clearSubmitting || !canClear"
+            @click="emit('open-clear')"
+          >
+            {{ t("pools.maintenance.clear") }}
+          </button>
+        </div>
+        <p v-if="clearSummary" class="notice-text">{{ clearSummary }}</p>
+        <p v-if="clearError" class="error-text">{{ clearError }}</p>
       </section>
 
       <PropertySection

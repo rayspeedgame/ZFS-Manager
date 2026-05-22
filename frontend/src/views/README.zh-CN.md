@@ -2,21 +2,57 @@
 
 > [English Version](./README.md)
 
-路由级页面组件。
+这里放路由级页面组件。
 
-## 文件
+## 主要页面
 
-- `DashboardView.vue`：总览页
-- `DisksView.vue`：磁盘与分区页面
-- `PoolsView.vue`：存储池页面容器
-- `DatasetsView.vue`：数据集页面容器，包含手动快照快速创建入口
-- `SnapshotsView.vue`：独立快照管理页面
-- `SchedulesView.vue`：定时 `scrub` 与定时 `snapshot` 页面
-- `TasksView.vue`：任务记录与状态页面
-- `SettingsView.vue`：后端设置页面
+- `DashboardView.vue`
+  - 总览页
+- `DisksView.vue`
+  - 磁盘与分区页
+- `PoolsView.vue`
+  - pool 页面容器
+- `DatasetsView.vue`
+  - dataset 页面容器，包含快速手动快照入口
+- `SnapshotsView.vue`
+  - 独立快照管理页
+- `SchedulesView.vue`
+  - 定时 `scrub` 和定时 `snapshot`
+- `TasksView.vue`
+  - 任务记录和状态页
+- `SettingsView.vue`
+  - 后端设置页
 
-## 说明
+## 当前说明
 
-- `SchedulesView` 现在支持从分钟级到月级的快照计划
-- 删除计划任务已经改成和其他危险操作一致的站内确认弹窗
-- `SnapshotsView` 继续作为快照集中管理界面
+### `DisksView`
+
+- 使用规范化后的磁盘身份模型
+- 主标题来自 `displayName`
+- 副信息展示 `kernelPath` 和 `byIdPath`
+- 自定义名称通过 `diskKey` 持久化
+
+### `PoolsView`
+
+- 新设备相关操作优先使用 `commandPath`
+- 已在 pool 内的成员维护使用 `commandTarget`
+- 拓扑显示优先使用别名，不直接暴露原始命令标识
+- 现在已经承载：
+  - `scrub`
+  - `clear`
+  - `offline / online`
+  - `replace`
+  - RAID-Z `expansion`
+
+### `SchedulesView`
+
+- 支持从分钟到月的快照计划
+- 支持定时 `scrub`
+
+### `TasksView`
+
+- 支持分页、状态筛选和自动刷新
+- 长任务详情会展示命令日志
+- RAID-Z expansion 任务会经过：
+  - `expand` 阶段
+  - 自动 `scrub` 阶段

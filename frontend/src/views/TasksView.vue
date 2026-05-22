@@ -161,7 +161,7 @@ function changeStatusFilter(event) {
     />
 
     <div v-else class="tasks-layout">
-      <article class="surface-panel">
+      <article class="surface-panel task-list-panel">
         <div class="section-header">
           <div>
             <h3>{{ t("tasks.listTitle") }}</h3>
@@ -256,7 +256,7 @@ function changeStatusFilter(event) {
         </div>
       </article>
 
-      <article v-if="selectedTask" class="surface-panel">
+      <article v-if="selectedTask" class="surface-panel task-detail-panel">
         <div class="section-header">
           <div>
             <h3>{{ selectedTask.title }}</h3>

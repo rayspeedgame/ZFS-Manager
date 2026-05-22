@@ -49,6 +49,37 @@ defineProps({
   removeDialogError: { type: String, default: "" },
   removeDialogResult: { type: Object, default: null },
   removeTerminalLogLines: { type: Array, default: () => [] },
+  selectedMaintenanceAction: { type: Object, default: null },
+  maintenanceConfirmDialogOpen: { type: Boolean, default: false },
+  maintenanceSubmitting: { type: Boolean, default: false },
+  maintenanceDialogPhase: { type: String, default: "confirm" },
+  maintenanceDialogSummary: { type: String, default: "" },
+  maintenanceDialogError: { type: String, default: "" },
+  maintenanceDialogResult: { type: Object, default: null },
+  maintenanceTerminalLogLines: { type: Array, default: () => [] },
+  selectedReplaceAction: { type: Object, default: null },
+  replaceConfirmDialogOpen: { type: Boolean, default: false },
+  replaceSubmitting: { type: Boolean, default: false },
+  replaceDialogPhase: { type: String, default: "confirm" },
+  replaceDialogSummary: { type: String, default: "" },
+  replaceDialogError: { type: String, default: "" },
+  replaceDialogResult: { type: Object, default: null },
+  replaceTerminalLogLines: { type: Array, default: () => [] },
+  selectedRaidzExpandAction: { type: Object, default: null },
+  raidzExpandConfirmDialogOpen: { type: Boolean, default: false },
+  raidzExpandSubmitting: { type: Boolean, default: false },
+  raidzExpandDialogPhase: { type: String, default: "confirm" },
+  raidzExpandDialogSummary: { type: String, default: "" },
+  raidzExpandDialogError: { type: String, default: "" },
+  raidzExpandDialogResult: { type: Object, default: null },
+  raidzExpandTerminalLogLines: { type: Array, default: () => [] },
+  clearConfirmDialogOpen: { type: Boolean, default: false },
+  clearSubmitting: { type: Boolean, default: false },
+  clearDialogPhase: { type: String, default: "confirm" },
+  clearDialogSummary: { type: String, default: "" },
+  clearDialogError: { type: String, default: "" },
+  clearDialogResult: { type: Object, default: null },
+  clearTerminalLogLines: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
@@ -58,11 +89,21 @@ const emit = defineEmits([
   "update:createPoolConfirmDialogOpen",
   "update:destroyConfirmDialogOpen",
   "update:removeConfirmDialogOpen",
+  "update:maintenanceConfirmDialogOpen",
+  "update:selectedReplaceAction",
+  "update:replaceConfirmDialogOpen",
+  "update:selectedRaidzExpandAction",
+  "update:raidzExpandConfirmDialogOpen",
+  "update:clearConfirmDialogOpen",
   "confirm-save",
   "confirm-topology",
   "confirm-create-pool",
   "confirm-destroy-pool",
   "confirm-remove-target",
+  "confirm-maintenance-action",
+  "confirm-replace-action",
+  "confirm-raidz-expand-action",
+  "confirm-clear-pool",
 ]);
 </script>
 
@@ -333,6 +374,213 @@ const emit = defineEmits([
       <section>
         <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
         <CommandLogPanel :entries="removeTerminalLogLines" />
+      </section>
+    </div>
+  </ConfirmDialog>
+
+  <ConfirmDialog
+    :model-value="maintenanceConfirmDialogOpen"
+    :busy="maintenanceSubmitting"
+    :can-confirm="Boolean(selectedMaintenanceAction && selectedMaintenanceAction.commandTarget)"
+    :result-mode="maintenanceDialogPhase === 'result'"
+    :confirm-text="maintenanceDialogPhase === 'submitting' ? t('pools.dialogs.applyingMaintenance') : t('pools.dialogs.confirmMaintenance')"
+    :title="t('pools.dialogs.confirmDeviceMaintenance')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
+    @update:modelValue="emit('update:maintenanceConfirmDialogOpen', $event)"
+    @confirm="emit('confirm-maintenance-action')"
+  >
+    <div v-if="maintenanceDialogPhase === 'confirm'" class="dialog-section-list">
+      <p class="subtle-text">{{ t("pools.dialogs.deviceMaintenanceWarning") }}</p>
+      <ul class="result-list" v-if="selectedMaintenanceAction">
+        <li class="result-list-item">
+          <strong>{{ selectedMaintenanceAction.displayLabel }}</strong>
+          <span class="subtle-text">{{ t(`pools.deviceActions.${selectedMaintenanceAction.action}`) }}</span>
+          <span class="subtle-text">{{ selectedMaintenanceAction.state || '-' }}</span>
+        </li>
+      </ul>
+    </div>
+    <div v-else-if="maintenanceDialogPhase === 'submitting'" class="dialog-section-list">
+      <div class="progress-shell">
+        <div class="progress-spinner"></div>
+        <div>
+          <strong>{{ t("pools.dialogs.applyingDeviceMaintenance") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.applyingDeviceMaintenanceDescription") }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-else class="dialog-section-list">
+      <p v-if="maintenanceDialogSummary" class="notice-text">{{ maintenanceDialogSummary }}</p>
+      <p v-if="maintenanceDialogError" class="error-text">{{ maintenanceDialogError }}</p>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
+        <CommandResultList
+          :items="maintenanceDialogResult ? [{ ...maintenanceDialogResult, label: maintenanceDialogResult.display_label, key: maintenanceDialogResult.display_label || 'device' }] : []"
+          :empty-text="t('common.noResult')"
+        />
+      </section>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
+        <CommandLogPanel :entries="maintenanceTerminalLogLines" />
+      </section>
+    </div>
+  </ConfirmDialog>
+
+  <ConfirmDialog
+    :model-value="replaceConfirmDialogOpen"
+    :busy="replaceSubmitting"
+    :can-confirm="Boolean(selectedReplaceAction && selectedReplaceAction.commandTarget && selectedReplaceAction.replacementTarget)"
+    :result-mode="replaceDialogPhase === 'result'"
+    :confirm-text="replaceDialogPhase === 'submitting' ? t('pools.dialogs.replacing') : t('pools.dialogs.confirmReplace')"
+    :title="t('pools.dialogs.confirmDeviceReplace')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
+    @update:modelValue="emit('update:replaceConfirmDialogOpen', $event)"
+    @confirm="emit('confirm-replace-action')"
+  >
+    <div v-if="replaceDialogPhase === 'confirm'" class="dialog-section-list">
+      <p class="error-text">{{ t("pools.dialogs.replaceWarning") }}</p>
+      <ul class="result-list" v-if="selectedReplaceAction">
+        <li class="result-list-item">
+          <strong>{{ selectedReplaceAction.displayLabel }}</strong>
+          <span class="subtle-text">{{ selectedReplaceAction.commandTarget }}</span>
+        </li>
+      </ul>
+      <label v-if="selectedReplaceAction?.candidates?.length" class="form-field">
+        <span>{{ t("pools.dialogs.replacementDevice") }}</span>
+        <select
+          class="property-field"
+          :disabled="replaceSubmitting"
+          :value="selectedReplaceAction.replacementTarget || ''"
+          @change="emit('update:selectedReplaceAction', { ...selectedReplaceAction, replacementTarget: $event.target.value })"
+        >
+          <option v-for="candidate in selectedReplaceAction.candidates" :key="candidate.commandPath || candidate.path" :value="candidate.commandPath || candidate.path">
+            {{ candidate.displayName || candidate.path }} [{{ candidate.diskId }}]
+          </option>
+        </select>
+      </label>
+    </div>
+    <div v-else-if="replaceDialogPhase === 'submitting'" class="dialog-section-list">
+      <div class="progress-shell">
+        <div class="progress-spinner"></div>
+        <div>
+          <strong>{{ t("pools.dialogs.replacingDevice") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.replacingDeviceDescription") }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-else class="dialog-section-list">
+      <p v-if="replaceDialogSummary" class="notice-text">{{ replaceDialogSummary }}</p>
+      <p v-if="replaceDialogError" class="error-text">{{ replaceDialogError }}</p>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
+        <CommandResultList
+          :items="replaceDialogResult ? [{ ...replaceDialogResult, label: replaceDialogResult.display_label, key: replaceDialogResult.display_label || 'replace' }] : []"
+          :empty-text="t('common.noResult')"
+        />
+      </section>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
+        <CommandLogPanel :entries="replaceTerminalLogLines" />
+      </section>
+    </div>
+  </ConfirmDialog>
+
+  <ConfirmDialog
+    :model-value="raidzExpandConfirmDialogOpen"
+    :busy="raidzExpandSubmitting"
+    :can-confirm="Boolean(selectedRaidzExpandAction && selectedRaidzExpandAction.vdevTarget && selectedRaidzExpandAction.newDeviceTarget)"
+    :result-mode="raidzExpandDialogPhase === 'result'"
+    :confirm-text="raidzExpandDialogPhase === 'submitting' ? t('pools.dialogs.expandingRaidz') : t('pools.dialogs.confirmRaidzExpand')"
+    :title="t('pools.dialogs.confirmRaidzExpandTitle')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
+    @update:modelValue="emit('update:raidzExpandConfirmDialogOpen', $event)"
+    @confirm="emit('confirm-raidz-expand-action')"
+  >
+    <div v-if="raidzExpandDialogPhase === 'confirm'" class="dialog-section-list">
+      <p class="error-text">{{ t("pools.dialogs.raidzExpandWarning") }}</p>
+      <ul class="result-list" v-if="selectedRaidzExpandAction">
+        <li class="result-list-item">
+          <strong>{{ selectedRaidzExpandAction.displayLabel }}</strong>
+          <span class="subtle-text">{{ selectedRaidzExpandAction.vdevTarget }}</span>
+          <span class="subtle-text">{{ t("common.groupCount", { count: selectedRaidzExpandAction.memberCount || 0 }) }}</span>
+        </li>
+      </ul>
+      <label v-if="selectedRaidzExpandAction?.candidates?.length" class="form-field">
+        <span>{{ t("pools.dialogs.expansionDevice") }}</span>
+        <select
+          class="property-field"
+          :disabled="raidzExpandSubmitting"
+          :value="selectedRaidzExpandAction.newDeviceTarget || ''"
+          @change="emit('update:selectedRaidzExpandAction', { ...selectedRaidzExpandAction, newDeviceTarget: $event.target.value })"
+        >
+          <option v-for="candidate in selectedRaidzExpandAction.candidates" :key="candidate.commandPath || candidate.path" :value="candidate.commandPath || candidate.path">
+            {{ candidate.displayName || candidate.path }} [{{ candidate.diskId }}]
+          </option>
+        </select>
+      </label>
+    </div>
+    <div v-else-if="raidzExpandDialogPhase === 'submitting'" class="dialog-section-list">
+      <div class="progress-shell">
+        <div class="progress-spinner"></div>
+        <div>
+          <strong>{{ t("pools.dialogs.expandingRaidzVdev") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.expandingRaidzVdevDescription") }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-else class="dialog-section-list">
+      <p v-if="raidzExpandDialogSummary" class="notice-text">{{ raidzExpandDialogSummary }}</p>
+      <p v-if="raidzExpandDialogError" class="error-text">{{ raidzExpandDialogError }}</p>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
+        <CommandResultList
+          :items="raidzExpandDialogResult ? [{ ...raidzExpandDialogResult, label: raidzExpandDialogResult.vdev_label, key: raidzExpandDialogResult.vdev_label || 'raidz-expand' }] : []"
+          :empty-text="t('common.noResult')"
+        />
+      </section>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
+        <CommandLogPanel :entries="raidzExpandTerminalLogLines" />
+      </section>
+    </div>
+  </ConfirmDialog>
+
+
+  <ConfirmDialog
+    :model-value="clearConfirmDialogOpen"
+    :busy="clearSubmitting"
+    :can-confirm="Boolean(selectedPool && selectedPool.name)"
+    :result-mode="clearDialogPhase === 'result'"
+    :confirm-text="clearDialogPhase === 'submitting' ? t('pools.dialogs.applyingMaintenance') : t('pools.dialogs.confirmClear')"
+    :title="t('pools.dialogs.confirmPoolClear')"
+    :description="selectedPool ? t('pools.dialogs.poolDescription', { name: selectedPool.name }) : ''"
+    @update:modelValue="emit('update:clearConfirmDialogOpen', $event)"
+    @confirm="emit('confirm-clear-pool')"
+  >
+    <div v-if="clearDialogPhase === 'confirm'" class="dialog-section-list">
+      <p class="subtle-text">{{ t("pools.dialogs.clearWarning") }}</p>
+    </div>
+    <div v-else-if="clearDialogPhase === 'submitting'" class="dialog-section-list">
+      <div class="progress-shell">
+        <div class="progress-spinner"></div>
+        <div>
+          <strong>{{ t("pools.dialogs.clearingPoolErrors") }}</strong>
+          <p class="subtle-text">{{ t("pools.dialogs.clearingPoolErrorsDescription") }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-else class="dialog-section-list">
+      <p v-if="clearDialogSummary" class="notice-text">{{ clearDialogSummary }}</p>
+      <p v-if="clearDialogError" class="error-text">{{ clearDialogError }}</p>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.result") }}</h4>
+        <CommandResultList
+          :items="clearDialogResult ? [{ ...clearDialogResult, label: clearDialogResult.pool, key: clearDialogResult.pool || 'pool-clear' }] : []"
+          :empty-text="t('common.noResult')"
+        />
+      </section>
+      <section>
+        <h4 class="dialog-mini-heading">{{ t("common.sshTerminalLog") }}</h4>
+        <CommandLogPanel :entries="clearTerminalLogLines" />
       </section>
     </div>
   </ConfirmDialog>

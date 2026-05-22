@@ -1,38 +1,50 @@
 # Documents
 
-> [中文版](./README.zh-CN.md)
+> [中文版本](./README.zh-CN.md)
 
-`Documents/` holds the project-level design notes, delivery roadmap, and codebase maps.
+`Documents/` stores project-level design notes, roadmaps, and structure maps.
 
 ## Index
 
-- `agent.md`: Handoff notes, implementation conventions, and extension hints
-- `target.md`: Product goals and delivered capability summary
-- `Roadmap.md`: Delivery roadmap and next-stage priorities
-- `TaskSystemArchitecture.md`: Task persistence, recovery, scheduling, and extensibility design
-- `SnapshotManagementArchitecture.md`: Snapshot module structure, dedicated page design, scheduling, and retention direction
-- `ProjectStruction.md`: High-level project structure overview
-- `ProjectDirectoryStructure.md`: Expanded directory-by-directory code map
+- `agent.md`
+  - collaboration and handoff notes
+- `target.md`
+  - current product goal and delivered capability summary
+- `Roadmap.md`
+  - staged roadmap and near-term priorities
+- `TaskSystemArchitecture.md`
+  - task persistence, recovery, scheduling, and extensibility
+- `SnapshotManagementArchitecture.md`
+  - snapshot page, recurring snapshot, and retention design
+- `PoolMaintenanceArchitecture.md`
+  - pool maintenance, device identity, replace, and RAID-Z expansion design
+- `ProjectStruction.md`
+  - high-level structure overview
+- `ProjectDirectoryStructure.md`
+  - expanded directory-by-directory structure notes
 
 ## Current Focus
 
-- The backend uses SSH polling plus REST write operations
-- The task system now includes:
-  - SQLite-backed task and schedule persistence
-  - startup recovery and active-task reconciliation
-  - scheduled `scrub`
-  - scheduled `snapshot`
-  - schedule-scoped snapshot retention cleanup
-- The snapshot module now includes:
-  - dataset quick-create entry
-  - dedicated snapshot page
-  - rollback flows
-  - advanced rollback mode selection
-  - scheduled snapshot workflows from minutely to monthly
-  - ZFS user-property tagging for scheduled snapshot ownership and retention identity
+- The backend uses SSH polling plus REST write execution.
+- The task system now includes SQLite persistence, startup recovery, pagination, and status filtering.
+- Snapshot scheduling supports levels from minutely through monthly.
+- Scheduled snapshots use short names while schedule ownership is written into ZFS user properties.
+- Pool maintenance now covers:
+  - `scrub`
+  - `clear`
+  - `offline / online`
+  - `replace`
+  - RAID-Z `expansion`
+- The disk identity model now separates display-facing and execution-facing fields:
+  - `displayName`
+  - `commandPath`
+  - `commandTarget`
+  - `rawCommandTarget`
+  - `aliases`
 
-## Notes
+## Current Rules
 
-- Runtime configuration lives under `backend/config/`
-- Long-running workflow truth should come from ZFS and host state whenever possible
-- Scheduled snapshot cleanup now keys off schedule metadata written into snapshot user properties instead of relying on long snapshot names
+- New disks that are not yet part of a pool should prefer `by-id`.
+- Existing pool-member maintenance must use the exact member token from `zpool status -L`.
+- Long-running workflows should treat ZFS and host state as the source of truth whenever possible.
+- RAID-Z expansion recovery must consider both the `expand:` phase and the automatic `scrub` phase, plus the observed member change.

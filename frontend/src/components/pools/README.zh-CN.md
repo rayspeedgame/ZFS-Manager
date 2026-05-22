@@ -2,23 +2,48 @@
 
 > [English Version](./README.md)
 
-池专用工作流组件。
+这里放 pool 相关的页面组件。
 
-## 文件
+## 主要文件
 
-- `PoolListPanel.vue`：池清单列表和入口操作
-- `PoolDetailDrawer.vue`：池信息、可编辑属性以及 `scrub` 状态/操作
-- `PoolTopologyDrawer.vue`：拓扑添加/移除工作流
-- `CreatePoolDrawer.vue`：分步池创建 UI
-- `PoolActionDialogs.vue`：池写操作的确认和结果对话框
-- `TopologyNode.vue`：递归拓扑展示
-- `pool-form-config.js`：池属性字段、拓扑选项和创建池配置
+- `PoolListPanel.vue`
+  - pool 列表和入口操作
+- `PoolDetailDrawer.vue`
+  - pool 详情、属性、`scrub`、`clear`
+- `PoolTopologyDrawer.vue`
+  - 拓扑编辑、设备维护、replace、RAID-Z expansion
+- `CreatePoolDrawer.vue`
+  - 分步骤创建 pool
+- `PoolActionDialogs.vue`
+  - pool 写操作的统一确认和结果弹窗
+- `TopologyNode.vue`
+  - 递归拓扑展示
+- `pool-form-config.js`
+  - pool 属性、拓扑选项和创建配置
 
-## 说明
+## 当前约定
 
-- 这些组件负责渲染 UI 并向上发出事件
-- `PoolDetailDrawer.vue` 现在包含独立的 `scrub` 区块，展示：
-  - 状态摘要
-  - 进度和 ETA
-  - 开始与停止按钮
-- `PoolsView.vue` 仍然拥有 API 调用、实时快照重绑定和草稿安全控制
+- 这些组件主要负责展示和向上派发事件
+- `PoolDetailDrawer.vue` 负责池级维护摘要
+- `PoolTopologyDrawer.vue` 负责设备级与 vdev 级维护入口
+
+### 拓扑显示字段
+
+拓扑组件会同时使用三类字段：
+
+- 显示字段
+  - `displayLabel`
+- 辅助识别字段
+  - `kernelPath`
+  - `byIdPath`
+  - `aliases`
+- 执行字段
+  - `commandTarget`
+
+### 当前已承载的维护动作
+
+- `offline / online`
+- `replace`
+- RAID-Z `expansion`
+
+其中 RAID-Z `expansion` 的按钮挂在 vdev 条目，而不是叶子磁盘条目。

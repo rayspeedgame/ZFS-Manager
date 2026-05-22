@@ -8,6 +8,9 @@ from app.core.state import state_store
 from app.schemas.dataset_create import DatasetCreateRequest
 from app.schemas.dataset_property_update import DatasetPropertyUpdateRequest
 from app.schemas.pool_create import PoolCreateRequest
+from app.schemas.pool_maintenance import PoolDeviceActionRequest
+from app.schemas.pool_raidz_expand import PoolRaidzExpandRequest
+from app.schemas.pool_replace import PoolReplaceRequest
 from app.schemas.pool_remove import PoolRemoveRequest
 from app.schemas.task_schedule import TaskScheduleCreateRequest, TaskScheduleUpdateRequest
 from app.schemas.topology_update import PoolTopologyUpdateRequest
@@ -26,9 +29,14 @@ def validate_topology_additions(
         raise HTTPException(status_code=404, detail=f"Pool {pool_name!r} was not found in the latest snapshot.")
 
     candidate_devices = {
-        str(device.get("path")): device
+        key: device
         for device in (pool.get("availableTopologyDevices") or [])
-        if device.get("path")
+        for key in {
+            str(device.get("commandPath") or "").strip(),
+            str(device.get("path") or "").strip(),
+            str(device.get("diskKey") or "").strip(),
+        }
+        if key
     }
 
     for addition in payload.additions:
@@ -284,16 +292,138 @@ def validate_pool_removal(
     state: AppState,
 ) -> dict:
     pool = require_pool(pool_name=pool_name, state=state)
-    # The frontend only receives targets that the backend already classified as
-    # removable, so REST validation just needs to re-check against that list.
     targets = pool.get("removalTargets") or []
-    target = next((item for item in targets if item.get("commandTarget") == payload.command_target), None)
+    # Removal targets now expose both a display-friendly alias and a preferred
+    # execution target. Match against either form so UI refresh timing cannot
+    # strand a valid user selection.
+    target = next((item for item in targets if _pool_removal_matches_target(item, payload.command_target)), None)
     if target is None:
         raise HTTPException(
             status_code=400,
             detail=f"Target {payload.command_target!r} is not removable in the latest snapshot.",
         )
     return target
+
+
+def validate_pool_device_action(
+    *,
+    pool_name: str,
+    payload: PoolDeviceActionRequest,
+    state: AppState,
+    expected_action: str,
+) -> dict:
+    pool = require_pool(pool_name=pool_name, state=state)
+    targets = _collect_pool_device_targets(pool)
+    target = next((item for item in targets if _pool_device_matches_target(item, payload.command_target)), None)
+    if target is None:
+        target = _find_pool_status_device_target(pool, payload.command_target)
+    if target is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Device target {payload.command_target!r} is not available in the latest topology snapshot.",
+        )
+
+    if expected_action == "offline" and not target.get("canOffline"):
+        raise HTTPException(
+            status_code=400,
+            detail=str(target.get("offlineReason") or f"Device {payload.command_target!r} cannot be offlined right now."),
+        )
+    if expected_action == "online" and not target.get("canOnline"):
+        raise HTTPException(
+            status_code=400,
+            detail=str(target.get("onlineReason") or f"Device {payload.command_target!r} cannot be onlined right now."),
+        )
+    return target
+
+
+def validate_pool_device_replace(
+    *,
+    pool_name: str,
+    payload: PoolReplaceRequest,
+    state: AppState,
+) -> tuple[dict, dict]:
+    pool = require_pool(pool_name=pool_name, state=state)
+    targets = _collect_pool_device_targets(pool)
+    target = next((item for item in targets if _pool_device_matches_target(item, payload.command_target)), None)
+    if target is None:
+        target = _find_pool_status_device_target(pool, payload.command_target)
+    if target is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Device target {payload.command_target!r} is not available in the latest topology snapshot.",
+        )
+    if not target.get("canReplace"):
+        raise HTTPException(
+            status_code=400,
+            detail=str(target.get("replaceReason") or f"Device {payload.command_target!r} cannot be replaced right now."),
+        )
+
+    replacement = next(
+        (
+            item
+            for item in (target.get("replaceCandidates") or [])
+            if _pool_replace_candidate_matches_target(item, payload.replacement_target)
+        ),
+        None,
+    )
+    if replacement is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Replacement target {payload.replacement_target!r} is not available for pool replace.",
+    )
+    return target, replacement
+
+
+def validate_pool_raidz_expand(
+    *,
+    pool_name: str,
+    payload: PoolRaidzExpandRequest,
+    state: AppState,
+) -> tuple[dict, dict]:
+    pool = require_pool(pool_name=pool_name, state=state)
+    target = next(
+        (
+            item
+            for item in _collect_pool_vdev_targets(pool)
+            if _pool_vdev_matches_target(item, payload.vdev_target)
+        ),
+        None,
+    )
+    if target is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"RAID-Z target {payload.vdev_target!r} is not available in the latest topology snapshot.",
+        )
+    if not target.get("canRaidzExpand"):
+        raise HTTPException(
+            status_code=400,
+            detail=str(target.get("raidzExpandReason") or f"RAID-Z target {payload.vdev_target!r} cannot be expanded right now."),
+        )
+
+    replacement = next(
+        (
+            item
+            for item in (target.get("raidzExpandCandidates") or [])
+            if _pool_replace_candidate_matches_target(item, payload.new_device_target)
+        ),
+        None,
+    )
+    if replacement is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expansion device {payload.new_device_target!r} is not available for RAID-Z expansion.",
+        )
+    minimum_size = coerce_int(target.get("smallestMemberSize"), default=0)
+    replacement_size = coerce_int(replacement.get("size"), default=0)
+    if minimum_size > 0 and replacement_size > 0 and replacement_size < minimum_size:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Expansion device {payload.new_device_target!r} is smaller than the current "
+                f"smallest RAID-Z member and cannot be used for expansion."
+            ),
+        )
+    return target, replacement
 
 
 def validate_pool_creation(*, payload: PoolCreateRequest, state: AppState) -> None:
@@ -312,7 +442,17 @@ def validate_pool_creation(*, payload: PoolCreateRequest, state: AppState) -> No
         )
 
     disks = state.data.disks or []
-    candidate_devices = {str(device.get("path")): device for device in disks if disk_is_available_for_creation(device)}
+    candidate_devices = {
+        key: device
+        for device in disks
+        if disk_is_available_for_creation(device)
+        for key in {
+            str(device.get("commandPath") or "").strip(),
+            str(device.get("path") or "").strip(),
+            str(device.get("diskKey") or "").strip(),
+        }
+        if key
+    }
 
     selected_devices: set[str] = set()
     for vdev in payload.vdevs:
@@ -360,3 +500,159 @@ def is_reusable_filesystem(filesystem: str | None, pool_name: str | None) -> boo
     if normalized_fs == "zfs_member" and normalized_pool == "-":
         return True
     return False
+
+
+def _collect_pool_device_targets(pool: dict) -> list[dict]:
+    targets: list[dict] = []
+    for group in pool.get("topologySummary") or []:
+        for item in group.get("items") or []:
+            for member in item.get("members") or []:
+                if member.get("commandTarget"):
+                    targets.append(member)
+    return targets
+
+
+def _collect_pool_vdev_targets(pool: dict) -> list[dict]:
+    targets: list[dict] = []
+    for group in pool.get("topologySummary") or []:
+        for item in group.get("items") or []:
+            if str(item.get("nodeKind") or "") == "vdev":
+                targets.append(item)
+    return targets
+
+
+def _pool_device_matches_target(member: dict, target: str) -> bool:
+    normalized = str(target or "").strip()
+    if not normalized:
+        return False
+    candidates = {
+        str(member.get("commandTarget") or "").strip(),
+        str(member.get("rawCommandTarget") or "").strip(),
+        str(member.get("path") or "").strip(),
+        str(member.get("kernelPath") or "").strip(),
+        str(member.get("byIdPath") or "").strip(),
+        str(member.get("name") or "").strip(),
+        str(member.get("diskId") or "").strip(),
+        str(member.get("displayLabel") or "").strip(),
+    }
+    for alias in member.get("aliases") or []:
+        alias_text = str(alias or "").strip()
+        if alias_text:
+            candidates.add(alias_text)
+    candidates.discard("")
+    return normalized in candidates
+
+
+def _pool_vdev_matches_target(item: dict, target: str) -> bool:
+    normalized = str(target or "").strip()
+    if not normalized:
+        return False
+    candidates = {
+        str(item.get("commandTarget") or "").strip(),
+        str(item.get("rawCommandTarget") or "").strip(),
+        str(item.get("displayLabel") or "").strip(),
+        str(item.get("name") or "").strip(),
+    }
+    candidates.discard("")
+    return normalized in candidates
+
+
+def _pool_removal_matches_target(target_info: dict, target: str) -> bool:
+    normalized = str(target or "").strip()
+    if not normalized:
+        return False
+    candidates = {
+        str(target_info.get("commandTarget") or "").strip(),
+        str(target_info.get("rawCommandTarget") or "").strip(),
+        str(target_info.get("displayLabel") or "").strip(),
+        str(target_info.get("name") or "").strip(),
+    }
+    for member in target_info.get("members") or []:
+        for key in ("commandTarget", "rawCommandTarget", "displayLabel", "path", "kernelPath", "byIdPath", "diskId"):
+            value = str(member.get(key) or "").strip()
+            if value:
+                candidates.add(value)
+        for alias in member.get("aliases") or []:
+            alias_text = str(alias or "").strip()
+            if alias_text:
+                candidates.add(alias_text)
+    candidates.discard("")
+    return normalized in candidates
+
+
+def _pool_replace_candidate_matches_target(candidate: dict, target: str) -> bool:
+    normalized = str(target or "").strip()
+    if not normalized:
+        return False
+    candidates = {
+        str(candidate.get("commandPath") or "").strip(),
+        str(candidate.get("path") or "").strip(),
+        str(candidate.get("kernelPath") or "").strip(),
+        str(candidate.get("byIdPath") or "").strip(),
+        str(candidate.get("diskKey") or "").strip(),
+        str(candidate.get("diskId") or "").strip(),
+        str(candidate.get("displayName") or "").strip(),
+        str(candidate.get("name") or "").strip(),
+    }
+    candidates.discard("")
+    return normalized in candidates
+
+
+def _find_pool_status_device_target(pool: dict, target: str) -> dict | None:
+    normalized = str(target or "").strip()
+    if not normalized:
+        return None
+
+    for node in _walk_pool_status_nodes((pool.get("status") or {}).get("config") or []):
+        if not _pool_status_node_is_device(node):
+            continue
+        candidates = {
+            str(node.get("name") or "").strip(),
+            str(node.get("display_name") or "").strip(),
+            str(node.get("displayName") or "").strip(),
+        }
+        candidates.discard("")
+        if normalized not in candidates:
+            continue
+        state = str(node.get("state") or "").strip().upper() or None
+        command_target = str(node.get("name") or normalized)
+        display_label = str(node.get("display_name") or node.get("displayName") or command_target)
+        return {
+            "name": command_target,
+            "path": display_label,
+            "displayLabel": display_label,
+            "commandTarget": command_target,
+            "rawCommandTarget": command_target,
+            "state": state,
+            "canOffline": state in {"ONLINE", "DEGRADED"},
+            "canOnline": state == "OFFLINE",
+            "canReplace": False,
+            "replaceReason": "Replace requires a fully enriched topology member from the latest snapshot.",
+            "offlineReason": None if state in {"ONLINE", "DEGRADED"} else (
+                "This device is already offline." if state == "OFFLINE" else f"Offline is not offered for device state {state or 'UNKNOWN'}."
+            ),
+            "onlineReason": None if state == "OFFLINE" else (
+                "Online is only offered when the device is OFFLINE."
+            ),
+        }
+    return None
+
+
+def _walk_pool_status_nodes(nodes: list[dict]) -> list[dict]:
+    collected: list[dict] = []
+    pending = list(nodes or [])
+    while pending:
+        node = pending.pop(0)
+        if not isinstance(node, dict):
+            continue
+        collected.append(node)
+        pending.extend(node.get("children") or [])
+    return collected
+
+
+def _pool_status_node_is_device(node: dict) -> bool:
+    node_kind = str(node.get("node_kind") or "").strip().lower()
+    if node_kind:
+        return node_kind == "device"
+    children = node.get("children") or []
+    return not children

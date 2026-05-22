@@ -332,7 +332,7 @@ class StatePoller:
 
         section_states = self._section_states()
 
-        disks = _build_disk_rows(disk_data, dataset_data, zpool_data)
+        disks = _build_disk_rows(disk_data, dataset_data, zpool_data, self._config.disk_labels)
 
         return AppState(
             meta=AppMeta(
@@ -518,7 +518,12 @@ def _build_summary(zpool_data: dict, disk_data: dict, dataset_data: dict) -> Sum
     )
 
 
-def _build_disk_rows(disk_data: dict, dataset_data: dict, zpool_data: dict) -> list[dict]:
+def _build_disk_rows(
+    disk_data: dict,
+    dataset_data: dict,
+    zpool_data: dict,
+    disk_labels: dict[str, str] | None = None,
+) -> list[dict]:
     devices = disk_data.get("lsblk", {}).get("blockdevices", [])
     blkid_rows = disk_data.get("blkid", [])
     by_id_rows = disk_data.get("by_id", [])
@@ -534,11 +539,19 @@ def _build_disk_rows(disk_data: dict, dataset_data: dict, zpool_data: dict) -> l
     )
     rows: list[dict] = []
     for device in devices:
+        disk_path = device.get("path") or f"/dev/{device.get('name')}"
+        disk_id = _resolve_disk_id(device_path=disk_path, by_id_rows=by_id_rows)
+        disk_key = _resolve_disk_key(disk_path=disk_path, disk_id=disk_id)
+        by_id_paths = _resolve_by_id_paths(device_path=disk_path, by_id_rows=by_id_rows)
+        preferred_by_id_path = _preferred_by_id_path(by_id_paths)
+        custom_name = str((disk_labels or {}).get(disk_key) or "").strip() or None
+        display_name = custom_name or str(disk_path)
         children = device.get("children") or []
         partitions = [
             _build_partition_row(
                 partition=child,
                 parent_device=device,
+                parent_display_name=display_name,
                 blkid_rows=blkid_rows,
                 by_id_rows=by_id_rows,
                 topology_membership=topology_membership,
@@ -565,8 +578,20 @@ def _build_disk_rows(disk_data: dict, dataset_data: dict, zpool_data: dict) -> l
         rows.append(
             {
                 **device,
-                "diskPath": device.get("path") or f"/dev/{device.get('name')}",
-                "diskId": _resolve_disk_id(device.get("path"), by_id_rows),
+                "diskPath": disk_path,
+                "kernelPath": disk_path,
+                "diskId": disk_id,
+                "diskKey": disk_key,
+                "byIdPath": preferred_by_id_path,
+                "byIdPaths": by_id_paths,
+                "customName": custom_name,
+                "displayName": display_name,
+                "commandPath": preferred_by_id_path or disk_path,
+                "aliases": _build_disk_aliases(
+                    display_name=display_name,
+                    kernel_path=disk_path,
+                    by_id_paths=by_id_paths,
+                ),
                 "filesystem": filesystem or "-",
                 "filesystemDisplay": _format_filesystem_display(filesystem or "-", device_pool_name or primary_pool_name or "-"),
                 "poolName": device_pool_name or primary_pool_name or "-",
@@ -588,15 +613,17 @@ def _build_pool_rows(zpool_data: dict, disks: list[dict]) -> list[dict]:
     for pool in pools:
         name = pool.get("name")
         status = _annotate_topology_status(status_by_pool.get(name) or {})
+        available_topology_devices = _build_available_topology_devices(disks)
         rows.append(
             {
                 **pool,
                 "status": _enrich_topology_status(status, disk_lookup),
                 "scanStatus": _build_scan_status(status.get("scan")),
+                "expandStatus": _build_expand_status(status.get("expand")),
                 "properties": properties.get(name, {}),
-                "topologySummary": _build_topology_summary(status, disk_lookup),
+                "topologySummary": _build_topology_summary(status, disk_lookup, available_topology_devices),
                 "removalTargets": _build_removal_targets(status, disk_lookup),
-                "availableTopologyDevices": _build_available_topology_devices(disks),
+                "availableTopologyDevices": available_topology_devices,
             }
         )
 
@@ -611,7 +638,7 @@ def _build_scan_status(scan: str | None) -> dict:
     progress = 0
     if progress_match:
         progress = max(0, min(100, int(float(progress_match.group(1)))))
-    elif "repaired" in lowered:
+    elif "repaired" in lowered or "resilvered" in lowered:
         progress = 100
     elif "in progress" in lowered:
         progress = 15
@@ -619,11 +646,50 @@ def _build_scan_status(scan: str | None) -> dict:
     return {
         "raw": normalized or None,
         "active": "in progress" in lowered,
-        "kind": "scrub" if "scrub" in lowered else ("resilver" if "resilver" in lowered else None),
+        "kind": (
+            "scrub"
+            if "scrub" in lowered
+            else "resilver" if "resilver" in lowered else "expansion" if "expand" in lowered or "expansion" in lowered else None
+        ),
         "progress": progress,
         "eta": eta_match.group(1).strip() if eta_match else None,
-        "completed": "scrub repaired" in lowered or "scrub completed" in lowered,
-        "stopped": "scrub canceled" in lowered or "scrub cancelled" in lowered or "scrub stopped" in lowered,
+        "completed": (
+            "scrub repaired" in lowered
+            or "scrub completed" in lowered
+            or ("resilvered" in lowered and "in progress" not in lowered)
+        ),
+        "stopped": (
+            "scrub canceled" in lowered
+            or "scrub cancelled" in lowered
+            or "scrub stopped" in lowered
+            or "resilver canceled" in lowered
+            or "resilver cancelled" in lowered
+            or "resilver stopped" in lowered
+        ),
+    }
+
+
+def _build_expand_status(expand: str | None) -> dict:
+    normalized = str(expand or "").strip()
+    lowered = normalized.lower()
+    progress_match = re.search(r"([0-9]+(?:\.[0-9]+)?)%\s+done", normalized, re.IGNORECASE)
+    eta_match = re.search(r",\s*([^,]+?)\s+to go", normalized, re.IGNORECASE)
+    progress = 0
+    if progress_match:
+        progress = max(0, min(100, int(float(progress_match.group(1)))))
+    elif "expanded" in lowered and "in progress" not in lowered:
+        progress = 100
+    elif "in progress" in lowered:
+        progress = 15
+
+    return {
+        "raw": normalized or None,
+        "active": "in progress" in lowered,
+        "kind": "expansion" if normalized else None,
+        "progress": progress,
+        "eta": eta_match.group(1).strip() if eta_match else None,
+        "completed": "expanded" in lowered and "in progress" not in lowered,
+        "stopped": "canceled" in lowered or "cancelled" in lowered or "stopped" in lowered,
     }
 
 
@@ -746,6 +812,7 @@ def _get_property_source_summary(properties: dict[str, dict]) -> str:
 def _build_partition_row(
     partition: dict,
     parent_device: dict,
+    parent_display_name: str,
     blkid_rows: list[dict],
     by_id_rows: list[dict],
     topology_membership: dict[str, str],
@@ -755,6 +822,11 @@ def _build_partition_row(
     partition_path = partition.get("path")
     blkid = next((item for item in blkid_rows if item.get("device") == partition_path), None)
     filesystem = (blkid or {}).get("type") or "-"
+    partition_by_id_paths = _resolve_by_id_paths(device_path=partition_path, by_id_rows=by_id_rows)
+    # Keep both partition-level and parent-disk by-id aliases. Pool topology,
+    # task metadata, and recovery logic do not always report the same form.
+    parent_by_id_paths = _resolve_by_id_paths(device_path=parent_device.get("path"), by_id_rows=by_id_rows)
+    preferred_partition_by_id = _preferred_by_id_path(partition_by_id_paths)
     pool_name = _lookup_pool_name(
         partition_path,
         partition.get("name"),
@@ -766,7 +838,27 @@ def _build_partition_row(
     return {
         **partition,
         "diskPath": parent_device.get("path") or f"/dev/{parent_device.get('name')}",
+        "kernelPath": partition_path,
+        # Some pools expose partition leaves while the effective capacity is
+        # still determined by the parent disk. Keep both so maintenance
+        # features can fall back when lsblk omits a partition size.
+        "size": partition.get("size") or parent_device.get("size"),
+        "parentSize": parent_device.get("size"),
         "diskId": _resolve_disk_id(parent_device.get("path"), by_id_rows),
+        "byIdPath": preferred_partition_by_id,
+        "byIdPaths": partition_by_id_paths,
+        "parentByIdPaths": parent_by_id_paths,
+        "displayName": parent_display_name,
+        "commandPath": preferred_partition_by_id or partition_path,
+        "aliases": _build_disk_aliases(
+            display_name=parent_display_name,
+            kernel_path=partition_path,
+            # Pool topology can expose either the partition alias or the
+            # parent whole-disk alias for the same physical member. Keep both
+            # on partition-backed members so task recovery can recognize the
+            # device regardless of which form the command or status uses.
+            by_id_paths=[*partition_by_id_paths, *parent_by_id_paths],
+        ),
         "filesystem": filesystem,
         "filesystemDisplay": _format_filesystem_display(filesystem, pool_name or "-"),
         "poolName": pool_name or "-",
@@ -942,6 +1034,38 @@ def _resolve_disk_id(device_path: str | None, by_id_rows: list[dict]) -> str:
     return str(device_path or "-")
 
 
+def _resolve_disk_key(*, disk_path: str, disk_id: str) -> str:
+    normalized_id = str(disk_id or "").strip()
+    if normalized_id and normalized_id != "-":
+        return normalized_id
+    return str(disk_path or "-")
+
+
+def _resolve_by_id_paths(*, device_path: str | None, by_id_rows: list[dict]) -> list[str]:
+    if not device_path:
+        return []
+    aliases = [
+        f"/dev/disk/by-id/{row.get('id')}"
+        for row in by_id_rows
+        if row.get("path") == device_path and row.get("id")
+    ]
+    return list(dict.fromkeys(str(alias) for alias in aliases if alias))
+
+
+def _preferred_by_id_path(by_id_paths: list[str]) -> str | None:
+    if not by_id_paths:
+        return None
+    non_partition = [path for path in by_id_paths if "-part" not in path]
+    if non_partition:
+        return sorted(non_partition)[0]
+    return sorted(by_id_paths)[0]
+
+
+def _build_disk_aliases(*, display_name: str, kernel_path: str, by_id_paths: list[str]) -> list[str]:
+    aliases = [display_name, kernel_path, *by_id_paths]
+    return list(dict.fromkeys(alias for alias in aliases if alias))
+
+
 def _build_disk_lookup(disks: list[dict]) -> dict[str, dict]:
     lookup: dict[str, dict] = {}
     for disk in disks:
@@ -949,6 +1073,8 @@ def _build_disk_lookup(disks: list[dict]) -> dict[str, dict]:
         for partition in disk.get("partitions", []):
             partition_entry = {
                 **partition,
+                "size": partition.get("size") or disk.get("size"),
+                "parentSize": disk.get("size"),
                 "diskId": disk.get("diskId"),
                 "model": disk.get("model"),
                 "diskPath": disk.get("diskPath") or disk.get("path"),
@@ -962,6 +1088,9 @@ def _register_device_identity(lookup: dict[str, dict], device: dict) -> None:
     name = device.get("name")
     for candidate in _device_identity_candidates(path, name):
         lookup[candidate] = device
+    for alias in device.get("byIdPaths") or []:
+        for candidate in _device_identity_candidates(alias, alias):
+            lookup[candidate] = device
 
 
 def _enrich_topology_status(status: dict, disk_lookup: dict[str, dict]) -> dict:
@@ -981,10 +1110,19 @@ def _enrich_topology_node(node: dict, disk_lookup: dict[str, dict]) -> dict:
         "children": [_enrich_topology_node(child, disk_lookup) for child in node.get("children", [])],
     }
     if device:
-        enriched["devicePath"] = device.get("diskPath") or device.get("path") or node.get("name")
-        enriched["displayName"] = device.get("diskPath") or device.get("path") or node.get("name")
+        # Keep the raw member name from `zpool status -L` for diagnostics while
+        # also exposing the preferred command target for operations. This lets
+        # the UI show friendly aliases without losing the exact topology token
+        # that ZFS reported in the latest snapshot.
+        enriched["statusName"] = node.get("name")
+        enriched["commandTarget"] = device.get("commandPath") or device.get("diskPath") or device.get("path") or node.get("name")
+        enriched["devicePath"] = enriched["commandTarget"]
+        enriched["displayName"] = device.get("displayName") or device.get("diskPath") or device.get("path") or node.get("name")
         enriched["diskId"] = device.get("diskId") or enriched["devicePath"]
+        enriched["kernelPath"] = device.get("kernelPath") or device.get("diskPath") or device.get("path")
+        enriched["byIdPath"] = device.get("byIdPath")
         enriched["deviceModel"] = device.get("model")
+        enriched["aliases"] = device.get("aliases") or [enriched["displayName"]]
     elif not enriched.get("displayName"):
         enriched["displayName"] = enriched.get("name")
     return enriched
@@ -997,12 +1135,13 @@ def _lookup_topology_device(name: str | None, disk_lookup: dict[str, dict]) -> d
     return None
 
 
-def _build_topology_summary(status: dict, disk_lookup: dict[str, dict]) -> list[dict]:
+def _build_topology_summary(status: dict, disk_lookup: dict[str, dict], available_devices: list[dict]) -> list[dict]:
     config = status.get("config", []) if status else []
     if not config:
         return []
 
     root = config[0]
+    scan_status = _build_scan_status(status.get("scan"))
     groups: list[dict] = []
     for group_name in ("data", "log", "cache", "special", "dedup", "spare"):
         nodes = [node for node in _collect_topology_group_nodes(root, group_name) if node.get("vdev_class") == group_name]
@@ -1010,7 +1149,15 @@ def _build_topology_summary(status: dict, disk_lookup: dict[str, dict]) -> list[
             {
                 "name": group_name,
                 "label": _topology_group_label(group_name),
-                "items": [_build_topology_summary_item(node, disk_lookup) for node in nodes],
+                "items": [
+                    _build_topology_summary_item(
+                        node,
+                        disk_lookup,
+                        available_devices,
+                        scan_active=bool(scan_status.get("active")),
+                    )
+                    for node in nodes
+                ],
             }
         )
     return groups
@@ -1049,43 +1196,119 @@ def _collect_topology_group_nodes(root: dict, group_name: str) -> list[dict]:
     return [child for child in children if child.get("vdev_class") == group_name]
 
 
-def _build_topology_summary_item(node: dict, disk_lookup: dict[str, dict]) -> dict:
+def _build_topology_summary_item(
+    node: dict,
+    disk_lookup: dict[str, dict],
+    available_devices: list[dict],
+    *,
+    scan_active: bool = False,
+) -> dict:
     member_nodes = _flatten_leaf_member_nodes(node)
     members = []
+    replace_target = str(node.get("name") or "-")
+    member_devices: list[dict] = []
     for leaf in member_nodes:
         member_name = str(leaf.get("name") or "-")
         device = _lookup_topology_device(member_name, disk_lookup)
+        if device:
+            member_devices.append(device)
+        member_state = str(leaf.get("state") or "").strip().upper() or None
+        display_label = (device or {}).get("displayName") or (device or {}).get("diskPath") or (device or {}).get("path") or member_name
+        replace_candidates = _build_replace_candidates(device, available_devices)
+        can_replace = bool(replace_candidates)
         members.append(
             {
                 "name": member_name,
-                "path": (device or {}).get("diskPath") or (device or {}).get("path") or member_name,
+                "path": (device or {}).get("kernelPath") or (device or {}).get("diskPath") or (device or {}).get("path") or member_name,
                 "diskId": (device or {}).get("diskId") or member_name,
+                "diskKey": (device or {}).get("diskKey") or None,
                 "model": (device or {}).get("model") or None,
-                "state": leaf.get("state") or None,
+                "state": member_state,
                 "read": leaf.get("read"),
                 "write": leaf.get("write"),
                 "cksum": leaf.get("cksum"),
+                # For devices that are already inside a pool, maintenance
+                # commands must use the exact member name reported by
+                # `zpool status -L`. The UI still gets the friendly aliases and
+                # canonical by-id path separately for display and matching.
+                "commandTarget": member_name,
+                "rawCommandTarget": member_name,
+                # Replace is slightly different from offline/online on Linux:
+                # pools that were created from whole disks may expose a child
+                # partition as the leaf member while `zpool replace` still
+                # expects the higher-level device node token. Keep a dedicated
+                # replace target so the frontend does not reuse the wrong
+                # command identity.
+                "replaceTarget": replace_target if str(node.get("node_kind") or "") == "device" else member_name,
+                "rawReplaceTarget": replace_target if str(node.get("node_kind") or "") == "device" else member_name,
+                "preferredPath": (device or {}).get("commandPath") or member_name,
+                "displayLabel": display_label,
+                "kernelPath": (device or {}).get("kernelPath") or (device or {}).get("diskPath") or (device or {}).get("path") or member_name,
+                "byIdPath": (device or {}).get("byIdPath") or None,
+                "aliases": (device or {}).get("aliases") or [display_label],
+                "canOffline": _can_offline_member(member_state),
+                "canOnline": _can_online_member(member_state),
+                "canReplace": can_replace,
+                "replaceReason": None if can_replace else "No unused replacement disks are currently available.",
+                # Attach candidate metadata directly to the leaf member so the
+                # frontend can offer replace without recomputing qualification.
+                "replaceCandidates": replace_candidates,
+                "offlineReason": _offline_reason(member_state),
+                "onlineReason": _online_reason(member_state),
             }
         )
+    item_display_label = str(node.get("name") or "-")
+    if node.get("node_kind") == "device" and members:
+        item_display_label = str(members[0].get("displayLabel") or members[0].get("path") or item_display_label)
+    raidz_expand_candidates = _build_raidz_expand_candidates(
+        node=node,
+        member_devices=member_devices,
+        available_devices=available_devices,
+        scan_active=scan_active,
+    )
+    can_raidz_expand = bool(raidz_expand_candidates)
+    raidz_expand_reason = _raidz_expand_reason(
+        node=node,
+        member_devices=member_devices,
+        available_devices=available_devices,
+        scan_active=scan_active,
+        candidates=raidz_expand_candidates,
+    )
+    smallest_member_size = _smallest_member_size(member_devices)
     return {
         "name": node.get("name"),
+        "displayLabel": item_display_label,
         "vdevClass": node.get("vdev_class"),
         "roleLabel": node.get("role_label"),
         "nodeKind": node.get("node_kind"),
         "state": node.get("state"),
         "layout": _infer_layout(node),
+        "commandTarget": replace_target if str(node.get("node_kind") or "") == "device" else node.get("name"),
+        "rawCommandTarget": node.get("name"),
+        # RAID-Z expansion operates on the vdev token itself instead of any
+        # individual leaf member, so the UI needs item-level candidates.
+        "canRaidzExpand": can_raidz_expand,
+        "raidzExpandReason": raidz_expand_reason,
+        "raidzExpandCandidates": raidz_expand_candidates,
+        "raidzWidth": len(member_nodes),
+        "smallestMemberSize": smallest_member_size,
         "members": members,
     }
 
 
 def _build_removal_target(node: dict, disk_lookup: dict[str, dict]) -> dict:
-    summary_item = _build_topology_summary_item(node, disk_lookup)
-    display_label = summary_item["name"]
+    summary_item = _build_topology_summary_item(node, disk_lookup, [])
+    display_label = summary_item.get("displayLabel") or summary_item["name"]
+    command_target = node.get("name")
+    raw_command_target = node.get("name")
     if summary_item.get("nodeKind") == "device" and summary_item.get("members"):
-        display_label = summary_item["members"][0].get("path") or display_label
+        member = summary_item["members"][0]
+        display_label = member.get("displayLabel") or member.get("path") or display_label
+        command_target = member.get("rawCommandTarget") or member.get("commandTarget") or command_target
     return {
         **summary_item,
-        "commandTarget": node.get("name"),
+        "commandTarget": command_target,
+        "rawCommandTarget": raw_command_target,
         "displayLabel": display_label,
         "targetType": "vdev" if summary_item.get("nodeKind") == "vdev" else "device",
     }
@@ -1103,13 +1326,22 @@ def _flatten_leaf_member_nodes(node: dict) -> list[dict]:
 
 def _infer_layout(node: dict) -> str:
     if node.get("layout"):
-        return str(node["layout"])
+        return _normalize_layout_name(str(node["layout"]))
     name = str(node.get("name") or "")
     if name.startswith("mirror"):
         return "mirror"
     if name.startswith("raidz"):
-        return name.split("-", 1)[0]
+        return _normalize_layout_name(name.split("-", 1)[0])
     return "stripe"
+
+
+def _normalize_layout_name(layout: str) -> str:
+    normalized = str(layout or "").strip().lower()
+    # Some hosts label single-parity RAID-Z as `raidz1`, but the rest of the
+    # UI and capability checks already treat that as plain `raidz`.
+    if normalized == "raidz1":
+        return "raidz"
+    return normalized
 
 
 def _topology_group_label(group_name: str) -> str:
@@ -1133,6 +1365,11 @@ def _build_available_topology_devices(disks: list[dict]) -> list[dict]:
                 "name": disk.get("name"),
                 "path": disk.get("path"),
                 "diskId": disk.get("diskId"),
+                "diskKey": disk.get("diskKey"),
+                "displayName": disk.get("displayName") or disk.get("path"),
+                "kernelPath": disk.get("kernelPath") or disk.get("path"),
+                "byIdPath": disk.get("byIdPath"),
+                "commandPath": disk.get("commandPath") or disk.get("path"),
                 "model": disk.get("model"),
                 "size": disk.get("size"),
                 "filesystem": disk.get("filesystem"),
@@ -1140,6 +1377,92 @@ def _build_available_topology_devices(disks: list[dict]) -> list[dict]:
             }
         )
     return candidates
+
+
+def _build_replace_candidates(device: dict | None, available_devices: list[dict]) -> list[dict]:
+    current_disk_key = str((device or {}).get("diskKey") or "").strip()
+    current_kernel_path = str((device or {}).get("kernelPath") or (device or {}).get("diskPath") or "").strip()
+    current_by_id_path = str((device or {}).get("byIdPath") or "").strip()
+    candidates: list[dict] = []
+    for candidate in available_devices:
+        if current_disk_key and str(candidate.get("diskKey") or "").strip() == current_disk_key:
+            continue
+        if current_kernel_path and str(candidate.get("kernelPath") or "").strip() == current_kernel_path:
+            continue
+        if current_by_id_path and str(candidate.get("byIdPath") or "").strip() == current_by_id_path:
+            continue
+        candidates.append(candidate)
+    return candidates
+
+
+def _build_raidz_expand_candidates(
+    *,
+    node: dict,
+    member_devices: list[dict],
+    available_devices: list[dict],
+    scan_active: bool,
+) -> list[dict]:
+    if str(node.get("node_kind") or "") != "vdev":
+        return []
+    if str(node.get("vdev_class") or "") != "data":
+        return []
+    if _infer_layout(node) not in {"raidz", "raidz2", "raidz3"}:
+        return []
+    if scan_active:
+        return []
+
+    # Let the operator open the expansion dialog even when the current member
+    # size cannot be derived from lsblk with certainty. We still validate at
+    # submit time when enough information is available, and otherwise let ZFS
+    # return the authoritative error.
+    return list(available_devices)
+
+
+def _raidz_expand_reason(
+    *,
+    node: dict,
+    member_devices: list[dict],
+    available_devices: list[dict],
+    scan_active: bool,
+    candidates: list[dict],
+) -> str | None:
+    if str(node.get("node_kind") or "") != "vdev":
+        return "RAID-Z expansion is only available on vdev items."
+    if str(node.get("vdev_class") or "") != "data":
+        return "RAID-Z expansion is only offered for data vdevs."
+    layout = _infer_layout(node)
+    if layout not in {"raidz", "raidz2", "raidz3"}:
+        return "This vdev is not a RAID-Z layout."
+    if scan_active:
+        return "Another pool scan task is already running, so RAID-Z expansion is temporarily blocked."
+    if not available_devices:
+        return "No unused disks are currently available for RAID-Z expansion."
+    if candidates:
+        return None
+    return "No unused disk is currently available for RAID-Z expansion."
+
+
+def _smallest_member_size(member_devices: list[dict]) -> int | None:
+    sizes = [
+        size
+        for size in (
+            _coerce_size_bytes(device.get("size")) or _coerce_size_bytes(device.get("parentSize"))
+            for device in member_devices
+        )
+        if size is not None and size > 0
+    ]
+    if not sizes:
+        return None
+    return min(sizes)
+
+
+def _coerce_size_bytes(value) -> int | None:
+    if value in (None, "", "-"):
+        return None
+    try:
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _disk_is_available_for_topology(disk: dict) -> bool:
@@ -1156,6 +1479,38 @@ def _disk_is_available_for_topology(disk: dict) -> bool:
         if not _is_reusable_filesystem(partition_filesystem, partition_pool):
             return False
     return True
+
+
+def _can_offline_member(state: str | None) -> bool:
+    normalized = str(state or "").upper()
+    return normalized in {"ONLINE", "DEGRADED"}
+
+
+def _can_online_member(state: str | None) -> bool:
+    normalized = str(state or "").upper()
+    return normalized == "OFFLINE"
+
+
+
+
+def _offline_reason(state: str | None) -> str | None:
+    normalized = str(state or "").upper()
+    if _can_offline_member(normalized):
+        return None
+    if normalized == "OFFLINE":
+        return "This device is already offline."
+    if not normalized:
+        return "The device state is unknown, so offline is not offered."
+    return f"Offline is not offered for device state {normalized}."
+
+
+def _online_reason(state: str | None) -> str | None:
+    normalized = str(state or "").upper()
+    if _can_online_member(normalized):
+        return None
+    if not normalized:
+        return "The device state is unknown, so online is not offered."
+    return f"Online is only offered when the device is OFFLINE, but the current state is {normalized}."
 
 
 def _is_reusable_filesystem(filesystem: str | None, pool_name: str | None) -> bool:

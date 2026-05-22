@@ -2,37 +2,49 @@
 
 > [English Version](./README.md)
 
-`Documents/` 用来存放项目级设计文档、开发路线图和代码结构说明。
+`Documents/` 用于存放项目级设计说明、路线图和代码结构索引。
 
 ## 索引
 
-- `agent.md`：交接说明、实现约定和扩展提示
-- `target.md`：产品目标与当前已交付能力
-- `Roadmap.md`：开发路线图与下一阶段重点
-- `TaskSystemArchitecture.md`：任务持久化、恢复、调度与扩展性设计
-- `SnapshotManagementArchitecture.md`：快照模块结构、独立页面设计、定时快照与保留策略方向
-- `ProjectStruction.md`：项目高层结构说明
-- `ProjectDirectoryStructure.md`：按目录展开的代码地图
+- `agent.md`
+  - 协作约定和交接说明
+- `target.md`
+  - 当前产品目标和已交付能力
+- `Roadmap.md`
+  - 后续阶段性规划
+- `TaskSystemArchitecture.md`
+  - 任务持久化、恢复、调度和扩展设计
+- `SnapshotManagementArchitecture.md`
+  - 快照页、定时快照和保留策略设计
+- `PoolMaintenanceArchitecture.md`
+  - pool 维护、设备身份、replace 和 RAID-Z expansion 设计
+- `ProjectStruction.md`
+  - 高层结构概览
+- `ProjectDirectoryStructure.md`
+  - 逐级目录结构说明
 
 ## 当前重点
 
-- 后端采用 SSH 轮询加 REST 写操作模式
-- 任务系统目前已经包含：
-  - 基于 SQLite 的任务与计划任务持久化
-  - 启动恢复与活动任务对账
-  - 定时 `scrub`
-  - 定时 `snapshot`
-  - 基于计划范围的快照保留清理
-- 快照模块目前已经包含：
-  - 数据集页面快速创建入口
-  - 独立快照页面
-  - 回滚流程
-  - 高级回滚模式选择
-  - 从分钟到月的定时快照
-  - 基于 ZFS 用户属性的定时快照归属与保留标记
+- 后端采用 SSH 轮询加 REST 写操作的架构。
+- 任务系统已经具备 SQLite 持久化、启动恢复、分页查询和状态筛选。
+- 快照调度已经支持从分钟到月的多级计划。
+- 定时快照使用短名称，计划归属写入 ZFS 用户自定义属性。
+- pool 维护已覆盖：
+  - `scrub`
+  - `clear`
+  - `offline / online`
+  - `replace`
+  - RAID-Z `expansion`
+- 磁盘身份模型已经拆分为显示字段和执行字段：
+  - `displayName`
+  - `commandPath`
+  - `commandTarget`
+  - `rawCommandTarget`
+  - `aliases`
 
-## 说明
+## 当前约束
 
-- 运行时配置位于 `backend/config/`
-- 长时间任务的真实状态应尽量来自 ZFS 和主机状态本身
-- 定时快照的清理匹配现在依赖写入快照用户属性的计划元数据，而不是依赖很长的快照名称
+- 未加入 pool 的新设备尽量使用 `by-id`。
+- 已在 pool 内的现有成员维护命令必须使用 `zpool status -L` 给出的真实成员名。
+- 长时间任务尽量以 ZFS 和主机状态作为真相源。
+- RAID-Z expansion 的恢复不仅看 `expand:`，还要看自动 `scrub` 阶段和成员变化。

@@ -24,5 +24,10 @@
   "auth": {
     "enabled": false,
     "password": "test"
+  },
+  "disk_labels": {
+    "scsi-36000c29bab844105a37e7a8d51cdb9e0": "sata1",
+    "scsi-36000c2986b286ebbb7fc5a0cc54c6ce6": "sata2",
+    "scsi-36000c299371218a1351ccbc0c68e7625": "sata7"
   }
 }
