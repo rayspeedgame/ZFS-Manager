@@ -1,0 +1,13 @@
+.git
+.gitignore
+.vscode
+Documents
+frontend/node_modules
+frontend/dist
+backend/__pycache__
+backend/.pytest_cache
+backend/tests
+backend/scripts
+**/__pycache__
+**/.DS_Store
+*.log

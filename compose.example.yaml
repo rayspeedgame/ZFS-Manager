@@ -1,0 +1,24 @@
+services:
+  zfs-manager:
+    build:
+      context: .
+    image: zfs-manager:latest
+    ports:
+      - "8080:80"
+    environment:
+      TZ: Asia/Shanghai
+      ZFS_MANAGER_CONFIG: /data/config.json
+      ZFS_MANAGER_TASK_DB: /data/tasks.sqlite3
+      ZFS_MANAGER_POLLER_MODE: ssh
+      ZFS_MANAGER_SSH_HOST: 192.168.1.10
+      ZFS_MANAGER_SSH_USERNAME: root
+      ZFS_MANAGER_SSH_PORT: "22"
+      ZFS_MANAGER_AUTH_ENABLED: "true"
+      ZFS_MANAGER_AUTH_PASSWORD: change-me
+    volumes:
+      - zfs_manager_data:/data
+      # If you use SSH keys, mount them read-only and point ZFS_MANAGER_SSH_KEY_FILES to the path.
+      # - ./secrets/id_ed25519:/run/secrets/id_ed25519:ro
+
+volumes:
+  zfs_manager_data:

@@ -1,6 +1,28 @@
+function normalizeOrigin(origin) {
+  return origin.endsWith("/") ? origin.slice(0, -1) : origin;
+}
+
+function buildBackendOrigin() {
+  const explicitOrigin = import.meta.env.VITE_BACKEND_ORIGIN?.trim();
+  if (explicitOrigin) {
+    return normalizeOrigin(explicitOrigin);
+  }
+
+  const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
+  if (backendPort) {
+    return `${window.location.protocol}//${window.location.hostname}:${backendPort}`;
+  }
+
+  // Local Vite development still uses a separate backend server on port 8000.
+  if (import.meta.env.DEV) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+
+  return window.location.origin;
+}
+
 function buildApiBaseUrl() {
-  const backendPort = import.meta.env.VITE_BACKEND_PORT || "8000";
-  return `${window.location.protocol}//${window.location.hostname}:${backendPort}/api`;
+  return `${buildBackendOrigin()}/api`;
 }
 
 async function parsePayload(response) {
@@ -436,4 +458,4 @@ export async function removePoolTarget(poolName, commandTarget) {
   );
 }
 
-export { buildApiBaseUrl };
+export { buildApiBaseUrl, buildBackendOrigin };

@@ -2,16 +2,11 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
 import { buildApiBaseUrl, getAuthStatus, login as loginRequest, logout as logoutRequest } from "../services/api.js";
+import { buildWebSocketUrl } from "../lib/endpoints.js";
 
 let socket = null;
 let reconnectTimer = null;
 let shouldReconnect = true;
-
-function buildWebSocketUrl() {
-  const backendPort = import.meta.env.VITE_BACKEND_PORT || "8000";
-  const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${wsProtocol}://${window.location.hostname}:${backendPort}/ws/state`;
-}
 
 export const useAppStore = defineStore("app", () => {
   const connectionState = ref("connecting");
