@@ -19,8 +19,8 @@ venv/
 env/
 
 # Backend local config and logs
-backend/config.json
-backend/tasks.sqlite3
+backend/config/config.json
+backend/config/tasks.sqlite3
 backend/run_logs/
 
 # Frontend
