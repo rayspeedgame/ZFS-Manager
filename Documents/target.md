@@ -63,5 +63,6 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 ## Next Steps
 
 - keep improving recurring snapshot editing and schedule visibility
-- extend retention into richer tiered rules only when needed
 - continue improving `replace` and RAID-Z `expansion` candidate explanations and audit detail
+
+> **On "tiered retention":** The multi-schedule independent retention design already covers tiered scenarios — different frequencies (daily/weekly/monthly) each have their own schedule, and retention is automatically isolated by `schedule_id`. No complex tiered rules are needed inside a single schedule.

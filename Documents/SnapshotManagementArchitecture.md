@@ -80,4 +80,8 @@ Recommended product rule:
 
 - Show schedule ownership fields in more snapshot views
 - Allow editing existing snapshot schedules
-- Add richer retention reporting before adding more complex tiered retention
+- Add richer retention reporting
+
+> **On "tiered retention":** The current **multi-schedule independent retention** design already covers tiered scenarios. Operators simply create separate schedules for different frequencies (daily, weekly, monthly), each retaining its own latest N snapshots without interference.
+> Snapshot ownership is tagged by `schedule_id` in ZFS user properties, and retention cleanup is keyed by schedule identity — it never affects manual snapshots or snapshots from other schedules.
+> Therefore no complex tiered retention rules are needed inside a single schedule.

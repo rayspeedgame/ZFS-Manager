@@ -10,10 +10,10 @@
     "properties_interval_seconds": 120
   },
   "ssh": {
-    "host": "192.168.2.2",
+    "host": "192.168.10.128",
     "username": "root",
     "port": 22,
-    "password": "rayspeedproxmox",
+    "password": "testtest",
     "key_files": [],
     "known_hosts": null,
     "connect_timeout": 10.0,

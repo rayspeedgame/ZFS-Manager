@@ -53,8 +53,13 @@
 ### 2. Snapshot retention growth
 
 - `keep latest N` remains the baseline
-- add richer tiered retention only when truly needed
 - keep the rule that automated cleanup must not affect manual snapshots
+
+> **"Tiered retention" is already covered by the multi-schedule design:**
+> The system naturally achieves tiered retention through independent schedules per frequency level.
+> Operators create separate schedules (daily, weekly, monthly), each retaining its own latest N snapshots.
+> Retention is keyed by `schedule_id` in ZFS user properties — it never affects manual snapshots or snapshots from other schedules.
+> Therefore no complex tiered retention rules are needed inside a single schedule.
 
 ### 3. Pool maintenance growth
 
