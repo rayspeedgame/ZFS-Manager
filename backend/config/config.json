@@ -1,19 +1,19 @@
 {
   "poller": {
     "mode": "ssh",
-    "interval_seconds": 5,
-    "fallback_to_fixture": false,
+    "interval_seconds": 2,
+    "fallback_to_fixture": true,
     "tick_seconds": 1,
-    "pools_interval_seconds": 10,
+    "pools_interval_seconds": 5,
     "datasets_interval_seconds": 15,
     "disks_interval_seconds": 60,
     "properties_interval_seconds": 120
   },
   "ssh": {
-    "host": "192.168.10.128",
+    "host": "192.168.2.2",
     "username": "root",
     "port": 22,
-    "password": "testtest",
+    "password": "rayspeedproxmox",
     "key_files": [],
     "known_hosts": null,
     "connect_timeout": 10.0,
@@ -23,11 +23,7 @@
   },
   "auth": {
     "enabled": false,
-    "password": "test"
+    "password": null
   },
-  "disk_labels": {
-    "scsi-36000c29bab844105a37e7a8d51cdb9e0": "sata1",
-    "scsi-36000c2986b286ebbb7fc5a0cc54c6ce6": "sata2",
-    "scsi-36000c299371218a1351ccbc0c68e7625": "sata7"
-  }
+  "disk_labels": {}
 }
