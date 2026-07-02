@@ -22,14 +22,20 @@ class SSHSettings(BaseModel):
 
 
 class PollerSettings(BaseModel):
+    # --- Active intervals (at least one WebSocket client connected) ---
     mode: Literal["fixture", "ssh"] = "fixture"
-    interval_seconds: int = 2
     fallback_to_fixture: bool = True
     tick_seconds: int = 1
     pools_interval_seconds: int = 5
     datasets_interval_seconds: int = 15
     disks_interval_seconds: int = 60
     properties_interval_seconds: int = 120
+    # --- Idle intervals (no WebSocket clients connected) ---
+    idle_tick_seconds: int = 30
+    idle_pools_interval_seconds: int = 60
+    idle_datasets_interval_seconds: int = 300
+    idle_disks_interval_seconds: int = 600
+    idle_properties_interval_seconds: int = 1200
 
 
 class AuthSettings(BaseModel):
@@ -98,8 +104,6 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     # Environment variables are convenient for Docker deployment.
     if value := os.environ.get("ZFS_MANAGER_POLLER_MODE"):
         config.poller.mode = value  # type: ignore[assignment]
-    if value := os.environ.get("ZFS_MANAGER_POLLER_INTERVAL"):
-        config.poller.interval_seconds = int(value)
     if value := os.environ.get("ZFS_MANAGER_POLLER_TICK"):
         config.poller.tick_seconds = int(value)
     if value := os.environ.get("ZFS_MANAGER_POLLER_FALLBACK"):
@@ -112,6 +116,16 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
         config.poller.disks_interval_seconds = int(value)
     if value := os.environ.get("ZFS_MANAGER_POLLER_PROPERTIES_INTERVAL"):
         config.poller.properties_interval_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_TICK"):
+        config.poller.idle_tick_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_POOLS_INTERVAL"):
+        config.poller.idle_pools_interval_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_DATASETS_INTERVAL"):
+        config.poller.idle_datasets_interval_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_DISKS_INTERVAL"):
+        config.poller.idle_disks_interval_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_PROPERTIES_INTERVAL"):
+        config.poller.idle_properties_interval_seconds = int(value)
 
     if value := os.environ.get("ZFS_MANAGER_SSH_HOST"):
         config.ssh.host = value

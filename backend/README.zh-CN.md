@@ -14,6 +14,7 @@
 - 运行定时 `scrub`
 - 运行定时 `snapshot`
 - 执行按计划归属隔离的快照保留清理
+- 客户端感知的活跃/空闲轮询节奏——有浏览器查看时快速刷新，无浏览器时使用慢速空闲间隔
 
 ## 磁盘身份模型
 
@@ -42,9 +43,12 @@
 ## 当前重点模块
 
 - `app/api/`
-  - REST API
+  - REST API（路由拆分在 `routes/` 子模块中）和 WebSocket 端点
+- `app/core/client_tracker.py`
+  - 追踪已连接的 WebSocket 客户端数量，驱动活跃↔空闲轮询模式切换
 - `app/services/poller.py`
   - 状态采集、磁盘身份规范化、`scanStatus` / `expandStatus` 组装
+  - 客户端感知的活跃/空闲刷新节奏，每项作业间隔独立可配
 - `app/services/task_scheduler.py`
   - 定时任务调度
 - `app/services/task_store.py`

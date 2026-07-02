@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 
+from app.core.client_tracker import client_tracker
 from app.core.config import AppConfig
 from app.core.state import state_store
 from app.schemas.zfs_state import (
@@ -64,8 +65,8 @@ class StatePoller:
 
     def __init__(self, config: AppConfig) -> None:
         self._config = config
-        self._interval_seconds = config.poller.interval_seconds
-        self._tick_seconds = max(1, config.poller.tick_seconds)
+        self._active_tick = max(1, config.poller.tick_seconds)
+        self._idle_tick = max(1, config.poller.idle_tick_seconds)
         self._task: asyncio.Task[None] | None = None
         self._backend_root = Path(__file__).resolve().parents[2]
         self._fixtures_dir = self._backend_root / "tests" / "fixtures"
@@ -75,12 +76,16 @@ class StatePoller:
         self._zpool_properties_cache = CachedPayload()
         self._dataset_core_cache = CachedPayload()
         self._dataset_properties_cache = CachedPayload()
+        # Start in idle mode — the poller loop will switch to active intervals
+        # on the first tick once a WebSocket client connects.
+        self._tick_seconds = self._idle_tick
         self._schedules = {
-            "disks": ScheduledRefresh(max(1, config.poller.disks_interval_seconds)),
-            "pools": ScheduledRefresh(max(1, config.poller.pools_interval_seconds)),
-            "datasets": ScheduledRefresh(max(1, config.poller.datasets_interval_seconds)),
-            "properties": ScheduledRefresh(max(1, config.poller.properties_interval_seconds)),
+            "disks": ScheduledRefresh(max(1, config.poller.idle_disks_interval_seconds)),
+            "pools": ScheduledRefresh(max(1, config.poller.idle_pools_interval_seconds)),
+            "datasets": ScheduledRefresh(max(1, config.poller.idle_datasets_interval_seconds)),
+            "properties": ScheduledRefresh(max(1, config.poller.idle_properties_interval_seconds)),
         }
+        self._active_clients = False
 
     async def start(self) -> None:
         if self._task is None or self._task.done():
@@ -97,9 +102,25 @@ class StatePoller:
             await self._ssh_client.close()
 
     async def _run(self) -> None:
+        # Mode detection runs at a fixed 1-second cadence so active↔idle
+        # transitions respond quickly even when the idle tick is very large.
+        # The configurable _tick_seconds only gates how often refresh_once()
+        # actually runs, not how often we check for mode changes.
+        _MODE_CHECK_SECONDS = 1
+        last_refresh_at = datetime.min.replace(tzinfo=timezone.utc)
+
         while True:
-            await self.refresh_once()
-            await asyncio.sleep(self._tick_seconds)
+            now = datetime.now(timezone.utc)
+            currently_active = client_tracker.active
+            if currently_active != self._active_clients:
+                self._apply_mode(currently_active)
+                self._active_clients = currently_active
+
+            if (now - last_refresh_at).total_seconds() >= self._tick_seconds:
+                await self.refresh_once()
+                last_refresh_at = datetime.now(timezone.utc)
+
+            await asyncio.sleep(_MODE_CHECK_SECONDS)
 
     async def refresh_once(self, *, force_all: bool = False) -> AppState:
         attempt_at = datetime.now(timezone.utc)
@@ -307,6 +328,27 @@ class StatePoller:
             if schedule.is_due(attempt_at)
         ]
 
+    def _apply_mode(self, active: bool) -> None:
+        """Switch schedule intervals between active (fast) and idle (slow)."""
+        if active:
+            self._schedules["disks"].interval_seconds = max(1, self._config.poller.disks_interval_seconds)
+            self._schedules["pools"].interval_seconds = max(1, self._config.poller.pools_interval_seconds)
+            self._schedules["datasets"].interval_seconds = max(1, self._config.poller.datasets_interval_seconds)
+            self._schedules["properties"].interval_seconds = max(1, self._config.poller.properties_interval_seconds)
+            self._tick_seconds = self._active_tick
+            # On idle→active transition, reset all schedules to trigger an
+            # immediate full refresh so the newly connected browser gets fresh
+            # data without waiting for the next due window.
+            now = datetime.now(timezone.utc)
+            for schedule in self._schedules.values():
+                schedule.next_due_at = now
+        else:
+            self._schedules["disks"].interval_seconds = max(1, self._config.poller.idle_disks_interval_seconds)
+            self._schedules["pools"].interval_seconds = max(1, self._config.poller.idle_pools_interval_seconds)
+            self._schedules["datasets"].interval_seconds = max(1, self._config.poller.idle_datasets_interval_seconds)
+            self._schedules["properties"].interval_seconds = max(1, self._config.poller.idle_properties_interval_seconds)
+            self._tick_seconds = self._idle_tick
+
     def _build_state(
         self,
         *,
@@ -339,7 +381,7 @@ class StatePoller:
                 app_status=app_status,
                 source_status=source_status,
                 message=message,
-                refresh_interval_seconds=self._interval_seconds,
+                refresh_interval_seconds=self._tick_seconds,
                 refresh_plan_seconds={
                     "tick": self._tick_seconds,
                     "disks": self._schedules["disks"].interval_seconds,

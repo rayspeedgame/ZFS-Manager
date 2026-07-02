@@ -17,6 +17,8 @@
 - 设备级 `offline / online`
 - `replace` 与 `resilver` 跟踪
 - RAID-Z `expansion`
+- 客户端感知的活跃/空闲轮询节奏，连接时即时全量刷新
+- 设置界面中可配置的空闲间隔
 
 ## 当前快照方向
 

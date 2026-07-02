@@ -69,6 +69,7 @@
 - 规范化磁盘身份
 - 构造 `topologySummary`
 - 补充 `scanStatus` 与 `expandStatus`
+- 管理客户端感知的活跃/空闲刷新节奏（参见 `client_tracker.py`）
 
 ### 独立维护服务
 

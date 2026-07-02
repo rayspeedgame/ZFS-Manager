@@ -14,6 +14,7 @@ The backend owns SSH polling, REST write execution, task persistence, schedule e
 - run recurring `scrub`
 - run recurring `snapshot`
 - apply schedule-scoped snapshot retention cleanup
+- client-aware active/idle poller cadence — fast refreshes when a browser is viewing, slow idle intervals otherwise
 
 ## Disk Identity Model
 
@@ -42,9 +43,12 @@ For disks that are already part of a pool:
 ## Important Current Modules
 
 - `app/api/`
-  - REST API surface
+  - REST API surface (routes split across `routes/` sub-modules) and WebSocket endpoint
+- `app/core/client_tracker.py`
+  - tracks connected WebSocket client count, drives active↔idle poller mode switching
 - `app/services/poller.py`
   - state collection, disk identity normalization, plus `scanStatus` / `expandStatus`
+  - client-aware active/idle refresh cadence with configurable per-job intervals
 - `app/services/task_scheduler.py`
   - recurring workflow scheduler
 - `app/services/task_store.py`

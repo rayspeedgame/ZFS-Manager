@@ -17,6 +17,7 @@
 - `SchedulesView`：定时 `scrub` 与定时 `snapshot`
 - `TasksView`：任务记录与状态
 - `DatasetsView`：手动快照快速发起
+- `SettingsView`：轮询配置，含独立的活跃和空闲间隔控制
 
 ## 当前计划任务界面特点
 

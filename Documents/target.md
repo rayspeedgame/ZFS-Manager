@@ -59,6 +59,7 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 - retention is matched by schedule identity, so cleanup does not affect manual snapshots or snapshots from other schedules
 - `SchedulesView` hosts both recurring `scrub` and recurring `snapshot`
 - pool maintenance now separates display identity from execution identity so path churn does not break commands
+- the poller uses WebSocket client-aware active/idle mode switching — fast active intervals with instant full refresh on connect, slow idle intervals when no browser is viewing
 
 ## Next Steps
 

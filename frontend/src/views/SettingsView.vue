@@ -28,13 +28,17 @@ function buildEmptyForm() {
   return {
     poller: {
       mode: "fixture",
-      interval_seconds: 2,
       fallback_to_fixture: true,
       tick_seconds: 1,
       pools_interval_seconds: 5,
       datasets_interval_seconds: 15,
       disks_interval_seconds: 60,
       properties_interval_seconds: 120,
+      idle_tick_seconds: 30,
+      idle_pools_interval_seconds: 60,
+      idle_datasets_interval_seconds: 300,
+      idle_disks_interval_seconds: 600,
+      idle_properties_interval_seconds: 1200,
     },
     ssh: {
       host: "",
@@ -57,13 +61,17 @@ function buildEmptyForm() {
 
 function applyConfig(config) {
   form.poller.mode = config?.poller?.mode || "fixture";
-  form.poller.interval_seconds = Number(config?.poller?.interval_seconds ?? 2);
   form.poller.fallback_to_fixture = Boolean(config?.poller?.fallback_to_fixture);
   form.poller.tick_seconds = Number(config?.poller?.tick_seconds ?? 1);
   form.poller.pools_interval_seconds = Number(config?.poller?.pools_interval_seconds ?? 5);
   form.poller.datasets_interval_seconds = Number(config?.poller?.datasets_interval_seconds ?? 15);
   form.poller.disks_interval_seconds = Number(config?.poller?.disks_interval_seconds ?? 60);
   form.poller.properties_interval_seconds = Number(config?.poller?.properties_interval_seconds ?? 120);
+  form.poller.idle_tick_seconds = Number(config?.poller?.idle_tick_seconds ?? 30);
+  form.poller.idle_pools_interval_seconds = Number(config?.poller?.idle_pools_interval_seconds ?? 60);
+  form.poller.idle_datasets_interval_seconds = Number(config?.poller?.idle_datasets_interval_seconds ?? 300);
+  form.poller.idle_disks_interval_seconds = Number(config?.poller?.idle_disks_interval_seconds ?? 600);
+  form.poller.idle_properties_interval_seconds = Number(config?.poller?.idle_properties_interval_seconds ?? 1200);
 
   form.ssh.host = config?.ssh?.host || "";
   form.ssh.username = config?.ssh?.username || "";
@@ -84,13 +92,17 @@ function buildPayload() {
   return {
     poller: {
       mode: form.poller.mode,
-      interval_seconds: Number(form.poller.interval_seconds),
       fallback_to_fixture: Boolean(form.poller.fallback_to_fixture),
       tick_seconds: Number(form.poller.tick_seconds),
       pools_interval_seconds: Number(form.poller.pools_interval_seconds),
       datasets_interval_seconds: Number(form.poller.datasets_interval_seconds),
       disks_interval_seconds: Number(form.poller.disks_interval_seconds),
       properties_interval_seconds: Number(form.poller.properties_interval_seconds),
+      idle_tick_seconds: Number(form.poller.idle_tick_seconds),
+      idle_pools_interval_seconds: Number(form.poller.idle_pools_interval_seconds),
+      idle_datasets_interval_seconds: Number(form.poller.idle_datasets_interval_seconds),
+      idle_disks_interval_seconds: Number(form.poller.idle_disks_interval_seconds),
+      idle_properties_interval_seconds: Number(form.poller.idle_properties_interval_seconds),
     },
     ssh: {
       host: form.ssh.host.trim(),
@@ -227,13 +239,9 @@ onMounted(() => {
             </label>
 
             <label class="form-field">
-              <span>{{ t("settings.fields.intervalSeconds") }}</span>
-              <input v-model.number="form.poller.interval_seconds" type="number" min="1" class="property-field" />
-            </label>
-
-            <label class="form-field">
               <span>{{ t("settings.fields.tickSeconds") }}</span>
               <input v-model.number="form.poller.tick_seconds" type="number" min="1" class="property-field" />
+              <small class="property-meta">{{ t("settings.poller.tickHint") }}</small>
             </label>
 
             <label class="form-field">
@@ -263,6 +271,41 @@ onMounted(() => {
                 <span>{{ t("settings.fallbackHelp") }}</span>
               </label>
             </div>
+          </div>
+
+          <p class="property-meta" style="margin-bottom: 12px;">{{ t("settings.poller.modeSwitchHint") }}</p>
+
+          <div class="settings-subsection-header">
+            <h4>{{ t("settings.poller.idleTitle") }}</h4>
+            <p>{{ t("settings.poller.idleDescription") }}</p>
+          </div>
+
+          <div class="settings-form-grid">
+            <label class="form-field">
+              <span>{{ t("settings.fields.idleTickSeconds") }}</span>
+              <input v-model.number="form.poller.idle_tick_seconds" type="number" min="1" class="property-field" />
+              <small class="property-meta">{{ t("settings.poller.tickHint") }}</small>
+            </label>
+
+            <label class="form-field">
+              <span>{{ t("settings.fields.idlePoolsIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.idle_pools_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
+
+            <label class="form-field">
+              <span>{{ t("settings.fields.idleDatasetsIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.idle_datasets_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
+
+            <label class="form-field">
+              <span>{{ t("settings.fields.idleDisksIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.idle_disks_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
+
+            <label class="form-field">
+              <span>{{ t("settings.fields.idlePropertiesIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.idle_properties_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
           </div>
         </section>
 

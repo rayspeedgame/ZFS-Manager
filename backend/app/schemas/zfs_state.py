@@ -78,7 +78,7 @@ class AppMeta(BaseModel):
     app_status: str = "starting"
     source_status: str = "connecting"
     message: str = "Poller has not produced a snapshot yet."
-    refresh_interval_seconds: int = 2
+    refresh_interval_seconds: int = 1
     refresh_plan_seconds: dict[str, int] = Field(default_factory=dict)
     last_updated: datetime | None = None
     last_attempt_at: datetime | None = None

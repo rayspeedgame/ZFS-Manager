@@ -5,6 +5,7 @@ import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.core.auth import websocket_is_authenticated
+from app.core.client_tracker import client_tracker
 from app.core.state import state_store
 
 
@@ -18,6 +19,7 @@ async def state_stream(websocket: WebSocket) -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await websocket.accept()
+    await client_tracker.add()
     version, state = await state_store.get_versioned_state()
     await websocket.send_json(state.model_dump(mode="json"))
 
@@ -34,3 +36,5 @@ async def state_stream(websocket: WebSocket) -> None:
         return
     except (WebSocketDisconnect, asyncio.CancelledError):
         return
+    finally:
+        await client_tracker.remove()

@@ -2,24 +2,15 @@
 
 > [中文版](./ProjectDirectoryStructure.zh-CN.md)
 
-## Frontend Hotspots
-
-- `frontend/src/components/common/HelpTooltip.vue`
-  - `?` help icon next to properties, shows description popup on hover
-- `frontend/src/views/SnapshotsView.vue`
-  - Dedicated snapshot management page with filtering, delete, rollback, and detail drawer
-- `frontend/src/views/SchedulesView.vue`
-  - Recurring workflow page for scheduled `scrub` and scheduled `snapshot`
-  - Supports minutely, hourly, daily, weekly, and monthly snapshot definitions
-- `frontend/src/views/TasksView.vue`
-  - Task records and status page with pagination and status filters
-- `frontend/src/views/DatasetsView.vue`
-  - Dataset tree and quick manual snapshot creation entry
-- `frontend/src/services/api.js`
-  - Snapshot APIs, task APIs, and schedule APIs
-
 ## Backend Hotspots
 
+- `backend/app/core/client_tracker.py`
+  - Tracks connected WebSocket client count
+  - Drives active↔idle poller mode switching in ≤1 second
+- `backend/app/services/poller.py`
+  - State collection with client-aware active/idle refresh cadences
+  - Mode detection runs at fixed 1-second interval; configurable tick only gates refresh frequency
+  - Four independent job schedules, each with separate active and idle intervals
 - `backend/app/services/task_scheduler.py`
   - Recurring workflow scheduler
   - Executes scheduled `scrub`
@@ -37,6 +28,25 @@
 - `backend/app/schemas/task_schedule.py`
   - Normalized recurring schedule pattern model
 
+## Frontend Hotspots
+
+- `frontend/src/components/common/HelpTooltip.vue`
+  - `?` help icon next to properties, shows description popup on hover
+- `frontend/src/views/SnapshotsView.vue`
+  - Dedicated snapshot management page with filtering, delete, rollback, and detail drawer
+- `frontend/src/views/SchedulesView.vue`
+  - Recurring workflow page for scheduled `scrub` and scheduled `snapshot`
+  - Supports minutely, hourly, daily, weekly, and monthly snapshot definitions
+- `frontend/src/views/TasksView.vue`
+  - Task records and status page with pagination and status filters
+- `frontend/src/views/DatasetsView.vue`
+  - Dataset tree and quick manual snapshot creation entry
+- `frontend/src/services/api.js`
+  - Snapshot APIs, task APIs, and schedule APIs
+- `frontend/src/views/SettingsView.vue`
+  - Active and idle poller interval configuration
+  - Idle refresh subsection with per-job idle intervals
+
 ## Persistence and Recovery
 
 - `backend/config/tasks.sqlite3`
@@ -48,6 +58,12 @@
 
 ## Change Clusters
 
+- Client-aware polling
+  - `backend/app/core/client_tracker.py`
+  - `backend/app/services/poller.py`
+  - `backend/app/api/ws.py`
+  - `backend/app/core/config.py`
+  - `frontend/src/views/SettingsView.vue`
 - Snapshot management
   - `backend/app/services/snapshot_creator.py`
   - `backend/app/services/snapshot_destroyer.py`

@@ -41,6 +41,7 @@
   - `commandTarget`
   - `rawCommandTarget`
   - `aliases`
+- **Client-aware polling** — the poller automatically switches between active (fast) and idle (slow) refresh cadences based on WebSocket client presence. A `client_tracker` module tracks connected clients, and the poller decouples 1-second mode detection from configurable wake‑up / job refresh intervals. All idle intervals are configurable in the Settings UI.
 
 ## Current Rules
 

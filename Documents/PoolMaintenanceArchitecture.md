@@ -69,6 +69,7 @@ Responsible for:
 - normalizing disk identity
 - building `topologySummary`
 - exposing `scanStatus` and `expandStatus`
+- managing client-aware active/idle refresh cadences (see `client_tracker.py`)
 
 ### Dedicated maintenance services
 

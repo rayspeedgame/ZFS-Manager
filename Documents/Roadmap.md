@@ -17,6 +17,8 @@
 - device-level `offline / online`
 - `replace` plus `resilver` tracking
 - RAID-Z `expansion`
+- client-aware active/idle poller cadence with instant full refresh on connect
+- idle interval configuration in the Settings UI
 
 ## Current Snapshot Direction
 

@@ -17,6 +17,7 @@ The frontend uses Vue 3, routed views, shared dialogs, and i18n to present the s
 - `SchedulesView`: recurring `scrub` and recurring `snapshot`
 - `TasksView`: task records and status
 - `DatasetsView`: quick manual snapshot initiation
+- `SettingsView`: poller configuration with separate active and idle interval controls
 
 ## Current Schedule UX
 

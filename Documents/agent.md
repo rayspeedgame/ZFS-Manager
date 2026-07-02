@@ -17,6 +17,16 @@ This note helps a new contributor understand where data comes from, where writes
 - The frontend should prefer `snapshot.data.*` from the backend instead of rebuilding ZFS state locally.
 - Dataset depth, parentage, short names, and ordering should come from backend-prepared fields whenever possible.
 
+### Client-aware polling
+
+- The poller automatically switches between active (fast) and idle (slow) refresh cadences.
+- A `ClientTracker` singleton in `backend/app/core/client_tracker.py` counts connected WebSocket clients.
+- Mode detection runs at a fixed 1-second interval — independent of the configurable tick/refresh intervals.
+- When a browser connects, the poller switches to active intervals and forces an immediate full refresh.
+- When the last browser disconnects, the poller drops to the configured idle intervals.
+- Active and idle intervals for each job (pools, datasets, disks, properties) are configurable in the Settings UI.
+- The wake-up interval (`tick_seconds` / `idle_tick_seconds`) controls how often `refresh_once()` is called; mode detection always runs at 1 Hz.
+
 ### Write flow contract
 
 Most pool and dataset mutations follow the same lifecycle:
@@ -49,6 +59,7 @@ Most pool and dataset mutations follow the same lifecycle:
 
 - Read path
   - `backend/app/services/poller.py`
+  - `backend/app/core/client_tracker.py`
   - `backend/app/ssh/parser.py`
   - `frontend/src/stores/app.js`
 - Write path
@@ -67,3 +78,4 @@ Most pool and dataset mutations follow the same lifecycle:
 - `Show snapshots` stays opt-in because large snapshot sets add a lot of UI noise.
 - `frontend/src/store/state.js` is still a compatibility layer; new state work should prefer the Pinia store in `frontend/src/stores/app.js`.
 - Locale-sensitive labels inside long-lived arrays should usually be wrapped in `computed()` so switching languages updates the active view immediately.
+- The poller's wake-up interval (`tick_seconds`) must be ≤ the fastest job refresh interval; otherwise, jobs with short refresh intervals are effectively throttled by the tick.

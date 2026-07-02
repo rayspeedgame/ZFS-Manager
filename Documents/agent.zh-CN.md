@@ -17,6 +17,16 @@
 - 前端应优先使用后端提供的 `snapshot.data.*`，而不是在本地重建 ZFS 状态。
 - 数据集深度、父子关系、短名称和排序应尽可能使用后端准备的字段。
 
+### 客户端感知轮询
+
+- 轮询器根据是否有浏览器连接自动在活跃（快速）和空闲（慢速）刷新节奏之间切换。
+- `ClientTracker` 单例（`backend/app/core/client_tracker.py`）追踪已连接的 WebSocket 客户端数量。
+- 模式检测以固定 1 秒间隔运行——独立于可配置的唤醒/刷新间隔。
+- 浏览器连接时，轮询器切换到活跃间隔并强制立即全量刷新。
+- 最后一个浏览器断开时，轮询器降至配置的空闲间隔。
+- 每项作业（pools、datasets、disks、properties）的活跃和空闲间隔均可在设置界面中调整。
+- 唤醒间隔（`tick_seconds` / `idle_tick_seconds`）控制 `refresh_once()` 的调用频率；模式检测始终以 1 Hz 运行。
+
 ### 写操作流程契约
 
 大多数池和数据集的变更遵循相同的生命周期：
@@ -49,6 +59,7 @@
 
 - 读取路径
   - `backend/app/services/poller.py`
+  - `backend/app/core/client_tracker.py`
   - `backend/app/ssh/parser.py`
   - `frontend/src/stores/app.js`
 - 写入路径
@@ -67,3 +78,4 @@
 - "显示快照"保持可选，因为大型快照集会产生大量 UI 噪音。
 - `frontend/src/store/state.js` 仍然是兼容层；新的状态工作应优先使用 `frontend/src/stores/app.js` 中的 Pinia store。
 - 长生命周期数组中的语言敏感标签通常应包装在 `computed()` 中，以便切换语言时立即更新当前视图。
+- 轮询器的唤醒间隔（`tick_seconds`）应 ≤ 最快的作业刷新间隔，否则短间隔作业会被唤醒间隔卡住。
