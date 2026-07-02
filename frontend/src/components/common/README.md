@@ -14,6 +14,7 @@ Shared base components used across views.
 - `PropertyFieldList.vue`: shared property renderer for readonly and editable field lists
 - `CommandResultList.vue`: compact success/failure result rows
 - `CommandLogPanel.vue`: SSH command log presentation
+- `HelpTooltip.vue`: `?` help icon next to property labels, shows multi-line description on hover
 - `property-options.js`: shared option lists reused by pool and dataset config files
 
 ## Usage

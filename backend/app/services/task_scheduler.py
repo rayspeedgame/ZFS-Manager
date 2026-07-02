@@ -4,7 +4,8 @@ import asyncio
 import calendar
 from datetime import datetime, timedelta, timezone
 from re import sub
-from typing import Callable
+from collections.abc import Awaitable
+from typing import Any, Callable
 from uuid import uuid4
 
 from app.core.state import state_store
@@ -38,7 +39,7 @@ class TaskSchedulerService:
         pool_scrubber: PoolScrubber,
         snapshot_creator: SnapshotCreator,
         snapshot_destroyer: SnapshotDestroyer,
-        refresh_state: Callable[..., object],
+        refresh_state: Callable[..., Awaitable[Any]],
         tick_seconds: int = 30,
     ) -> None:
         self._store = store

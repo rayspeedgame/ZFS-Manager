@@ -4,6 +4,8 @@
 
 ## 前端热点目录
 
+- `frontend/src/components/common/HelpTooltip.vue`
+  - 属性 `?` 帮助图标，hover 时出现说明弹出框
 - `frontend/src/views/SnapshotsView.vue`
   - 独立快照管理页面，负责筛选、删除、回滚和详情抽屉
 - `frontend/src/views/SchedulesView.vue`

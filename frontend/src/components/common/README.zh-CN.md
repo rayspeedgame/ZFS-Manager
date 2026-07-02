@@ -14,6 +14,7 @@
 - `PropertyFieldList.vue`: 只读和可编辑字段列表的共享属性渲染器
 - `CommandResultList.vue`: 紧凑的成功/失败结果行
 - `CommandLogPanel.vue`: SSH 命令日志展示
+- `HelpTooltip.vue`: 属性旁的 `?` 帮助图标，hover 时显示多行说明
 - `property-options.js`: 池和数据集配置文件重用的共享选项列表
 
 ## Usage

@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from "vue-i18n";
+import HelpTooltip from "./HelpTooltip.vue";
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -13,7 +14,16 @@ const props = defineProps({
   itemClass: { type: String, default: "" },
 });
 
-const { t, te } = useI18n();
+const { t, te, tm } = useI18n();
+
+function fieldHelp(field) {
+  const name = fieldName(field);
+  const helpMap = tm("properties.help");
+  if (helpMap && typeof helpMap === "object" && helpMap[name]) {
+    return helpMap[name];
+  }
+  return "";
+}
 const emit = defineEmits(["update:modelValue"]);
 
 function fieldName(field) {
@@ -68,7 +78,13 @@ function updateValue(name, value) {
       :key="fieldName(field)"
       :class="itemClass"
     >
-      <dt>{{ fieldLabel(field) }}</dt>
+      <dt>
+        {{ fieldLabel(field) }}
+        <HelpTooltip
+          v-if="fieldHelp(field)"
+          :text="fieldHelp(field)"
+        />
+      </dt>
       <dd>
         <template v-if="readonly">
           <span>{{ metaByField[fieldName(field)]?.value ?? "-" }}</span>

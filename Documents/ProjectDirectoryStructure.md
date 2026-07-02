@@ -4,6 +4,8 @@
 
 ## Frontend Hotspots
 
+- `frontend/src/components/common/HelpTooltip.vue`
+  - `?` help icon next to properties, shows description popup on hover
 - `frontend/src/views/SnapshotsView.vue`
   - Dedicated snapshot management page with filtering, delete, rollback, and detail drawer
 - `frontend/src/views/SchedulesView.vue`
