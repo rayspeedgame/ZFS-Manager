@@ -10,6 +10,8 @@ from app.ssh.client import SSHClient, SSHConfig
 class _FakeResult:
     def __init__(self, stdout: str) -> None:
         self.stdout = stdout
+        self.stderr = ""
+        self.exit_status = 0
 
 
 class _FakeConnection:

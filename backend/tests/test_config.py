@@ -5,14 +5,19 @@ from app.core.config import AppConfig, DEFAULT_EXAMPLE_CONFIG_PATH
 
 def test_app_config_accepts_ssh_mode() -> None:
     payload = {
-        "poller": {"mode": "ssh", "interval_seconds": 5, "fallback_to_fixture": False},
+        "poller": {
+            "mode": "ssh",
+            "tick_seconds": 1,
+            "pools_interval_seconds": 5,
+            "fallback_to_fixture": False,
+        },
         "ssh": {"host": "10.0.0.2", "username": "admin", "password": "secret"},
     }
 
     config = AppConfig.model_validate(payload)
 
     assert config.poller.mode == "ssh"
-    assert config.poller.interval_seconds == 5
+    assert config.poller.pools_interval_seconds == 5
     assert config.ssh.host == "10.0.0.2"
     assert config.ssh.username == "admin"
 

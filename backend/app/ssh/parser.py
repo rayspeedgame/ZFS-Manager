@@ -178,7 +178,14 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
             result["expand"] = match.group("expand")
             multiline_key = "expand"
             continue
-        if not in_config and multiline_key and line.startswith(" ") and line.strip() and not line.lstrip().startswith("errors:"):
+        if (
+            not in_config
+            and multiline_key
+            and line.startswith(" ")
+            and line.strip()
+            and not line.lstrip().startswith("errors:")
+            and not _CONFIG_HEADER_RE.match(line)
+        ):
             existing = str(result.get(multiline_key) or "").strip()
             addition = line.strip()
             result[multiline_key] = f"{existing}\n{addition}" if existing else addition
@@ -208,22 +215,24 @@ def parse_zpool_statuses(raw_output: str) -> dict[str, dict[str, Any]]:
             continue
         if in_config and (match := _STATE_ONLY_LINE_RE.match(line)):
             if str(match.group("name") or "").lower() == "errors:":
+                # Fall through so _ERRORS_RE can handle this line.
+                pass
+            else:
+                _append_config_node(
+                    result=result,
+                    stack=stack,
+                    node={
+                        "name": match.group("name"),
+                        "state": match.group("state"),
+                        "read": None,
+                        "write": None,
+                        "cksum": None,
+                        "notes": (match.group("notes") or "").strip() or None,
+                        "children": [],
+                    },
+                    indent=len(match.group("indent")),
+                )
                 continue
-            _append_config_node(
-                result=result,
-                stack=stack,
-                node={
-                    "name": match.group("name"),
-                    "state": match.group("state"),
-                    "read": None,
-                    "write": None,
-                    "cksum": None,
-                    "notes": (match.group("notes") or "").strip() or None,
-                    "children": [],
-                },
-                indent=len(match.group("indent")),
-            )
-            continue
         if in_config and (match := _LABEL_ONLY_LINE_RE.match(line)):
             lowered = str(match.group("name") or "").lower()
             if lowered in {"config:", "name", "errors:"}:
