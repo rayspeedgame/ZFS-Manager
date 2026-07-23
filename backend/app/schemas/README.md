@@ -8,7 +8,10 @@ This layer defines the data models used internally and externally by the backend
 
 - `AppState`: Top-level snapshot
 - `AppMeta`: Application status, source status, timestamps, and error information
-- `AppData`: Structured business data with legacy overview compatibility
+- `AppData`: Structured business data with legacy overview compatibility, carries `smart_overview: SmartOverview` in the snapshot
+- `SmartOverview`: Per-device SMART data container indexed by device path
+- `DiskSmartInfo`: Normalized SMART info (health status, temperature, power-on hours, protocol, attributes)
+- `SmartAttributeItem`: Individual SMART attribute (id, name, value, worst, threshold, raw, when_failed)
 - `PropertyValue`: Property value with source
 - `AppConfig`: Complete settings model used by the settings page
 - `SettingsSaveResponse`: Settings save response

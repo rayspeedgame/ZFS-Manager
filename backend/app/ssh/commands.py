@@ -70,9 +70,20 @@ ZFS_DATASET_OVERVIEW = (
     "'"
 )
 
+SMART_INFO = (
+    "sh -lc '"
+    'for dev in $(lsblk -dn -o NAME 2>/dev/null | grep -vx -E "loop[0-9]+|ram[0-9]+|fd[0-9]+|sr[0-9]+|zd[0-9]+|zram[0-9]+"); do '
+    f'  printf "{SECTION_PREFIX} smart_$dev\\n"; '
+    "  smartctl -a --json \"/dev/$dev\" 2>/dev/null || "
+    '  echo "{\\"device\\":{\\"name\\":\\"/dev/$dev\\"},\\"smartctl\\":{\\"exit_status\\":1}}"; '
+    "done"
+    "'"
+)
+
 COMMANDS = {
     "lsblk": LSBLK_JSON,
     "zpool": ZPOOL_STATUS,
+    "smart_info": SMART_INFO,
     "disk_overview": DISK_OVERVIEW,
     "zpool_core": ZPOOL_CORE,
     "zpool_properties": ZPOOL_PROPERTIES,

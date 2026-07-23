@@ -8,7 +8,10 @@
 
 - `AppState`：顶层快照
 - `AppMeta`：应用状态、来源状态、时间和错误信息
-- `AppData`：结构化业务数据与兼容 overview
+- `AppData`：结构化业务数据与兼容 overview，快照中携带 `smart_overview: SmartOverview`
+- `SmartOverview`：按设备路径索引的全局 SMART 数据容器
+- `DiskSmartInfo`：规范化后的 SMART 信息（健康状态、温度、通电时间、协议类型、属性表）
+- `SmartAttributeItem`：单条 SMART 属性（id、名称、值、最差、阈值、原始值、告警状态）
 - `PropertyValue`：属性值与来源
 - `AppConfig`：设置页读写的完整配置模型
 - `SettingsSaveResponse`：设置保存响应

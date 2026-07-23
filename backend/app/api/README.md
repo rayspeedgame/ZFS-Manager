@@ -21,7 +21,7 @@ This directory holds the backend HTTP API layer. `rest.py` now acts as the stabl
 - `routes/tasks.py`
   - tasks and schedules
 - `routes/disks.py`
-  - disk labels
+  - disk labels, SMART data retrieval
 - `routes/pools.py`
   - pools, maintenance actions, replace, and RAID-Z expansion
 - `routes/datasets.py`
@@ -39,6 +39,10 @@ This directory holds the backend HTTP API layer. `rest.py` now acts as the stabl
   - supports pagination and status filtering
 - `PUT /api/disks/{disk_key}/label`
   - persists custom disk labels
+- `GET /api/disks/{disk_key}/smart`
+  - returns cached SMART data for a specific disk
+- `POST /api/disks/{disk_key}/smart/refresh`
+  - forces full SMART refresh and returns updated data
 - `POST /api/pools/{pool_name}/offline`
 - `POST /api/pools/{pool_name}/online`
 - `POST /api/pools/{pool_name}/clear`

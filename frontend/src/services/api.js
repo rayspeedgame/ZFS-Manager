@@ -322,6 +322,22 @@ export async function clearPool(poolName) {
   );
 }
 
+export async function getDiskSmartData(diskKey) {
+  return request(
+    `/disks/${encodeURIComponent(diskKey)}/smart`,
+    {},
+    "Failed to load SMART data"
+  );
+}
+
+export async function refreshDiskSmartData(diskKey) {
+  return request(
+    `/disks/${encodeURIComponent(diskKey)}/smart/refresh`,
+    { method: "POST" },
+    "Failed to refresh SMART data"
+  );
+}
+
 export async function updateDiskLabel(diskKey, label) {
   return request(
     `/disks/${encodeURIComponent(diskKey)}/label`,

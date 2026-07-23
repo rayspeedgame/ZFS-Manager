@@ -12,6 +12,7 @@
   - 任务记录列表与详情
   - 计划任务列表、创建、更新和删除
   - 设置读取、保存和 SSH 测试
+  - 磁盘 SMART 数据获取（`getDiskSmartData`）与刷新（`refreshDiskSmartData`）
   - 登录状态、登录、退出
   - 共享 API 基础地址辅助函数
 

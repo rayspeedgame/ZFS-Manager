@@ -10,7 +10,8 @@
 - `backend/app/services/poller.py`
   - State collection with client-aware active/idle refresh cadences
   - Mode detection runs at fixed 1-second interval; configurable tick only gates refresh frequency
-  - Four independent job schedules, each with separate active and idle intervals
+  - Five independent job schedules (disks, pools, datasets, properties, smart), each with separate active and idle intervals
+  - Non-physical disk filtering (`loop`, `ram`, `fd`, `sr`, `zd`, `zram` excluded)
 - `backend/app/services/task_scheduler.py`
   - Recurring workflow scheduler
   - Executes scheduled `scrub`
@@ -64,6 +65,18 @@
   - `backend/app/api/ws.py`
   - `backend/app/core/config.py`
   - `frontend/src/views/SettingsView.vue`
+- SMART health monitoring
+  - `backend/app/ssh/commands.py` — `SMART_INFO` command
+  - `backend/app/ssh/parser.py` — `parse_smartctl_output`, `parse_smart_info`
+  - `backend/app/schemas/zfs_state.py` — `SmartOverview`, `DiskSmartInfo`, `SmartAttributeItem`
+  - `backend/app/services/poller.py` — smart job schedule, caching, state assembly
+  - `backend/app/api/routes/disks.py` — `GET/POST /api/disks/{key}/smart`
+  - `backend/app/core/config.py` — smart interval settings
+  - `frontend/src/views/DisksView.vue` — inline health column, SMART detail dialog
+  - `frontend/src/views/SettingsView.vue` — active/idle smart intervals
+  - `frontend/src/services/api.js` — `getDiskSmartData`, `refreshDiskSmartData`
+  - `frontend/src/i18n/messages/*/disks.js` — SMART translation keys
+  - `backend/tests/fixtures/smart_info_sample.txt` — ATA + NVMe test data
 - Snapshot management
   - `backend/app/services/snapshot_creator.py`
   - `backend/app/services/snapshot_destroyer.py`

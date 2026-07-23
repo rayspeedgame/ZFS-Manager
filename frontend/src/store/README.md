@@ -9,6 +9,7 @@ Compatibility adapter layer.
 - `state.js`
   - Exposes historical `useAppState()` interface
   - Internally delegates to new Pinia store and API service
+  - Re-exports `getDiskSmartData` and `refreshDiskSmartData` from the API service layer
 
 ## Notes
 

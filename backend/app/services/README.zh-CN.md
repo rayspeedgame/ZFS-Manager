@@ -8,6 +8,7 @@
 
 - `poller.py`
   - 采集 SSH 状态、规范化磁盘身份、组装应用快照
+  - 五个独立作业调度（disks、pools、datasets、properties、smart），各有活跃/空闲间隔
 - `task_manager.py`
   - 任务注册、状态更新、查询
 - `task_store.py`
@@ -37,6 +38,17 @@
 
 - 磁盘行会暴露 `displayName`、`kernelPath`、`byIdPath`、`commandPath`、`diskId`、`diskKey`、`aliases`
 - pool 叶子成员会暴露 `displayLabel`、`kernelPath`、`byIdPath`、`commandTarget`、`rawCommandTarget`、`aliases`
+- 非物理块设备（`loop`、`ram`、`fd`、`sr`、`zd`、`zram`）在构造磁盘行前会被过滤
+
+### SMART 健康监控
+
+`poller.py` 包含第五个作业调度（smart），负责采集 `smartctl -a --json` 输出：
+
+- 通过 `smart_interval_seconds` / `idle_smart_interval_seconds` 配置间隔
+- ATA 和 NVMe 属性被解析为 `SmartOverview` / `DiskSmartInfo` / `SmartAttributeItem`
+- `_normalize_smart_protocol()` 将 `sat` 映射为 `sata` 以保证显示一致性
+- 通过 `GET /api/disks/{disk_key}/smart` 获取，通过 `POST /api/disks/{disk_key}/smart/refresh` 刷新
+- 非物理块设备（`loop`、`ram`、`fd`、`sr`、`zd`、`zram`）在构造磁盘行前会被过滤
 
 分区成员还会继承父盘的整盘 `by-id` 别名，避免恢复逻辑因为整盘路径和 `-part1` 路径不同而漏判同一块盘。
 

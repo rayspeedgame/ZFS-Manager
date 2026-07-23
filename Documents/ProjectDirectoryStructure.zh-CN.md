@@ -64,6 +64,18 @@
   - `backend/app/api/ws.py`
   - `backend/app/core/config.py`
   - `frontend/src/views/SettingsView.vue`
+- SMART 健康监控
+  - `backend/app/ssh/commands.py` — `SMART_INFO` 命令
+  - `backend/app/ssh/parser.py` — `parse_smartctl_output`、`parse_smart_info`
+  - `backend/app/schemas/zfs_state.py` — `SmartOverview`、`DiskSmartInfo`、`SmartAttributeItem`
+  - `backend/app/services/poller.py` — smart 调度、缓存、状态组装
+  - `backend/app/api/routes/disks.py` — `GET/POST /api/disks/{key}/smart`
+  - `backend/app/core/config.py` — smart 间隔设置
+  - `frontend/src/views/DisksView.vue` — 健康列、SMART 详情弹窗
+  - `frontend/src/views/SettingsView.vue` — 活跃/空闲 smart 间隔
+  - `frontend/src/services/api.js` — `getDiskSmartData`、`refreshDiskSmartData`
+  - `frontend/src/i18n/messages/*/disks.js` — SMART 翻译键
+  - `backend/tests/fixtures/smart_info_sample.txt` — ATA + NVMe 测试数据
 - 快照管理
   - `backend/app/services/snapshot_creator.py`
   - `backend/app/services/snapshot_destroyer.py`

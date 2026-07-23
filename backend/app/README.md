@@ -10,7 +10,8 @@
 - `core/`: Configuration, authentication, shared state, and other infrastructure
 - `schemas/`: Pydantic data models
 - `services/`: Pollers, aggregators, and write operation services
-- `ssh/`: SSH command definitions, client, and parsers
+- `ssh/`: SSH command definitions, client, and parsers (including `SMART_INFO` with `smartctl --json`)
+- `schemas/`: Pydantic data models (including `SmartOverview`, `DiskSmartInfo`, `SmartAttributeItem`)
 
 ## Main Execution Flow
 

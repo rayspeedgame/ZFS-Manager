@@ -24,6 +24,16 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 - `resilver` tracking and recovery
 - RAID-Z `expansion`
 
+### Disk and SMART workflows
+
+- disk inventory with partition expansion
+- inline SMART health column (PASS/FAIL badge + temperature) in the disk table
+- health overview dialog with scrollable attribute table
+- automatic SMART polling (configurable active/idle intervals)
+- manual SMART refresh per disk
+- ATA and NVMe attribute support
+- non-physical device filtering (`loop`, `ram`, `fd`, `sr`, `zd`, `zram` excluded)
+
 ### Dataset and snapshot workflows
 
 - dataset and zvol inventory

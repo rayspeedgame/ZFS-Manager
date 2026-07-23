@@ -35,12 +35,9 @@
   - `offline / online`
   - `replace`
   - RAID-Z `expansion`
-- The disk identity model now separates display-facing and execution-facing fields:
-  - `displayName`
-  - `commandPath`
-  - `commandTarget`
-  - `rawCommandTarget`
-  - `aliases`
+- Disk identity and SMART health monitoring:
+  - `displayName`, `commandPath`, `commandTarget`, `rawCommandTarget`, `aliases`
+  - SMART auto-polling with smartctl, inline health column, full attribute dialog, ATA/NVMe support, non-physical device filtering
 - **Client-aware polling** — the poller automatically switches between active (fast) and idle (slow) refresh cadences based on WebSocket client presence. A `client_tracker` module tracks connected clients, and the poller decouples 1-second mode detection from configurable wake‑up / job refresh intervals. All idle intervals are configurable in the Settings UI.
 
 ## Current Rules

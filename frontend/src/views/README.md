@@ -31,6 +31,8 @@ This directory holds route-level page components.
 - main title comes from `displayName`
 - secondary lines show `kernelPath` and `byIdPath`
 - custom labels persist through `diskKey`
+- disk table includes an inline SMART health column (PASS/FAIL badge + temperature) sourced from `smart_overview` in the WebSocket snapshot
+- full SMART details open in a `ConfirmDialog` (result mode) with temperature, power-on hours, protocol, serial, firmware, and scrollable attribute table with status badges
 
 ### `PoolsView`
 

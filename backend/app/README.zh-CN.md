@@ -10,7 +10,8 @@
 - `core/`: 配置、认证、共享状态等基础设施
 - `schemas/`: Pydantic 数据模型
 - `services/`: 轮询器、聚合器和写操作服务
-- `ssh/`: SSH 命令定义、客户端和解析器
+- `ssh/`: SSH 命令定义、客户端和解析器（含 `SMART_INFO` 与 `smartctl --json`）
+- `schemas/`: Pydantic 数据模型（含 `SmartOverview`、`DiskSmartInfo`、`SmartAttributeItem`）
 
 ## 运行主线
 

@@ -19,6 +19,7 @@
 - RAID-Z `expansion`
 - client-aware active/idle poller cadence with instant full refresh on connect
 - idle interval configuration in the Settings UI
+- **SMART health monitoring** — automatic polling with smartctl, inline health column in disk table, full attribute detail dialog, ATA/NVMe support, non-physical device filtering
 
 ## Current Snapshot Direction
 

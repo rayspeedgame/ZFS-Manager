@@ -9,6 +9,7 @@
 - `state.js`
   - 暴露历史上的 `useAppState()` 接口
   - 内部委托给新的 Pinia store 和 API service
+  - 重新导出 `getDiskSmartData` 和 `refreshDiskSmartData` 来自 API 服务层
 
 ## Notes
 

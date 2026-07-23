@@ -30,12 +30,14 @@ class PollerSettings(BaseModel):
     datasets_interval_seconds: int = 15
     disks_interval_seconds: int = 60
     properties_interval_seconds: int = 120
+    smart_interval_seconds: int = 3600
     # --- Idle intervals (no WebSocket clients connected) ---
     idle_tick_seconds: int = 30
     idle_pools_interval_seconds: int = 60
     idle_datasets_interval_seconds: int = 300
     idle_disks_interval_seconds: int = 600
     idle_properties_interval_seconds: int = 1200
+    idle_smart_interval_seconds: int = 7200
 
 
 class AuthSettings(BaseModel):
@@ -126,6 +128,11 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
         config.poller.idle_disks_interval_seconds = int(value)
     if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_PROPERTIES_INTERVAL"):
         config.poller.idle_properties_interval_seconds = int(value)
+
+    if value := os.environ.get("ZFS_MANAGER_POLLER_SMART_INTERVAL"):
+        config.poller.smart_interval_seconds = int(value)
+    if value := os.environ.get("ZFS_MANAGER_POLLER_IDLE_SMART_INTERVAL"):
+        config.poller.idle_smart_interval_seconds = int(value)
 
     if value := os.environ.get("ZFS_MANAGER_SSH_HOST"):
         config.ssh.host = value

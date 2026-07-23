@@ -12,6 +12,7 @@ Frontend API service layer.
   - Task records list and detail
   - Task schedules list, create, update, and delete
   - Settings read, save, and SSH test
+  - Disk SMART data retrieval (`getDiskSmartData`) and refresh (`refreshDiskSmartData`)
   - Login status, login, and logout
   - Shared API base-address helper
 

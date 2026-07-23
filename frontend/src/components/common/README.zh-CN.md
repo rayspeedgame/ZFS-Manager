@@ -21,5 +21,6 @@
 
 - 池和数据集详情工作流使用 `DetailDrawer`
 - 高风险保存/创建/删除流程使用 `ConfirmDialog`
+- SMART 健康详情弹窗使用 `ConfirmDialog` 的 `result-mode`，含可滚动的属性表
 - 空或尚未就绪的页面应优先使用 `EmptyState`
 - 属性密集型抽屉在添加一次性标记之前应优先使用 `PropertySection` 和 `PropertyFieldList`

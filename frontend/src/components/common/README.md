@@ -21,5 +21,6 @@ Shared base components used across views.
 
 - Pools and Datasets detail workflows use `DetailDrawer`.
 - High-risk save/create/delete flows use `ConfirmDialog`.
+- SMART health detail dialogs use `ConfirmDialog` in `result-mode` with a scrollable attribute table.
 - Empty or not-yet-ready pages should prefer `EmptyState`.
 - Property-heavy drawers should prefer `PropertySection` and `PropertyFieldList` before adding one-off markup.

@@ -15,9 +15,13 @@ This layer is responsible for interacting with remote hosts and parsing command 
 - Supports polling-required read-only command groups
 - Supports SSH command execution during pool and dataset write operations
 - `client.py` returns detailed execution results including `stdout / stderr / exit_status`
+- `SMART_INFO` command collects `smartctl -a --json` for all non-virtual block devices, excluding `loop`, `ram`, `fd`, `sr`, `zd`, and `zram`
 
 ## Current Parsing Focus
 
 - `zpool status` supports multi-pool topology parsing
 - `zfs list/get` covers filesystem, volume, and snapshot simultaneously
+- `smartctl --json` output is parsed into structured `SmartOverview` with per-device `DiskSmartInfo`:
+  - ATA attributes (`ata_smart_attributes.table`) and NVMe health log (`nvme_smart_health_information_log`) are both supported
+  - Protocol normalization: `sat` → `sata`, others preserved
 - Overview parsing results serve both debugging and final structured page data

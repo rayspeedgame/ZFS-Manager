@@ -19,9 +19,11 @@ A web-based management console for remote ZFS hosts via SSH. ZFS Manager brings 
 - Optional snapshot visibility toggle
 
 ### Disk Monitoring
-- Disk inventory with model, type, and health status
+- Disk inventory with model, type, SMART health, and temperature
 - Partition and filesystem information
 - Pool ownership association
+- Full SMART attribute table (ATA + NVMe) with health badges
+- Automatic SMART polling with configurable intervals
 
 ### Real-time Updates
 - WebSocket-powered live state synchronization

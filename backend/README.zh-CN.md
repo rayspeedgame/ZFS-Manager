@@ -6,8 +6,8 @@
 
 ## 当前职责
 
-- 轮询 `lsblk`、`blkid`、`zpool`、`zfs` 状态
-- 将 pool、dataset、disk、snapshot 和属性状态整理成统一快照
+- 轮询 `lsblk`、`blkid`、`zpool`、`zfs`、SMART（`smartctl --json`）状态
+- 将 pool、dataset、disk、snapshot、属性、SMART 状态整理成统一快照
 - 执行 pool、dataset、snapshot 的写操作
 - 使用 SQLite 持久化任务与计划任务
 - 在重启后恢复未完成任务
@@ -15,6 +15,7 @@
 - 运行定时 `snapshot`
 - 执行按计划归属隔离的快照保留清理
 - 客户端感知的活跃/空闲轮询节奏——有浏览器查看时快速刷新，无浏览器时使用慢速空闲间隔
+- 非物理磁盘过滤（`loop`、`ram`、`fd`、`sr`、`zd`、`zram` 排除在磁盘行和总数统计之外）
 
 ## 磁盘身份模型
 

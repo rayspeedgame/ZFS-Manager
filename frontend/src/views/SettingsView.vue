@@ -34,11 +34,13 @@ function buildEmptyForm() {
       datasets_interval_seconds: 15,
       disks_interval_seconds: 60,
       properties_interval_seconds: 120,
+      smart_interval_seconds: 3600,
       idle_tick_seconds: 30,
       idle_pools_interval_seconds: 60,
       idle_datasets_interval_seconds: 300,
       idle_disks_interval_seconds: 600,
       idle_properties_interval_seconds: 1200,
+      idle_smart_interval_seconds: 7200,
     },
     ssh: {
       host: "",
@@ -67,11 +69,13 @@ function applyConfig(config) {
   form.poller.datasets_interval_seconds = Number(config?.poller?.datasets_interval_seconds ?? 15);
   form.poller.disks_interval_seconds = Number(config?.poller?.disks_interval_seconds ?? 60);
   form.poller.properties_interval_seconds = Number(config?.poller?.properties_interval_seconds ?? 120);
+  form.poller.smart_interval_seconds = Number(config?.poller?.smart_interval_seconds ?? 3600);
   form.poller.idle_tick_seconds = Number(config?.poller?.idle_tick_seconds ?? 30);
   form.poller.idle_pools_interval_seconds = Number(config?.poller?.idle_pools_interval_seconds ?? 60);
   form.poller.idle_datasets_interval_seconds = Number(config?.poller?.idle_datasets_interval_seconds ?? 300);
   form.poller.idle_disks_interval_seconds = Number(config?.poller?.idle_disks_interval_seconds ?? 600);
   form.poller.idle_properties_interval_seconds = Number(config?.poller?.idle_properties_interval_seconds ?? 1200);
+  form.poller.idle_smart_interval_seconds = Number(config?.poller?.idle_smart_interval_seconds ?? 7200);
 
   form.ssh.host = config?.ssh?.host || "";
   form.ssh.username = config?.ssh?.username || "";
@@ -98,11 +102,13 @@ function buildPayload() {
       datasets_interval_seconds: Number(form.poller.datasets_interval_seconds),
       disks_interval_seconds: Number(form.poller.disks_interval_seconds),
       properties_interval_seconds: Number(form.poller.properties_interval_seconds),
+      smart_interval_seconds: Number(form.poller.smart_interval_seconds),
       idle_tick_seconds: Number(form.poller.idle_tick_seconds),
       idle_pools_interval_seconds: Number(form.poller.idle_pools_interval_seconds),
       idle_datasets_interval_seconds: Number(form.poller.idle_datasets_interval_seconds),
       idle_disks_interval_seconds: Number(form.poller.idle_disks_interval_seconds),
       idle_properties_interval_seconds: Number(form.poller.idle_properties_interval_seconds),
+      idle_smart_interval_seconds: Number(form.poller.idle_smart_interval_seconds),
     },
     ssh: {
       host: form.ssh.host.trim(),
@@ -264,6 +270,11 @@ onMounted(() => {
               <input v-model.number="form.poller.properties_interval_seconds" type="number" min="1" class="property-field" />
             </label>
 
+            <label class="form-field">
+              <span>{{ t("settings.fields.smartIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.smart_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
+
             <div class="form-field form-field-checkbox">
               <span>{{ t("settings.fields.fallbackToFixture") }}</span>
               <label class="inline-checkbox">
@@ -305,6 +316,11 @@ onMounted(() => {
             <label class="form-field">
               <span>{{ t("settings.fields.idlePropertiesIntervalSeconds") }}</span>
               <input v-model.number="form.poller.idle_properties_interval_seconds" type="number" min="1" class="property-field" />
+            </label>
+
+            <label class="form-field">
+              <span>{{ t("settings.fields.idleSmartIntervalSeconds") }}</span>
+              <input v-model.number="form.poller.idle_smart_interval_seconds" type="number" min="1" class="property-field" />
             </label>
           </div>
         </section>

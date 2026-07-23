@@ -6,8 +6,8 @@ The backend owns SSH polling, REST write execution, task persistence, schedule e
 
 ## Current Responsibilities
 
-- poll `lsblk`, `blkid`, `zpool`, and `zfs`
-- normalize pool, dataset, disk, snapshot, and property state into one shared snapshot
+- poll `lsblk`, `blkid`, `zpool`, `zfs`, and SMART (`smartctl --json`)
+- normalize pool, dataset, disk, snapshot, property, and SMART state into one shared snapshot
 - execute write operations for pools, datasets, and snapshots
 - persist tasks and task schedules in SQLite
 - recover unfinished tasks after restart
@@ -15,6 +15,7 @@ The backend owns SSH polling, REST write execution, task persistence, schedule e
 - run recurring `snapshot`
 - apply schedule-scoped snapshot retention cleanup
 - client-aware active/idle poller cadence — fast refreshes when a browser is viewing, slow idle intervals otherwise
+- non-physical disk filtering (`loop`, `ram`, `fd`, `sr`, `zd`, `zram` excluded from disk rows and summary count)
 
 ## Disk Identity Model
 

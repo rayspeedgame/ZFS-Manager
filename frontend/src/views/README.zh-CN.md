@@ -31,6 +31,8 @@
 - 主标题来自 `displayName`
 - 副信息展示 `kernelPath` 和 `byIdPath`
 - 自定义名称通过 `diskKey` 持久化
+- 磁盘表内置 SMART 健康列（PASS/FAIL 徽标 + 温度），数据来自 WebSocket 快照的 `smart_overview`
+- 完整 SMART 详情通过 `ConfirmDialog`（result 模式）弹窗展示，包含温度、通电时间、协议、序列号、固件和可滚动的属性表
 
 ### `PoolsView`
 

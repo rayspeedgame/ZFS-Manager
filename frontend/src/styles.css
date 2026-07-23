@@ -1479,7 +1479,9 @@ svg {
 }
 
 .confirm-dialog {
-  width: min(560px, 100%);
+  width: fit-content;
+  min-width: 400px;
+  max-width: min(90vw, 960px);
   max-height: min(88vh, 960px);
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.16);
@@ -1632,6 +1634,121 @@ svg {
   .nav-list {
     grid-template-columns: 1fr 1fr;
   }
+
+.smart-health-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(14, 23, 43, 0.92);
+}
+
+.smart-health-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.health-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.health-badge-failing {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
+}
+
+.health-badge-past {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+}
+
+.smart-metric {
+  font-size: 13px;
+  color: #cfe0fb;
+}
+
+/* ── Inline table health badge ── */
+
+.inline-health-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.inline-health-badge.health-online {
+  background: rgba(74, 222, 128, 0.15);
+  color: #86efac;
+}
+
+.inline-health-badge.health-warning {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
+}
+
+.inline-health-temp {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.smart-attr-section {
+  margin-top: 16px;
+}
+
+.smart-attr-section h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #93c5fd;
+}
+
+.smart-table-shell {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.smart-table-shell-dialog {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.smart-attr-table th,
+.smart-attr-table td {
+  font-size: 12px;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.smart-attr-table th {
+  position: sticky;
+  top: 0;
+  background: #0b1325;
+  z-index: 1;
+}
+
+.smart-raw-cell {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-attr-warning {
+  background: rgba(248, 113, 113, 0.06);
+}
 
   .summary-grid,
   .split-list,

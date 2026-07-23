@@ -72,6 +72,7 @@ class StateSections(BaseModel):
     disks: SectionState = Field(default_factory=SectionState)
     pools: SectionState = Field(default_factory=SectionState)
     datasets: SectionState = Field(default_factory=SectionState)
+    smart: SectionState = Field(default_factory=SectionState)
 
 
 class AppMeta(BaseModel):
@@ -87,6 +88,53 @@ class AppMeta(BaseModel):
     sections: StateSections = Field(default_factory=StateSections)
 
 
+# ── SMART models ───────────────────────────────────────────────────
+
+
+class SmartAttributeItem(BaseModel):
+    """A single normalized SMART attribute row for display.
+
+    ATA disks expose this from ata_smart_attributes.table; NVMe disks
+    synthesize it from nvme_smart_health_information_log fields.
+    """
+
+    id: int | None = None
+    name: str
+    value: int | None = None
+    worst: int | None = None
+    threshold: int | None = None
+    raw: int | str | None = None
+    when_failed: str | None = None
+
+
+class DiskSmartInfo(BaseModel):
+    """Normalized SMART data for a single disk device."""
+
+    device_path: str
+    model_name: str | None = None
+    serial_number: str | None = None
+    firmware_version: str | None = None
+    protocol: str | None = None  # "ata", "nvme", "scsi", "sata"
+    smart_supported: bool = False
+    smart_enabled: bool = False
+    smart_status_passed: bool | None = None
+    temperature: float | None = None
+    power_on_hours: float | None = None
+    attributes: list[SmartAttributeItem] = Field(default_factory=list)
+    raw_data_available: bool = False
+    error: str | None = None
+
+
+class SmartOverview(BaseModel):
+    """Container for the full SMART snapshot across all devices."""
+
+    devices: dict[str, DiskSmartInfo] = Field(default_factory=dict)
+    collected_at: datetime | None = None
+    unhealthy_count: int = 0
+    unsupported_count: int = 0
+    total_queried: int = 0
+
+
 class AppData(BaseModel):
     summary: SummaryData = Field(default_factory=SummaryData)
     disks: list[dict[str, Any]] = Field(default_factory=list)
@@ -95,6 +143,7 @@ class AppData(BaseModel):
     disk_overview: DiskOverview = Field(default_factory=DiskOverview)
     zpool_overview: ZPoolOverview = Field(default_factory=ZPoolOverview)
     dataset_overview: DatasetOverview = Field(default_factory=DatasetOverview)
+    smart_overview: SmartOverview = Field(default_factory=SmartOverview)
 
 
 class AppState(BaseModel):

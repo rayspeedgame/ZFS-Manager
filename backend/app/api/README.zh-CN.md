@@ -21,7 +21,7 @@
 - `routes/tasks.py`
   - 任务与计划任务
 - `routes/disks.py`
-  - 磁盘标签
+  - 磁盘标签、SMART 数据读取
 - `routes/pools.py`
   - pool、维护动作、replace、RAID-Z expansion
 - `routes/datasets.py`
@@ -39,6 +39,10 @@
   - 支持分页和状态筛选
 - `PUT /api/disks/{disk_key}/label`
   - 保存自定义磁盘名称
+- `GET /api/disks/{disk_key}/smart`
+  - 返回指定磁盘的缓存 SMART 数据
+- `POST /api/disks/{disk_key}/smart/refresh`
+  - 强制全量刷新 SMART 数据并返回最新结果
 - `POST /api/pools/{pool_name}/offline`
 - `POST /api/pools/{pool_name}/online`
 - `POST /api/pools/{pool_name}/clear`

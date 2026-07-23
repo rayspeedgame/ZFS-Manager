@@ -35,12 +35,9 @@
   - `offline / online`
   - `replace`
   - RAID-Z `expansion`
-- 磁盘身份模型已经拆分为显示字段和执行字段：
-  - `displayName`
-  - `commandPath`
-  - `commandTarget`
-  - `rawCommandTarget`
-  - `aliases`
+- 磁盘身份模型与 SMART 健康监控：
+  - `displayName`、`commandPath`、`commandTarget`、`rawCommandTarget`、`aliases`
+  - SMART 自动轮询、磁盘表内置健康列、完整属性弹窗、ATA/NVMe 支持、非物理设备过滤
 - **客户端感知轮询** — 轮询器根据 WebSocket 客户端存在与否自动在活跃（快速）和空闲（慢速）刷新节奏之间切换。`client_tracker` 模块追踪已连接客户端数量，轮询器将 1 秒固定模式检测与可配置的唤醒/作业刷新间隔解耦。所有空闲间隔均可在设置界面中调整。
 
 ## 当前约束

@@ -1,0 +1,151 @@
+__ZFS_MANAGER_SECTION__ smart_sda
+{
+  "json_format_version": [1, 0],
+  "smartctl": {
+    "version": [7, 4],
+    "svn_revision": "5379",
+    "platform_info": "x86_64-linux-5.15.0-generic",
+    "build_info": "(local build)",
+    "argv": ["smartctl", "-a", "--json", "/dev/sda"],
+    "exit_status": 0
+  },
+  "device": {
+    "name": "/dev/sda",
+    "info_name": "/dev/sda",
+    "type": "ata",
+    "protocol": "ATA"
+  },
+  "model_name": "Samsung SSD 870 EVO",
+  "model_family": "Samsung SSDs",
+  "serial_number": "S4S5J6NC12345678",
+  "firmware_version": "SVTB01B6Q",
+  "smart_support": {
+    "supported": true,
+    "enabled": true
+  },
+  "smart_status": {
+    "passed": true
+  },
+  "temperature": {
+    "current": 35,
+    "drive_trip": 70
+  },
+  "power_on_time": {
+    "hours": 8765,
+    "days": 365
+  },
+  "ata_smart_attributes": {
+    "table": [
+      {
+        "id": 5,
+        "name": "Reallocated_Sector_Ct",
+        "value": 100,
+        "worst": 100,
+        "threshold": 10,
+        "raw": {"value": 0, "string": "0"},
+        "when_failed": null
+      },
+      {
+        "id": 9,
+        "name": "Power_On_Hours",
+        "value": 95,
+        "worst": 95,
+        "threshold": 0,
+        "raw": {"value": 8765, "string": "8765"},
+        "when_failed": null
+      },
+      {
+        "id": 12,
+        "name": "Power_Cycle_Count",
+        "value": 97,
+        "worst": 97,
+        "threshold": 0,
+        "raw": {"value": 342, "string": "342"},
+        "when_failed": null
+      },
+      {
+        "id": 187,
+        "name": "Reported_Uncorrect",
+        "value": 100,
+        "worst": 100,
+        "threshold": 0,
+        "raw": {"value": 0, "string": "0"},
+        "when_failed": null
+      },
+      {
+        "id": 194,
+        "name": "Temperature_Celsius",
+        "value": 65,
+        "worst": 55,
+        "threshold": 0,
+        "raw": {"value": 35, "string": "35 (Min/Max 20/45)"},
+        "when_failed": null
+      },
+      {
+        "id": 197,
+        "name": "Current_Pending_Sector",
+        "value": 100,
+        "worst": 100,
+        "threshold": 0,
+        "raw": {"value": 0, "string": "0"},
+        "when_failed": null
+      },
+      {
+        "id": 198,
+        "name": "Offline_Uncorrectable",
+        "value": 100,
+        "worst": 100,
+        "threshold": 0,
+        "raw": {"value": 0, "string": "0"},
+        "when_failed": null
+      }
+    ]
+  }
+}
+
+__ZFS_MANAGER_SECTION__ smart_nvme0n1
+{
+  "json_format_version": [1, 0],
+  "smartctl": {
+    "version": [7, 4],
+    "svn_revision": "5379",
+    "platform_info": "x86_64-linux-5.15.0-generic",
+    "build_info": "(local build)",
+    "argv": ["smartctl", "-a", "--json", "/dev/nvme0n1"],
+    "exit_status": 0
+  },
+  "device": {
+    "name": "/dev/nvme0n1",
+    "info_name": "/dev/nvme0n1",
+    "type": "nvme",
+    "protocol": "NVMe"
+  },
+  "model_name": "Samsung SSD 980 PRO",
+  "serial_number": "S6S1NG0R12345678",
+  "firmware_version": "3B2QGXA7",
+  "smart_support": {
+    "supported": true,
+    "enabled": true
+  },
+  "smart_status": {
+    "passed": true
+  },
+  "temperature": 42,
+  "power_on_time": {
+    "hours": 4321,
+    "days": 180
+  },
+  "nvme_smart_health_information_log": {
+    "temperature": 42,
+    "percentage_used": 3,
+    "available_spare": 100,
+    "available_spare_threshold": 10,
+    "critical_warning": 0,
+    "media_errors": 0,
+    "num_err_log_entries": 0,
+    "controller_busy_time": 1234,
+    "power_on_hours": 4321,
+    "warning_temp_time": 0,
+    "critical_comp_time": 0
+  }
+}

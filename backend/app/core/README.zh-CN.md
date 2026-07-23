@@ -18,7 +18,7 @@
 
 主要配置块：
 
-- `poller`
+- `poller`（含 `smart_interval_seconds` / `idle_smart_interval_seconds`）
 - `ssh`
 - `auth`
 

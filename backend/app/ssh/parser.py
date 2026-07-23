@@ -8,6 +8,7 @@ from app.ssh.commands import (
     DISK_OVERVIEW,
     LSBLK_JSON,
     SECTION_PREFIX,
+    SMART_INFO,
     ZFS_DATASET_CORE,
     ZFS_DATASET_PROPERTIES,
     ZFS_DATASET_OVERVIEW,
@@ -450,6 +451,184 @@ def parse_dataset_properties(raw_output: str) -> dict[str, Any]:
     return {"properties": parse_zfs_get(raw_output)}
 
 
+# ── SMART parsers ──────────────────────────────────────────────────
+
+
+def _normalize_smart_protocol(protocol: str | None) -> str | None:
+    """Normalize smartctl protocol strings for display."""
+    if protocol is None:
+        return None
+    p = protocol.lower().strip()
+    # "sat" = SCSI ATA Translation (common for SATA disks behind a SAT layer)
+    if p in ("sat", "sata"):
+        return "sata"
+    if p in ("ata", "pata"):
+        return "ata"
+    if p == "nvme":
+        return "nvme"
+    if p == "scsi":
+        return "scsi"
+    return protocol
+
+
+def parse_smartctl_output(raw_text: str, device_name: str) -> dict[str, Any]:
+    """Parse a single smartctl JSON section into a normalized dict.
+
+    Handles both ATA (ata_smart_attributes.table) and NVMe
+    (nvme_smart_health_information_log) output shapes.
+    """
+    raw_text = raw_text.strip()
+    if not raw_text:
+        return {"device_path": device_name, "raw_data_available": False}
+
+    try:
+        data = json.loads(raw_text)
+    except (json.JSONDecodeError, ValueError):
+        return {"device_path": device_name, "raw_data_available": False, "error": "Failed to parse smartctl JSON output"}
+
+    if not isinstance(data, dict):
+        return {"device_path": device_name, "raw_data_available": False, "error": "smartctl output was not a JSON object"}
+
+    exit_status = data.get("smartctl", {}).get("exit_status", 0)
+    if exit_status == 1 and not data.get("device"):
+        return {"device_path": device_name, "raw_data_available": False, "error": "smartctl failed — is smartmontools installed?"}
+    if exit_status == 2 and not data.get("device"):
+        return {"device_path": device_name, "raw_data_available": False, "error": "smartctl failed to open device (permission or missing device)"}
+
+    device_info = data.get("device", {}) or {}
+    result: dict[str, Any] = {
+        "device_path": device_info.get("name") or device_name,
+        "model_name": data.get("model_name") or data.get("model_family") or None,
+        "serial_number": data.get("serial_number") or None,
+        "firmware_version": data.get("firmware_version") or None,
+        "protocol": _normalize_smart_protocol(device_info.get("type")),
+        "smart_supported": bool(data.get("smart_support", {}).get("supported", False) if isinstance(data.get("smart_support"), dict) else False),
+        "smart_enabled": bool(data.get("smart_support", {}).get("enabled", False) if isinstance(data.get("smart_support"), dict) else False),
+        "smart_status_passed": None,
+        "temperature": None,
+        "power_on_hours": None,
+        "attributes": [],
+        "raw_data_available": True,
+        "error": None,
+    }
+
+    # Determine the protocol for parsing logic
+    protocol = result["protocol"]
+
+    # SMART overall status — common to ATA and NVMe
+    smart_status = data.get("smart_status")
+    if isinstance(smart_status, dict):
+        result["smart_status_passed"] = bool(smart_status.get("passed", False))
+
+    # Temperature — common
+    temp = data.get("temperature")
+    if isinstance(temp, dict):
+        result["temperature"] = temp.get("current")
+    elif isinstance(temp, (int, float)):
+        result["temperature"] = temp
+
+    # Power-on time — common
+    pot = data.get("power_on_time")
+    if isinstance(pot, dict):
+        result["power_on_hours"] = pot.get("hours")
+
+    # ATA-specific attributes
+    if protocol in ("ata", "sata", None) or isinstance(data.get("ata_smart_attributes"), dict):
+        ata_attrs = data.get("ata_smart_attributes", {}) if isinstance(data.get("ata_smart_attributes"), dict) else {}
+        attr_table = ata_attrs.get("table", []) if isinstance(ata_attrs.get("table"), list) else []
+        result["attributes"] = [
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "value": item.get("value"),
+                "worst": item.get("worst"),
+                "threshold": item.get("threshold"),
+                "raw": _coerce_smart_raw_value(item.get("raw", {}).get("value") if isinstance(item.get("raw"), dict) else item.get("raw")),
+                "when_failed": item.get("when_failed"),
+            }
+            for item in attr_table
+            if isinstance(item, dict) and item.get("name")
+        ]
+
+    # NVMe-specific health log
+    nvme_log = data.get("nvme_smart_health_information_log")
+    if isinstance(nvme_log, dict):
+        result["temperature"] = nvme_log.get("temperature") if nvme_log.get("temperature") is not None else result["temperature"]
+        result["power_on_hours"] = nvme_log.get("power_on_hours") if nvme_log.get("power_on_hours") is not None else result["power_on_hours"]
+        # Build a synthetic attribute list for NVMe controller health
+        nvme_fields = [
+            ("critical_warning", "critical_warning", nvme_log.get("critical_warning")),
+            ("media_errors", "media_errors", nvme_log.get("media_errors")),
+            ("num_err_log_entries", "num_err_log_entries", nvme_log.get("num_err_log_entries")),
+            ("percentage_used", "percentage_used", nvme_log.get("percentage_used")),
+            ("available_spare", "available_spare", nvme_log.get("available_spare")),
+            ("available_spare_threshold", "available_spare_threshold", nvme_log.get("available_spare_threshold")),
+            ("controller_busy_time", "controller_busy_time", nvme_log.get("controller_busy_time")),
+            ("warning_temp_time", "warning_temp_time", nvme_log.get("warning_temp_time")),
+            ("critical_comp_time", "critical_comp_time", nvme_log.get("critical_comp_time")),
+        ]
+        for attr_name, label, attr_value in nvme_fields:
+            if attr_value is not None:
+                result["attributes"].append({
+                    "id": None,
+                    "name": label,
+                    "value": attr_value if isinstance(attr_value, int) else int(str(attr_value)) if attr_value else None,
+                    "worst": None,
+                    "threshold": None,
+                    "raw": str(attr_value) if attr_value is not None else None,
+                    "when_failed": None,
+                })
+
+    return result
+
+
+def parse_smart_info(raw_output: str) -> dict[str, Any]:
+    """Parse SMART-info sectioned output into a map keyed by device path."""
+    sections = parse_sectioned_output(raw_output)
+    devices: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    unhealthy_count = 0
+    unsupported_count = 0
+
+    for section_name, section_text in sections.items():
+        if not section_name.startswith("smart_"):
+            continue
+        device_name = f"/dev/{section_name.removeprefix('smart_')}"
+        parsed = parse_smartctl_output(section_text, device_name)
+        dev_path = parsed.get("device_path") or device_name
+        devices[dev_path] = parsed
+
+        if parsed.get("error"):
+            errors.append(f"{dev_path}: {parsed['error']}")
+        if parsed.get("raw_data_available") and parsed.get("smart_status_passed") is False:
+            unhealthy_count += 1
+        if not parsed.get("raw_data_available") or not parsed.get("smart_supported"):
+            unsupported_count += 1
+
+    # If a device was skipped entirely (lsblk reported it but smartctl didn't
+    # produce a section), leave it absent from the map — the frontend will show
+    # "no data" for its device path.
+    return {
+        "devices": devices,
+        "collected_at": None,  # Timestamp filled by the caller
+        "unhealthy_count": unhealthy_count,
+        "unsupported_count": unsupported_count,
+        "total_queried": len(devices),
+        "error": "; ".join(errors) if errors else None,
+    }
+
+
+def _coerce_smart_raw_value(value: Any) -> int | str | None:
+    """Coerce a SMART raw attribute value to int when possible."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        str_val = str(value).strip()
+        return str_val if str_val else None
+
+
 def parse_command_output(command: str, raw_output: str) -> dict[str, Any]:
     """Dispatch raw command output to the matching parser."""
     normalized = command.strip()
@@ -469,6 +648,8 @@ def parse_command_output(command: str, raw_output: str) -> dict[str, Any]:
         return parse_dataset_properties(raw_output)
     if normalized == ZFS_DATASET_OVERVIEW:
         return parse_dataset_overview(raw_output)
+    if normalized == SMART_INFO:
+        return parse_smart_info(raw_output)
     if normalized == LSBLK_JSON or (lowered.startswith("lsblk") and "--json" in lowered):
         return parse_lsblk_json(raw_output)
     if normalized == ZPOOL_STATUS or lowered.startswith("zpool status"):

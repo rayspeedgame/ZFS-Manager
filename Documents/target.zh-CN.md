@@ -24,6 +24,16 @@
 - `resilver` 跟踪与恢复
 - RAID-Z `expansion`
 
+### 磁盘与 SMART 工作流
+
+- 磁盘清单与分区展开
+- 磁盘表内置 SMART 健康列（PASS/FAIL 徽标 + 温度）
+- 健康概览弹窗，含可滚动的属性表
+- 自动 SMART 轮询（可配置活跃/空闲间隔）
+- 按磁盘手动刷新 SMART
+- 同时支持 ATA 和 NVMe 属性
+- 非物理设备自动过滤（排除 `loop`、`ram`、`fd`、`sr`、`zd`、`zram`）
+
 ### Dataset 与快照工作流
 
 - dataset 和 zvol 清单

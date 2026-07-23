@@ -18,7 +18,7 @@ This layer contains backend infrastructure code.
 
 Main configuration blocks:
 
-- `poller`
+- `poller` (including `smart_interval_seconds` / `idle_smart_interval_seconds`)
 - `ssh`
 - `auth`
 

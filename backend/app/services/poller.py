@@ -18,6 +18,7 @@ from app.schemas.zfs_state import (
     DiskOverview,
     PropertyValue,
     SectionState,
+    SmartOverview,
     StateSections,
     SummaryData,
     ZPoolOverview,
@@ -25,6 +26,7 @@ from app.schemas.zfs_state import (
 from app.ssh.client import SSHClient, SSHConfig
 from app.ssh.commands import (
     DISK_OVERVIEW,
+    SMART_INFO,
     ZFS_DATASET_CORE,
     ZFS_DATASET_OVERVIEW,
     ZFS_DATASET_PROPERTIES,
@@ -76,6 +78,7 @@ class StatePoller:
         self._zpool_properties_cache = CachedPayload()
         self._dataset_core_cache = CachedPayload()
         self._dataset_properties_cache = CachedPayload()
+        self._smart_cache = CachedPayload()
         # Start in idle mode — the poller loop will switch to active intervals
         # on the first tick once a WebSocket client connects.
         self._tick_seconds = self._idle_tick
@@ -84,6 +87,7 @@ class StatePoller:
             "pools": ScheduledRefresh(max(1, config.poller.idle_pools_interval_seconds)),
             "datasets": ScheduledRefresh(max(1, config.poller.idle_datasets_interval_seconds)),
             "properties": ScheduledRefresh(max(1, config.poller.idle_properties_interval_seconds)),
+            "smart": ScheduledRefresh(max(1, config.poller.idle_smart_interval_seconds)),
         }
         self._active_clients = False
 
@@ -253,6 +257,13 @@ class StatePoller:
             )
             return
 
+        if job_name == "smart":
+            raw_output = await self._ssh_client.run(SMART_INFO, timeout=timeout)
+            parsed = parse_command_output(SMART_INFO, raw_output)
+            parsed["collected_at"] = attempt_at.isoformat()
+            self._record_success(self._smart_cache, parsed, attempt_at)
+            return
+
         raise ValueError(f"Unknown refresh job: {job_name}")
 
     async def _refresh_from_fixtures(
@@ -314,6 +325,11 @@ class StatePoller:
                     attempt_at,
                 )
 
+        if "smart" in due_jobs:
+            # No fixture data available yet for SMART — mark completed to avoid
+            # retrying on every tick until a real SSH connection is configured.
+            self._schedules["smart"].mark_completed(attempt_at)
+
         return self._build_state(
             attempt_at=attempt_at,
             app_status="ready",
@@ -335,6 +351,7 @@ class StatePoller:
             self._schedules["pools"].interval_seconds = max(1, self._config.poller.pools_interval_seconds)
             self._schedules["datasets"].interval_seconds = max(1, self._config.poller.datasets_interval_seconds)
             self._schedules["properties"].interval_seconds = max(1, self._config.poller.properties_interval_seconds)
+            self._schedules["smart"].interval_seconds = max(1, self._config.poller.smart_interval_seconds)
             self._tick_seconds = self._active_tick
             # On idle→active transition, reset all schedules to trigger an
             # immediate full refresh so the newly connected browser gets fresh
@@ -347,6 +364,7 @@ class StatePoller:
             self._schedules["pools"].interval_seconds = max(1, self._config.poller.idle_pools_interval_seconds)
             self._schedules["datasets"].interval_seconds = max(1, self._config.poller.idle_datasets_interval_seconds)
             self._schedules["properties"].interval_seconds = max(1, self._config.poller.idle_properties_interval_seconds)
+            self._schedules["smart"].interval_seconds = max(1, self._config.poller.idle_smart_interval_seconds)
             self._tick_seconds = self._idle_tick
 
     def _build_state(
@@ -367,6 +385,7 @@ class StatePoller:
             self._zpool_properties_cache.last_success_at,
             self._dataset_core_cache.last_success_at,
             self._dataset_properties_cache.last_success_at,
+            self._smart_cache.last_success_at,
         )
         stale_seconds = None
         if last_success_at is not None:
@@ -388,6 +407,7 @@ class StatePoller:
                     "pools": self._schedules["pools"].interval_seconds,
                     "datasets": self._schedules["datasets"].interval_seconds,
                     "properties": self._schedules["properties"].interval_seconds,
+                    "smart": self._schedules["smart"].interval_seconds,
                 },
                 last_updated=attempt_at,
                 last_attempt_at=attempt_at,
@@ -397,6 +417,7 @@ class StatePoller:
                     disks=section_states["disks"],
                     pools=section_states["pools"],
                     datasets=section_states["datasets"],
+                    smart=section_states["smart"],
                 ),
             ),
             data=AppData(
@@ -407,6 +428,7 @@ class StatePoller:
                 disk_overview=DiskOverview.model_validate(disk_data),
                 zpool_overview=ZPoolOverview.model_validate(_normalize_property_values(zpool_data)),
                 dataset_overview=DatasetOverview.model_validate(_normalize_property_values(dataset_data)),
+                smart_overview=SmartOverview.model_validate(self._smart_cache.data) if self._smart_cache.has_data() else SmartOverview(),
             ),
         )
 
@@ -415,6 +437,7 @@ class StatePoller:
             "disks": _to_section_state([self._disk_cache]),
             "pools": _to_section_state([self._zpool_core_cache, self._zpool_properties_cache]),
             "datasets": _to_section_state([self._dataset_core_cache, self._dataset_properties_cache]),
+            "smart": _to_section_state([self._smart_cache]),
         }
 
     def _build_ssh_client(self) -> SSHClient:
@@ -443,6 +466,7 @@ class StatePoller:
                 self._zpool_properties_cache,
                 self._dataset_core_cache,
                 self._dataset_properties_cache,
+                self._smart_cache,
             )
         )
 
@@ -462,6 +486,8 @@ class StatePoller:
             return [self._dataset_core_cache]
         if job_name == "properties":
             return [self._zpool_properties_cache, self._dataset_properties_cache]
+        if job_name == "smart":
+            return [self._smart_cache]
         raise ValueError(f"Unknown refresh job: {job_name}")
 
     @staticmethod
@@ -547,7 +573,8 @@ def _build_refresh_message(*, source: str, successes: list[str], failures: list[
 
 def _build_summary(zpool_data: dict, disk_data: dict, dataset_data: dict) -> SummaryData:
     pools = zpool_data.get("pools", [])
-    disks = disk_data.get("lsblk", {}).get("blockdevices", [])
+    all_disks = disk_data.get("lsblk", {}).get("blockdevices", [])
+    disks = [d for d in all_disks if _is_physical_disk(d.get("name", ""))]
     datasets = dataset_data.get("datasets", [])
 
     return SummaryData(
@@ -558,6 +585,16 @@ def _build_summary(zpool_data: dict, disk_data: dict, dataset_data: dict) -> Sum
         total_allocated=sum(int(pool.get("allocated") or 0) for pool in pools),
         total_free=sum(int(pool.get("free") or 0) for pool in pools),
     )
+
+
+_NON_PHYSICAL_DISK_RE = re.compile(
+    r"^(loop|ram|fd|sr)\d+$|^zd\d+$|^zram\d+$"
+)
+
+
+def _is_physical_disk(device_name: str) -> bool:
+    """Return True if the block device name looks like a real disk."""
+    return not bool(_NON_PHYSICAL_DISK_RE.match(device_name))
 
 
 def _build_disk_rows(
@@ -581,7 +618,10 @@ def _build_disk_rows(
     )
     rows: list[dict] = []
     for device in devices:
-        disk_path = device.get("path") or f"/dev/{device.get('name')}"
+        device_name = device.get("name", "")
+        if not _is_physical_disk(device_name):
+            continue
+        disk_path = device.get("path") or f"/dev/{device_name}"
         disk_id = _resolve_disk_id(device_path=disk_path, by_id_rows=by_id_rows)
         disk_key = _resolve_disk_key(disk_path=disk_path, disk_id=disk_id)
         by_id_paths = _resolve_by_id_paths(device_path=disk_path, by_id_rows=by_id_rows)
