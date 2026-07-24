@@ -39,6 +39,24 @@
 - 可选的网页密码登录保护
 - 基于 Cookie 的会话管理
 
+## 截图预览
+
+| 总览 | 存储池 |
+|:---:|:---:|
+| ![总览](screenshots/总览.png) | ![存储池](screenshots/存储池.png) |
+
+| 磁盘（含 SMART 健康） | 数据集 |
+|:---:|:---:|
+| ![磁盘](screenshots/磁盘.png) | ![数据集](screenshots/数据集.png) |
+
+| 快照 | 计划任务 |
+|:---:|:---:|
+| ![快照](screenshots/快照.png) | ![计划任务](screenshots/计划任务.png) |
+
+| 任务记录 | 设置 |
+|:---:|:---:|
+| ![任务记录](screenshots/任务记录和状态.png) | ![设置](screenshots/设置.png) |
+
 ## 技术栈
 
 | 层级 | 技术 |

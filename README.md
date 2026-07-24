@@ -39,6 +39,24 @@ A web-based management console for remote ZFS hosts via SSH. ZFS Manager brings 
 - Optional web login with password protection
 - Cookie-based session management
 
+## Screenshots
+
+| Dashboard | Pools |
+|:---:|:---:|
+| ![dashboard](screenshots/dashboard.png) | ![Pools](screenshots/Pools.png) |
+
+| Disks (with SMART health) | Datasets |
+|:---:|:---:|
+| ![Disks](screenshots/Disks.png) | ![Datasets](screenshots/Datasets.png) |
+
+| Snapshots | Schedules |
+|:---:|:---:|
+| ![Snapshots](screenshots/Snapshots.png) | ![Schedules](screenshots/Schedules.png) |
+
+| Tasks | Settings |
+|:---:|:---:|
+| ![Tasks](screenshots/Tasks_status.png) | ![Settings](screenshots/Settings.png) |
+
 ## Tech Stack
 
 | Layer | Technology |
