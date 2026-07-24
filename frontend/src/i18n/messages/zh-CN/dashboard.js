@@ -22,4 +22,5 @@ export default {
   diskStandby: "待机",
   diskUnknown: "未知",
   noDisks: "暂未发现磁盘",
+  noSmartData: "等待 SMART 数据",
 };

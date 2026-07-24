@@ -15,8 +15,10 @@ const props = defineProps({
 const snapshot = computed(() => props.state.snapshot.value);
 const summary = computed(() => snapshot.value?.data?.summary || {});
 const pools = computed(() => snapshot.value?.zpool_overview?.pools || []);
-const disks = computed(() => snapshot.value?.disk_overview?.lsblk?.blockdevices || []);
+const disks = computed(() => snapshot.value?.data?.disks || []);
 const datasets = computed(() => snapshot.value?.dataset_overview?.datasets || []);
+
+const smartOverview = computed(() => snapshot.value?.data?.smart_overview || null);
 
 function getHealthClass(health) {
   const s = (health || "").toLowerCase();
@@ -26,22 +28,31 @@ function getHealthClass(health) {
   return "health-unknown";
 }
 
-function getDiskStatus(disk) {
-  const state = (disk.state || "").toLowerCase();
-  const rota = disk.rota;
-  if (state === "running") return t("dashboard.diskRunning");
-  if (state === "idle") return t("dashboard.diskIdle");
-  if (state === "standby") return t("dashboard.diskStandby");
-  if (state === "unknown" || !state) return t("dashboard.diskUnknown");
-  return disk.state;
+function getDiskSmartHealth(row) {
+  if (!smartOverview.value?.devices) return null;
+  const key = row.kernelPath || row.path || row.diskPath || null;
+  if (!key) return null;
+  return smartOverview.value.devices[key] || null;
 }
 
-function getDiskHealthClass(disk) {
-  const state = (disk.state || "").toLowerCase();
-  if (state === "running") return "health-online";
-  if (state === "idle" || state === "standby") return "health-idle";
-  if (state === "unknown" || !state) return "health-unknown";
-  return "health-warning";
+function smartStatusLabel(health) {
+  if (!health) return "";
+  if (!health.raw_data_available) return "N/A";
+  if (health.smart_status_passed === true) return "✓ PASS";
+  if (health.smart_status_passed === false) return "✗ FAIL";
+  return "?";
+}
+
+function smartStatusClass(health) {
+  if (!health?.raw_data_available) return "";
+  if (health.smart_status_passed === true) return "health-online";
+  if (health.smart_status_passed === false) return "health-warning";
+  return "";
+}
+
+function formatSmartTemp(health) {
+  if (!health?.raw_data_available || health.temperature == null) return null;
+  return `${health.temperature}°C`;
 }
 
 const summaryCards = computed(() => [
@@ -123,10 +134,24 @@ const summaryCards = computed(() => [
         </div>
 
         <div class="simple-list" v-if="disks.length">
-          <div v-for="disk in disks" :key="disk.path || disk.name" class="disk-health-row">
-            <span class="disk-name">{{ disk.name }}</span>
-            <span class="disk-model">{{ disk.model || disk.type || "Unknown" }}</span>
-            <span class="health-status" :class="getDiskHealthClass(disk)">{{ getDiskStatus(disk) }}</span>
+          <div v-for="disk in disks" :key="disk.diskKey || disk.kernelPath || disk.name" class="disk-health-row">
+            <div class="disk-health-row-head">
+              <span class="disk-name">{{ disk.displayName || disk.name }}</span>
+              <span class="disk-model">{{ disk.model || "-" }}</span>
+            </div>
+            <template v-if="getDiskSmartHealth(disk)">
+              <div class="disk-health-row-smart">
+                <span class="inline-health-badge" :class="smartStatusClass(getDiskSmartHealth(disk))">
+                  {{ smartStatusLabel(getDiskSmartHealth(disk)) }}
+                </span>
+                <span v-if="formatSmartTemp(getDiskSmartHealth(disk))" class="dashboard-health-temp">
+                  {{ formatSmartTemp(getDiskSmartHealth(disk)) }}
+                </span>
+              </div>
+            </template>
+            <div v-else class="disk-health-row-smart">
+              <span class="subtle-text">{{ t("dashboard.noSmartData") }}</span>
+            </div>
           </div>
         </div>
         <div v-else class="empty-hint">{{ t("dashboard.noDisks") }}</div>

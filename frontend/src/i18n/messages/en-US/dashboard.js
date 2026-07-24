@@ -22,4 +22,5 @@ export default {
   diskStandby: "Standby",
   diskUnknown: "Unknown",
   noDisks: "No disks discovered yet",
+  noSmartData: "SMART data pending",
 };

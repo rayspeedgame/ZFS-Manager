@@ -648,13 +648,24 @@ svg {
 }
 
 .disk-health-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
   padding: 10px 12px;
   border-radius: 8px;
   background: rgba(14, 23, 43, 0.92);
+}
+
+.disk-health-row-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.disk-health-row-smart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
 }
 
 .disk-name {
@@ -1703,6 +1714,11 @@ svg {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 2px;
+}
+
+.dashboard-health-temp {
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 .smart-attr-section {
