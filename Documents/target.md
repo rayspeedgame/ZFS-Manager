@@ -8,6 +8,15 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 
 ## Delivered Capabilities
 
+### Overview, configuration, and deployment
+
+- dashboard summaries for disks, pools, capacity, datasets, and SMART health
+- live WebSocket snapshot, freshness indicators, and forced refresh
+- web editing for polling, SSH, and login settings with runtime rebuild on save
+- no-save SSH connectivity testing
+- `fixture` demonstration mode and optional fallback after SSH failures
+- single-container Docker deployment with Nginx and Uvicorn
+
 ### Pool workflows
 
 - pool health, capacity, and state overview
@@ -30,7 +39,7 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 - inline SMART health column (PASS/FAIL badge + temperature) in the disk table
 - health overview dialog with scrollable attribute table
 - automatic SMART polling (configurable active/idle intervals)
-- manual SMART refresh per disk
+- full SMART/state refresh initiated from an individual disk detail view
 - ATA and NVMe attribute support
 - non-physical device filtering (`loop`, `ram`, `fd`, `sr`, `zd`, `zram` excluded)
 
@@ -60,6 +69,7 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
   - daily
   - weekly
   - monthly
+- schedule creation, enable/disable, and deletion
 
 ## Current Architecture Direction
 
@@ -75,5 +85,6 @@ Build ZFS Manager into a practical ZFS web interface for single-node or small la
 
 - keep improving recurring snapshot editing and schedule visibility
 - continue improving `replace` and RAID-Z `expansion` candidate explanations and audit detail
+- add independent continuous active-task reconciliation instead of relying on task API reads
 
 > **On "tiered retention":** The multi-schedule independent retention design already covers tiered scenarios — different frequencies (daily/weekly/monthly) each have their own schedule, and retention is automatically isolated by `schedule_id`. No complex tiered rules are needed inside a single schedule.

@@ -10,7 +10,8 @@
 - `backend/app/services/poller.py`
   - 具备客户端感知的活跃/空闲刷新节奏的状态采集
   - 模式检测以固定 1 秒间隔运行；可配置的唤醒间隔仅控制刷新频率
-  - 四个独立作业调度，每个都有独立的活跃和空闲间隔
+  - 五个独立作业调度（disks、pools、datasets、properties、smart），每个都有独立的活跃和空闲间隔
+  - 过滤 `loop`、`ram`、`fd`、`sr`、`zd`、`zram` 等非物理设备
 - `backend/app/services/task_scheduler.py`
   - 周期任务调度器
   - 执行定时 `scrub`
@@ -42,7 +43,7 @@
 - `frontend/src/views/DatasetsView.vue`
   - 数据集树与手动快照快速创建入口
 - `frontend/src/services/api.js`
-  - 快照接口、任务接口、计划任务接口
+  - 认证、设置、磁盘、Pool、Dataset、快照、任务和计划任务接口
 - `frontend/src/views/SettingsView.vue`
   - 活跃与空闲轮询间隔配置
   - 空闲刷新子区域，包含各项独立的空闲间隔设置
@@ -55,6 +56,19 @@
   - 任务与计划任务持久化层
 - `backend/app/services/task_recovery.py`
   - 启动恢复与任务对账
+- `backend/config/config.json`
+  - 轮询、SSH、登录和磁盘自定义名称配置
+
+## 部署入口
+
+- `Dockerfile`
+  - 使用 Node 构建前端，Python 镜像运行后端，并安装 Nginx
+- `docker/start.sh`
+  - 同时启动 Uvicorn 与 Nginx，并处理容器退出信号
+- `docker/nginx.conf`
+  - 提供 SPA 静态文件并代理 `/api/` 和 `/ws/`
+- `compose.example.yaml`
+  - 示例端口、环境变量和 `/data` 持久化卷
 
 ## 相关改动簇
 
@@ -69,13 +83,13 @@
   - `backend/app/ssh/parser.py` — `parse_smartctl_output`、`parse_smart_info`
   - `backend/app/schemas/zfs_state.py` — `SmartOverview`、`DiskSmartInfo`、`SmartAttributeItem`
   - `backend/app/services/poller.py` — smart 调度、缓存、状态组装
-  - `backend/app/api/routes/disks.py` — `GET/POST /api/disks/{key}/smart`
+  - `backend/app/api/routes/disks.py` — `GET /api/disks/{key}/smart`、`POST /api/disks/{key}/smart/refresh`
   - `backend/app/core/config.py` — smart 间隔设置
   - `frontend/src/views/DisksView.vue` — 健康列、SMART 详情弹窗
   - `frontend/src/views/SettingsView.vue` — 活跃/空闲 smart 间隔
   - `frontend/src/services/api.js` — `getDiskSmartData`、`refreshDiskSmartData`
   - `frontend/src/i18n/messages/*/disks.js` — SMART 翻译键
-  - `backend/tests/fixtures/smart_info_sample.txt` — ATA + NVMe 测试数据
+  - `backend/tests/fixtures/smart_info_sample.txt` — ATA + NVMe 解析/调试样例（当前自动化测试与 fixture poller 尚未加载）
 - 快照管理
   - `backend/app/services/snapshot_creator.py`
   - `backend/app/services/snapshot_destroyer.py`

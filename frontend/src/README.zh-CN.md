@@ -21,9 +21,11 @@
 ## 当前笔记
 
 - `PoolsView.vue` 和 `DatasetsView.vue` 继续作为页面容器，负责 API 调用、实时快照重绑定和草稿保护
-- `TasksView.vue` 现在负责任务记录浏览、状态筛选、分页和详情加载
-- `SchedulesView.vue` 负责定时 `scrub` 定义以及未来定时快照占位区
+- `SnapshotsView.vue` 负责快照筛选、排序、创建、删除和回滚
+- `TasksView.vue` 负责任务记录浏览、状态筛选、分页和详情加载
+- `SchedulesView.vue` 负责分钟到月级的快照计划、每周 `scrub` 计划，以及计划创建、启停和删除
 - `DisksView.vue` 在磁盘表中内置 SMART 健康列，并通过 `ConfirmDialog` 展示完整属性弹窗
 - `SettingsView.vue` 负责设置读取、保存、SSH 测试、登录配置编辑和 SMART 轮询间隔
 - `i18n/messages.js` 现在只是聚合入口，真正的翻译资源位于 `i18n/messages/<locale>/<module>.js`
 - 路由定义仍暴露翻译 key，这样切换语言时侧边栏和标题会立即更新
+- 计划后端支持局部更新，但当前页面尚未提供完整的计划编辑表单

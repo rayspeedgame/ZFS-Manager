@@ -29,6 +29,14 @@
   - `replace`
 - `pool_raidz_expander.py`
   - RAID-Z `expansion`
+- `pool_creator.py` / `pool_destroyer.py` / `pool_remover.py`
+  - pool 创建、销毁和设备移除
+- `property_updater.py` / `topology_updater.py`
+  - pool 属性和辅助 vdev 拓扑更新
+- `dataset_creator.py` / `dataset_destroyer.py` / `dataset_property_updater.py`
+  - dataset 与 zvol 的生命周期和属性更新
+- `snapshot_creator.py` / `snapshot_destroyer.py` / `snapshot_rollbacker.py` / `snapshot_query.py`
+  - 快照查询、创建、删除和回滚
 
 ## 当前约定
 
@@ -46,9 +54,10 @@
 
 - 通过 `smart_interval_seconds` / `idle_smart_interval_seconds` 配置间隔
 - ATA 和 NVMe 属性被解析为 `SmartOverview` / `DiskSmartInfo` / `SmartAttributeItem`
-- `_normalize_smart_protocol()` 将 `sat` 映射为 `sata` 以保证显示一致性
+- SSH 解析器会把 `sat` 协议规范化为 `sata`，以保证显示一致性
 - 通过 `GET /api/disks/{disk_key}/smart` 获取，通过 `POST /api/disks/{disk_key}/smart/refresh` 刷新
 - 非物理块设备（`loop`、`ram`、`fd`、`sr`、`zd`、`zram`）在构造磁盘行前会被过滤
+- 单盘详情页的手动 SMART 刷新当前会触发一次完整的 `force_all` 状态刷新
 
 分区成员还会继承父盘的整盘 `by-id` 别名，避免恢复逻辑因为整盘路径和 `-part1` 路径不同而漏判同一块盘。
 
@@ -67,3 +76,5 @@
 - 成员数是否增长
 
 只有这些条件闭合后，RAID-Z expansion 任务才会进入完成状态。
+
+任务恢复检查会在 runtime 启动、相关 pool 维护/定时 scrub 的写后刷新以及任务接口访问时运行；当前没有独立的后台对账循环。

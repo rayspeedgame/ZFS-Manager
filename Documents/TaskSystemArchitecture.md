@@ -15,6 +15,8 @@
 - Runtime task manager plus SQLite task store
 - Startup task reload and active-task reconciliation
 - `scrub` recovery based on `zpool status`
+- `replace/resilver` recovery based on `zpool status` and normalized topology
+- RAID-Z expansion recovery using `expand:`, automatic `scrub`, and vdev member changes
 - Schedule persistence and background scheduling
 - Scheduled `scrub`
 - Scheduled `snapshot`
@@ -31,7 +33,7 @@ Use three layers with clear boundaries:
    - `zfs list`
    - `zfs get`
 2. Event and history sources
-   - `zpool history`
+   - `zpool history` (planned supporting evidence; not currently integrated)
    - future host log or event hooks
 3. Local application records
    - task rows
@@ -53,13 +55,22 @@ Use three layers with clear boundaries:
 - `SchedulesView.vue`
   - recurring `scrub`
   - recurring `snapshot`
+  - schedule creation, enable/disable, and deletion
   - in-app delete confirmations
 - `SnapshotsView.vue`
   - centralized snapshot management and rollback
 
+## Current Reconciliation Triggers
+
+- after the backend starts and produces its first state refresh
+- after relevant pool-maintenance actions or a scheduled scrub force a state refresh
+- when task list or task detail APIs are requested
+
+As a result, `scrub`, `resilver`, and RAID-Z expansion reconcile against current state at those points. A reconciliation loop that runs independently of request traffic is not implemented yet.
+
 ## Immediate Next Extensions
 
-1. Editing existing snapshot schedules
+1. A complete edit-existing-schedule UI (the UI currently supports enable/disable and delete; backend PATCH already supports title, pattern, and metadata)
 2. Richer retention reporting
-3. `replace/resilver` recovery handlers
-4. Background reconciliation updates even when the task page is closed
+3. Background reconciliation updates even when the task page is closed
+4. Stronger history and audit evidence for short writes whose result cannot be safely inferred from current state

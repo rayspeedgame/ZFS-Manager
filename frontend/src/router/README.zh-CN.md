@@ -7,7 +7,7 @@
 ## 文件
 
 - `index.js`：使用 `createWebHashHistory()` 创建 router
-- `routes.js`：`Dashboard`、`Disks`、`Pools`、`Datasets`、`Schedules`、`Tasks` 和 `Settings` 的路由元数据
+- `routes.js`：`Dashboard`、`Disks`、`Pools`、`Datasets`、`Snapshots`、`Schedules`、`Tasks` 和 `Settings` 的路由元数据
 
 ## 说明
 

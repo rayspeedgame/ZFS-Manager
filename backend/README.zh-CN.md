@@ -16,6 +16,7 @@
 - 执行按计划归属隔离的快照保留清理
 - 客户端感知的活跃/空闲轮询节奏——有浏览器查看时快速刷新，无浏览器时使用慢速空闲间隔
 - 非物理磁盘过滤（`loop`、`ram`、`fd`、`sr`、`zd`、`zram` 排除在磁盘行和总数统计之外）
+- 提供设置读取/保存、SSH 连通性测试、磁盘自定义标签和可选的 cookie 登录门禁
 
 ## 磁盘身份模型
 
@@ -64,3 +65,10 @@
   - replace 提交
 - `app/services/pool_raidz_expander.py`
   - RAID-Z expansion 提交
+
+## 运行与持久化
+
+- 默认读取 `config/config.json`，并兼容旧路径 `backend/config.json`；也可用 `ZFS_MANAGER_CONFIG` 指定路径。示例配置需按需复制，不会被 runtime 自动读取
+- 任务和计划默认保存在配置目录的 SQLite 数据库，可用 `ZFS_MANAGER_TASK_DB` 覆盖
+- `poller.mode=fixture` 可在没有 ZFS 主机时加载状态样例，但当前不注入 SMART 样例，也不能执行写操作或计划
+- SSH 模式的远端需要 ZFS 工具、块设备工具和 `smartmontools`，并为 SSH 用户授予相应读写权限

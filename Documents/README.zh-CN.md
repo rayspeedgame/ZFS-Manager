@@ -26,6 +26,7 @@
 ## 当前重点
 
 - 后端采用 SSH 轮询加 REST 写操作的架构。
+- 前端包含 Dashboard、Disks、Pools、Datasets、Snapshots、Schedules、Tasks 和 Settings 八个一级页面。
 - 任务系统已经具备 SQLite 持久化、启动恢复、分页查询和状态筛选。
 - 快照调度已经支持从分钟到月的多级计划。
 - 定时快照使用短名称，计划归属写入 ZFS 用户自定义属性。
@@ -39,6 +40,7 @@
   - `displayName`、`commandPath`、`commandTarget`、`rawCommandTarget`、`aliases`
   - SMART 自动轮询、磁盘表内置健康列、完整属性弹窗、ATA/NVMe 支持、非物理设备过滤
 - **客户端感知轮询** — 轮询器根据 WebSocket 客户端存在与否自动在活跃（快速）和空闲（慢速）刷新节奏之间切换。`client_tracker` 模块追踪已连接客户端数量，轮询器将 1 秒固定模式检测与可配置的唤醒/作业刷新间隔解耦。所有空闲间隔均可在设置界面中调整。
+- 设置页支持保存后重建 runtime、无保存 SSH 测试和可选网页登录；项目提供 Docker/Nginx 单容器部署。
 
 ## 当前约束
 
@@ -46,3 +48,6 @@
 - 已在 pool 内的现有成员维护命令必须使用 `zpool status -L` 给出的真实成员名。
 - 长时间任务尽量以 ZFS 和主机状态作为真相源。
 - RAID-Z expansion 的恢复不仅看 `expand:`，还要看自动 `scrub` 阶段和成员变化。
+- 已有 Pool 的 topology 更新当前只开放受支持的辅助类别，不允许增加 data vdev。
+- 定时 scrub 当前仅支持每周；定时快照支持分钟到月。
+- SMART 依赖远程主机安装 `smartmontools`；fixture 模式当前不加载 SMART 样例。

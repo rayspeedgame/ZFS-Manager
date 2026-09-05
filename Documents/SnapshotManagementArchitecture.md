@@ -79,7 +79,7 @@ Recommended product rule:
 ## Next Snapshot Work
 
 - Show schedule ownership fields in more snapshot views
-- Allow editing existing snapshot schedules
+- Add frontend editing for existing snapshot schedules (the backend already exposes `PATCH /api/task-schedules/{schedule_id}`)
 - Add richer retention reporting
 
 > **On "tiered retention":** The current **multi-schedule independent retention** design already covers tiered scenarios. Operators simply create separate schedules for different frequencies (daily, weekly, monthly), each retaining its own latest N snapshots without interference.

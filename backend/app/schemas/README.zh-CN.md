@@ -17,13 +17,20 @@
 - `SettingsSaveResponse`：设置保存响应
 - `SSHConnectionTestRequest` / `SSHConnectionTestResponse`
 - `AuthStatusResponse` / `LoginRequest` / `LoginResponse`
+- `DiskLabelUpdateRequest` / `DiskLabelUpdateResponse`
 - `PoolCreateRequest` / `PoolCreateResponse`
+- `PoolDestroyResponse` / `PoolRemoveRequest` / `PoolRemoveResponse`
 - `PoolPropertyUpdateRequest` / `PoolPropertyUpdateResponse`
 - `PoolTopologyUpdateRequest` / `PoolTopologyUpdateResponse`
-- `PoolScrubResponse`
+- `PoolScrubResponse` / `PoolDeviceActionRequest` / `PoolMaintenanceActionResponse`
+- `PoolReplaceRequest` / `PoolReplaceResponse`
+- `PoolRaidzExpandRequest` / `PoolRaidzExpandResponse`
 - `DatasetCreateRequest` / `DatasetCreateResponse`
 - `DatasetPropertyUpdateRequest` / `DatasetPropertyUpdateResponse`
 - `DatasetDestroyResponse`
+- `SnapshotListResponse` / `SnapshotDetailResponse` / `SnapshotFiltersResponse`
+- `SnapshotCreateRequest` / `SnapshotCreateResponse`
+- `SnapshotDestroyResponse` / `SnapshotRollbackRequest` / `SnapshotRollbackResponse`
 - `TaskListResponse` / `TaskDetailResponse`
 - `TaskScheduleCreateRequest` / `TaskScheduleUpdateRequest`
 - `TaskScheduleListResponse` / `TaskScheduleDetailResponse`
@@ -34,3 +41,5 @@
 - 同时提供 `summary / disks / pools / datasets`，减少前端重复拼装
 - 写操作响应尽量保留命令、退出码和标准输出，方便排查
 - 任务列表响应现在额外携带分页与筛选元数据，供任务记录页使用
+- 快照列表项携带允许删除/回滚等能力标记，前端无需重复推导操作可用性
+- 计划模型把频率参数规范化到 `TaskSchedulePattern`，供调度器和 API 复用

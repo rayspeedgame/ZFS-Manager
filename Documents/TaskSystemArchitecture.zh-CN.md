@@ -15,6 +15,8 @@
 - 运行时任务管理器加 SQLite 持久化
 - 启动任务回填与活动任务对账
 - 基于 `zpool status` 的 `scrub` 恢复
+- 基于 `zpool status` 和规范化拓扑的 `replace/resilver` 恢复
+- 结合 `expand:`、自动 `scrub` 和 vdev 成员变化的 RAID-Z expansion 恢复
 - 计划任务持久化与后台调度
 - 定时 `scrub`
 - 定时 `snapshot`
@@ -31,7 +33,7 @@
    - `zfs list`
    - `zfs get`
 2. 事件与历史来源
-   - `zpool history`
+   - `zpool history`（规划中的补充证据，当前尚未接入）
    - 未来的主机日志或事件钩子
 3. 本地应用记录
    - task 行
@@ -53,13 +55,22 @@
 - `SchedulesView.vue`
   - 定时 `scrub`
   - 定时 `snapshot`
+  - 计划创建、启停和删除
   - 统一的站内删除确认弹窗
 - `SnapshotsView.vue`
   - 集中快照管理与回滚
 
+## 当前对账触发点
+
+- 后端启动并完成首次状态刷新后
+- 相关 pool 维护动作或定时 scrub 提交并强制刷新状态后
+- 请求任务列表或任务详情时
+
+因此 `scrub`、`resilver` 和 RAID-Z expansion 会在上述时机根据当前状态更新；完全独立于访问流量的后台对账循环尚未实现。
+
 ## 下一步
 
-1. 支持编辑已有快照计划
+1. 在前端支持完整编辑已有计划（当前界面支持启停和删除，后端 PATCH 已支持标题、pattern 和 metadata）
 2. 增强保留策略报告
-3. 增加 `replace/resilver` 恢复器
-4. 即使任务页未打开，也在后台持续更新活动任务对账
+3. 即使任务页未打开，也在后台持续更新活动任务对账
+4. 为无法从当前状态安全推断结果的短写操作补充历史和审计证据

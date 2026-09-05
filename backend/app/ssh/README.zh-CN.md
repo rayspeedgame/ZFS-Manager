@@ -13,7 +13,7 @@
 ## 当前能力
 
 - 支持轮询需要的只读命令组
-- 支持 pool 与 dataset 写操作时的 SSH 命令执行
+- 支持 pool、dataset、snapshot 和计划任务写操作时的 SSH 命令执行
 - `client.py` 返回详细执行结果，包含 `stdout / stderr / exit_status`
 - `SMART_INFO` 命令对所有非虚拟块设备采集 `smartctl -a --json`，已过滤 `loop`、`ram`、`fd`、`sr`、`zd`、`zram`
 
@@ -25,3 +25,9 @@
   - 支持 ATA 属性表（`ata_smart_attributes.table`）和 NVMe 健康日志（`nvme_smart_health_information_log`）
   - 协议类型规范化：`sat` → `sata`，其余原样保留
 - overview 解析结果既服务调试，也服务最终结构化页面数据
+
+## 远端要求
+
+- 目标主机需要提供 `zpool`、`zfs`、`lsblk`、`findmnt`、`blkid` 和 `smartctl`
+- SMART 采集依赖远端安装 `smartmontools`，SSH 用户需要有读取磁盘健康信息及执行所启用写操作的权限
+- fixture 模式只加载既有状态夹具；不会自动加载 `tests/fixtures/smart_info_sample.txt` 作为 SMART 轮询结果

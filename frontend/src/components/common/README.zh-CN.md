@@ -9,7 +9,7 @@
 - `DetailDrawer.vue`: 侧滑详情面板
 - `ConfirmDialog.vue`: 确认和结果对话框外壳
 - `EmptyState.vue`: 空数据占位符
-- `JsonDebugPanel.vue`: 仅开发使用的原始快照面板
+- `JsonDebugPanel.vue`: 由 `VITE_SHOW_JSON_DEBUG=true` 显式启用的原始快照面板
 - `PropertySection.vue`: 详情和表单区域的标签包装器
 - `PropertyFieldList.vue`: 只读和可编辑字段列表的共享属性渲染器
 - `CommandResultList.vue`: 紧凑的成功/失败结果行

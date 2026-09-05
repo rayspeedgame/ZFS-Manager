@@ -7,11 +7,10 @@
 ## Subdirectory Responsibilities
 
 - `api/`: REST and WebSocket routes
-- `core/`: Configuration, authentication, shared state, and other infrastructure
-- `schemas/`: Pydantic data models
-- `services/`: Pollers, aggregators, and write operation services
+- `core/`: Configuration, authentication, client tracking, shared state, and other infrastructure
+- `schemas/`: Pydantic state, write-request, task, schedule, and SMART models
+- `services/`: Pollers, aggregators, write operations, task persistence/recovery, and scheduling services
 - `ssh/`: SSH command definitions, client, and parsers (including `SMART_INFO` with `smartctl --json`)
-- `schemas/`: Pydantic data models (including `SmartOverview`, `DiskSmartInfo`, `SmartAttributeItem`)
 
 ## Main Execution Flow
 
@@ -20,3 +19,4 @@
 - `StatePoller` is responsible for scheduled refresh of various states and writes to `state_store`
 - Write endpoints trigger a forced refresh after executing commands
 - Settings endpoints rebuild the runtime after saving, so new configuration takes effect immediately
+- Runtime recovers unfinished tasks and starts the schedule runner at startup; task API access also triggers a recovery check

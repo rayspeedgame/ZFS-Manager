@@ -16,6 +16,7 @@ The backend owns SSH polling, REST write execution, task persistence, schedule e
 - apply schedule-scoped snapshot retention cleanup
 - client-aware active/idle poller cadence — fast refreshes when a browser is viewing, slow idle intervals otherwise
 - non-physical disk filtering (`loop`, `ram`, `fd`, `sr`, `zd`, `zram` excluded from disk rows and summary count)
+- expose settings read/save, SSH connectivity testing, custom disk labels, and an optional cookie-based login gate
 
 ## Disk Identity Model
 
@@ -64,3 +65,10 @@ For disks that are already part of a pool:
   - replace submission
 - `app/services/pool_raidz_expander.py`
   - RAID-Z expansion submission
+
+## Runtime and Persistence
+
+- Configuration defaults to `config/config.json`, retains compatibility with legacy `backend/config.json`, and can be redirected with `ZFS_MANAGER_CONFIG`. The example file must be copied explicitly; runtime does not load it automatically
+- Tasks and schedules default to a SQLite database in the configuration directory; `ZFS_MANAGER_TASK_DB` overrides it
+- `poller.mode=fixture` can load state samples without a ZFS host, but currently does not inject SMART samples and cannot run writes or schedules
+- SSH mode requires ZFS/block-device tools and `smartmontools` on the remote host, with appropriate read/write permissions for the SSH account

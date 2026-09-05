@@ -33,6 +33,7 @@ This directory holds route-level page components.
 - custom labels persist through `diskKey`
 - disk table includes an inline SMART health column (PASS/FAIL badge + temperature) sourced from `smart_overview` in the WebSocket snapshot
 - full SMART details open in a `ConfirmDialog` (result mode) with temperature, power-on hours, protocol, serial, firmware, and scrollable attribute table with status badges
+- manual refresh in the detail view currently asks the backend for a complete state refresh rather than polling only the selected disk
 
 ### `PoolsView`
 
@@ -45,11 +46,18 @@ This directory holds route-level page components.
   - `offline / online`
   - `replace`
   - RAID-Z `expansion`
+- existing-pool topology updates accept auxiliary vdevs only; adding a new data vdev is not supported
+
+### `SnapshotsView`
+
+- supports search, pool/dataset/type filters, pagination, and sorting
+- supports detail, creation, deletion, and safe/forced rollback, with action availability supplied by backend capability flags
 
 ### `SchedulesView`
 
 - supports recurring snapshot levels from minutely through monthly
 - supports recurring `scrub`
+- scrub currently supports weekly frequency only; schedules can be created, enabled/disabled, and deleted, while a complete edit form remains unimplemented
 
 ### `TasksView`
 
@@ -58,3 +66,8 @@ This directory holds route-level page components.
 - RAID-Z expansion tasks move through:
   - the `expand` phase
   - the automatic `scrub` phase
+
+### `SettingsView`
+
+- reads and saves SSH, polling, login, and disk-label configuration
+- provides SSH connection testing and separate active/idle SMART polling intervals

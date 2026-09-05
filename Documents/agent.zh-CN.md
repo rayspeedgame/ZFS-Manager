@@ -24,12 +24,12 @@
 - 模式检测以固定 1 秒间隔运行——独立于可配置的唤醒/刷新间隔。
 - 浏览器连接时，轮询器切换到活跃间隔并强制立即全量刷新。
 - 最后一个浏览器断开时，轮询器降至配置的空闲间隔。
-- 每项作业（pools、datasets、disks、properties）的活跃和空闲间隔均可在设置界面中调整。
+- 每项作业（disks、pools、datasets、properties、smart）的活跃和空闲间隔均可在设置界面中调整。
 - 唤醒间隔（`tick_seconds` / `idle_tick_seconds`）控制 `refresh_once()` 的调用频率；模式检测始终以 1 Hz 运行。
 
 ### 写操作流程契约
 
-大多数池和数据集的变更遵循相同的生命周期：
+大多数 pool、dataset 和 snapshot 变更遵循相同的生命周期：
 
 1. 在前端验证用户输入。
 2. 提交 REST 写请求。
@@ -51,7 +51,7 @@
 ### 语言系统
 
 - `frontend/src/i18n/index.js` 从 `localStorage` 首先选择初始语言，然后是浏览器语言，最后是后备语言。
-- `frontend/src/i18n/messages.js` 保存分组的翻译键，用于外壳、路由、通用 UI、仪表盘、池和数据集。
+- `frontend/src/i18n/messages.js` 是聚合入口；`messages/<locale>/` 按 app、routes、common、dashboard、disks、pools、datasets、snapshots、schedules、tasks、settings、login 和 properties 拆分资源。
 - 路由元数据应使用 `labelKey` 和 `descriptionKey`，以便导航和视图标题响应语言变化。
 - 添加 UI 文本时，优先使用翻译键而非原始字符串，除非该值是应保持原样的领域原生标记。
 
@@ -63,19 +63,31 @@
   - `backend/app/ssh/parser.py`
   - `frontend/src/stores/app.js`
 - 写入路径
-  - `backend/app/api/rest.py`
+  - `backend/app/api/routes/`
   - `backend/app/services/pool_creator.py`
   - `backend/app/services/topology_updater.py`
   - `backend/app/services/dataset_creator.py`
   - `backend/app/services/dataset_property_updater.py`
   - `backend/app/services/dataset_destroyer.py`
+  - `backend/app/services/snapshot_creator.py`
+  - `backend/app/services/snapshot_destroyer.py`
+  - `backend/app/services/snapshot_rollbacker.py`
   - `frontend/src/services/api.js`
+- 任务与计划路径
+  - `backend/app/services/task_manager.py`
+  - `backend/app/services/task_store.py`
+  - `backend/app/services/task_recovery.py`
+  - `backend/app/services/task_scheduler.py`
 
 ## 常见坑点
 
 - 实时快照可能在用户编辑表单时到达，因此页面容器必须在重新绑定新快照数据之前保护脏草稿。
 - 数据集名称可能包含 `/`，因此 REST 路由必须继续使用 `{dataset_name:path}`。
+- snapshot 名称同样可能包含 `/`，相关路由必须继续使用 `{snapshot_name:path}`。
 - "显示快照"保持可选，因为大型快照集会产生大量 UI 噪音。
 - `frontend/src/store/state.js` 仍然是兼容层；新的状态工作应优先使用 `frontend/src/stores/app.js` 中的 Pinia store。
 - 长生命周期数组中的语言敏感标签通常应包装在 `computed()` 中，以便切换语言时立即更新当前视图。
 - 轮询器的唤醒间隔（`tick_seconds`）应 ≤ 最快的作业刷新间隔，否则短间隔作业会被唤醒间隔卡住。
+- fixture 模式不会加载 SMART 样例，也不能执行写操作或计划；SSH 模式的远端 SMART 采集依赖 `smartmontools`。
+- 未完成任务的恢复检查发生在 runtime 启动、相关 pool 维护/定时 scrub 的写后刷新和任务接口访问时；当前没有独立后台对账循环。
+- 快照计划支持分钟到月级，`scrub` 计划当前仅支持每周；计划页面支持创建、启停和删除，但没有完整编辑表单。

@@ -31,23 +31,16 @@ This directory holds the backend HTTP API layer. `rest.py` now acts as the stabl
 
 ## Current API Surface
 
-- `GET /api/state`
-  - returns the unified state snapshot
-- `POST /api/state/refresh`
-  - forces a refresh
-- `GET /api/tasks`
-  - supports pagination and status filtering
-- `PUT /api/disks/{disk_key}/label`
-  - persists custom disk labels
-- `GET /api/disks/{disk_key}/smart`
-  - returns cached SMART data for a specific disk
-- `POST /api/disks/{disk_key}/smart/refresh`
-  - forces full SMART refresh and returns updated data
-- `POST /api/pools/{pool_name}/offline`
-- `POST /api/pools/{pool_name}/online`
-- `POST /api/pools/{pool_name}/clear`
-- `POST /api/pools/{pool_name}/replace`
-- `POST /api/pools/{pool_name}/raidz-expand`
+- State and settings: `GET /api/state`, `POST /api/state/refresh`, `GET /api/health`, `GET/PUT /api/settings`, and `POST /api/settings/test-ssh`
+- Authentication: `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout`
+- Disks: `PUT /api/disks/{disk_key}/label`, `GET /api/disks/{disk_key}/smart`, and `POST /api/disks/{disk_key}/smart/refresh`
+- Pools: create, destroy, remove device, update properties, start/stop scrub, offline/online/replace devices, RAID-Z expansion, clear errors, and update topology
+- Datasets: create, destroy, and update properties; `{dataset_name:path}` accepts names containing `/`
+- Snapshots: paginated list, filter values, detail, per-dataset list, create, delete, and rollback; `{snapshot_name:path}` accepts names containing `/`
+- Tasks: task list/detail plus schedule list, create, partial update, and delete
+- Live state: `WS /ws/state`
+
+The snapshot list supports `search`, `pool`, `dataset`, `snapshot_type`, `sort_by`, `sort_order`, `page`, and `page_size`.
 
 ## Current Rules
 
@@ -55,6 +48,9 @@ This directory holds the backend HTTP API layer. `rest.py` now acts as the stabl
 - existing pool-member maintenance must resolve to `commandTarget`
 - validators accept aliases such as `displayName`, `kernelPath`, `byIdPath`, and stored `aliases`
 - the backend still resolves back to the correct current execution target before running the command
+- existing-pool topology updates currently accept only `log`, `cache`, `spare`, `special`, and `dedup`; adding a new data vdev is rejected
+- all ZFS-mutating writes and schedule execution require `poller.mode=ssh`; settings, authentication, and disk-label writes do not
+- a manual refresh initiated through a single-disk SMART endpoint currently calls `refresh_once(force_all=True)`, refreshing the complete state rather than only that disk
 
 ## Maintenance Notes
 

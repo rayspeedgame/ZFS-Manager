@@ -24,8 +24,11 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="ZFS Manager Backend",
-    version="0.3.0",
-    description="Stage 3 demo: state polling plus WebSocket streaming.",
+    version="1.1.1",
+    description=(
+        "Remote ZFS management API with state polling, WebSocket streaming, "
+        "pool/dataset/snapshot operations, SMART monitoring, tasks, and schedules."
+    ),
     lifespan=lifespan,
 )
 

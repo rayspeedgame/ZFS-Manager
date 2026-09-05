@@ -7,7 +7,7 @@ Frontend routing configuration.
 ## Files
 
 - `index.js`: Creates the router with `createWebHashHistory()`
-- `routes.js`: Route metadata for `Dashboard`, `Disks`, `Pools`, `Datasets`, `Schedules`, `Tasks`, and `Settings`
+- `routes.js`: Route metadata for `Dashboard`, `Disks`, `Pools`, `Datasets`, `Snapshots`, `Schedules`, `Tasks`, and `Settings`
 
 ## Notes
 

@@ -17,6 +17,8 @@
 - 设备级 `offline` / `online`
 - 设备级 `replace` 与 `resilver` 跟踪
 - RAID-Z vdev 级 `raidz expansion`
+- 移除当前拓扑标记为可移除的目标
+- 为现有 pool 添加 `log`、`cache`、`special`、`dedup` 和 `spare` 辅助设备
 
 ## 磁盘与成员身份模型
 
@@ -120,11 +122,17 @@
 
 ## 当前接口重点
 
+- `POST /api/pools/{pool_name}/scrub/start`
+- `POST /api/pools/{pool_name}/scrub/stop`
 - `POST /api/pools/{pool_name}/offline`
 - `POST /api/pools/{pool_name}/online`
 - `POST /api/pools/{pool_name}/clear`
 - `POST /api/pools/{pool_name}/replace`
 - `POST /api/pools/{pool_name}/raidz-expand`
+- `POST /api/pools/{pool_name}/remove`
+- `POST /api/pools/{pool_name}/topology`
+
+当前 topology 更新只开放 `log`、`cache`、`special`、`dedup` 和 `spare` 等辅助类别；后端会拒绝向已有 Pool 增加 data vdev。
 
 ## 当前状态快照中与维护相关的重要字段
 

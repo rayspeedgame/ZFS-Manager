@@ -7,11 +7,13 @@
     "datasets_interval_seconds": 15,
     "disks_interval_seconds": 60,
     "properties_interval_seconds": 120,
+    "smart_interval_seconds": 3600,
     "idle_tick_seconds": 30,
     "idle_pools_interval_seconds": 60,
     "idle_datasets_interval_seconds": 300,
     "idle_disks_interval_seconds": 600,
-    "idle_properties_interval_seconds": 1200
+    "idle_properties_interval_seconds": 1200,
+    "idle_smart_interval_seconds": 7200
   },
   "ssh": {
     "host": "192.168.1.10",
@@ -30,5 +32,6 @@
   "auth": {
     "enabled": false,
     "password": null
-  }
+  },
+  "disk_labels": {}
 }

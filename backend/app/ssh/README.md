@@ -13,7 +13,7 @@ This layer is responsible for interacting with remote hosts and parsing command 
 ## Current Capabilities
 
 - Supports polling-required read-only command groups
-- Supports SSH command execution during pool and dataset write operations
+- Supports SSH command execution for pool, dataset, snapshot, and scheduled write operations
 - `client.py` returns detailed execution results including `stdout / stderr / exit_status`
 - `SMART_INFO` command collects `smartctl -a --json` for all non-virtual block devices, excluding `loop`, `ram`, `fd`, `sr`, `zd`, and `zram`
 
@@ -25,3 +25,9 @@ This layer is responsible for interacting with remote hosts and parsing command 
   - ATA attributes (`ata_smart_attributes.table`) and NVMe health log (`nvme_smart_health_information_log`) are both supported
   - Protocol normalization: `sat` → `sata`, others preserved
 - Overview parsing results serve both debugging and final structured page data
+
+## Remote Requirements
+
+- The target host must provide `zpool`, `zfs`, `lsblk`, `findmnt`, `blkid`, and `smartctl`
+- SMART collection requires remote `smartmontools`; the SSH account needs permission to read disk health and execute any enabled write operations
+- Fixture mode loads the existing state fixtures only; it does not automatically load `tests/fixtures/smart_info_sample.txt` as SMART poll data

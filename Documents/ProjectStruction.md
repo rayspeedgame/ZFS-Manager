@@ -7,11 +7,11 @@
 - `app/api`
   - REST and WebSocket endpoints
 - `app/core`
-  - shared backend config and application wiring
+  - configuration, authentication, client tracking, and shared state
 - `app/schemas`
   - request and response models
 - `app/services`
-  - ZFS orchestration and refresh services
+  - ZFS orchestration, refresh, task persistence/recovery, and scheduling
 - `app/ssh`
   - SSH command execution and parser helpers
 
@@ -32,7 +32,7 @@
 - `stores`
   - Pinia store that owns snapshot lifecycle and WebSocket state
 - `services`
-  - REST write requests
+  - REST queries and write requests
 - `store`
   - compatibility adapter that still exposes `useAppState()`
 - `views`
@@ -44,7 +44,14 @@
 2. The frontend store receives that snapshot over WebSocket or on-demand refresh.
 3. Routed views derive page-specific state from the snapshot.
 4. Child components render the UI and emit events upward.
-5. The routed views call the REST service layer for writes, then refresh state again.
+5. Routed views call the REST layer for queries or writes; writes create tasks, execute SSH commands, and force a backend state refresh.
+6. Long-running tasks are reconciled against later ZFS state, while schedules persist in SQLite and are fired by the scheduler.
+
+## Runtime and Persistence
+
+- `backend/app/runtime.py` assembles long-lived services and rebuilds them after configuration saves.
+- State snapshots live in memory; tasks and schedules live in SQLite; application settings and disk labels live in JSON configuration.
+- `docker-compose.yml` and `Dockerfile` provide container entry points. SSH mode connects to a real ZFS host, while fixture mode is intended for read-only UI demonstrations.
 
 ## Frontend Refactor Outcome
 

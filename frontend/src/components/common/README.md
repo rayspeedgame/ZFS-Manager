@@ -9,7 +9,7 @@ Shared base components used across views.
 - `DetailDrawer.vue`: slide-over detail panel
 - `ConfirmDialog.vue`: confirmation and result dialog shell
 - `EmptyState.vue`: empty-data placeholder
-- `JsonDebugPanel.vue`: development-only raw snapshot panel
+- `JsonDebugPanel.vue`: raw snapshot panel explicitly enabled with `VITE_SHOW_JSON_DEBUG=true`
 - `PropertySection.vue`: labeled wrapper for detail and form sections
 - `PropertyFieldList.vue`: shared property renderer for readonly and editable field lists
 - `CommandResultList.vue`: compact success/failure result rows

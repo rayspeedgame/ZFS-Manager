@@ -49,7 +49,7 @@
 
 ### 1. Snapshot schedule refinement
 
-- edit existing snapshot schedules
+- add a frontend editor for the backend's existing schedule PATCH support (title, timing pattern, recursion, and retention count)
 - surface strategy ownership and metadata more clearly
 - add operator-facing visibility into which snapshots belong to which schedule
 
@@ -74,3 +74,5 @@
 
 - keep schedule, retention, task recovery, and pool-maintenance docs aligned
 - continue improving operator-visible task logs and audit details
+- add independent continuous active-task reconciliation instead of relying on task API reads
+- add automated coverage for SMART parsing, polling, and endpoints

@@ -17,6 +17,8 @@ This document describes how pool-maintenance workflows are layered in the curren
 - device-level `offline` / `online`
 - device-level `replace` plus `resilver` tracking
 - RAID-Z vdev-level `raidz expansion`
+- remove targets marked removable in the current topology
+- add `log`, `cache`, `special`, `dedup`, and `spare` auxiliary devices to an existing pool
 
 ## Disk and Member Identity Model
 
@@ -120,11 +122,17 @@ If those signals still cannot be confirmed after the observation window, the tas
 
 ## Current API Surface
 
+- `POST /api/pools/{pool_name}/scrub/start`
+- `POST /api/pools/{pool_name}/scrub/stop`
 - `POST /api/pools/{pool_name}/offline`
 - `POST /api/pools/{pool_name}/online`
 - `POST /api/pools/{pool_name}/clear`
 - `POST /api/pools/{pool_name}/replace`
 - `POST /api/pools/{pool_name}/raidz-expand`
+- `POST /api/pools/{pool_name}/remove`
+- `POST /api/pools/{pool_name}/topology`
+
+Topology updates currently expose auxiliary classes such as `log`, `cache`, `special`, `dedup`, and `spare`; the backend rejects adding a data vdev to an existing pool.
 
 ## Important Maintenance Fields in the Current Snapshot
 

@@ -31,23 +31,16 @@
 
 ## 当前接口约定
 
-- `GET /api/state`
-  - 返回统一状态快照
-- `POST /api/state/refresh`
-  - 强制刷新状态
-- `GET /api/tasks`
-  - 支持分页和状态筛选
-- `PUT /api/disks/{disk_key}/label`
-  - 保存自定义磁盘名称
-- `GET /api/disks/{disk_key}/smart`
-  - 返回指定磁盘的缓存 SMART 数据
-- `POST /api/disks/{disk_key}/smart/refresh`
-  - 强制全量刷新 SMART 数据并返回最新结果
-- `POST /api/pools/{pool_name}/offline`
-- `POST /api/pools/{pool_name}/online`
-- `POST /api/pools/{pool_name}/clear`
-- `POST /api/pools/{pool_name}/replace`
-- `POST /api/pools/{pool_name}/raidz-expand`
+- 状态与设置：`GET /api/state`、`POST /api/state/refresh`、`GET /api/health`、`GET/PUT /api/settings`、`POST /api/settings/test-ssh`
+- 认证：`GET /api/auth/status`、`POST /api/auth/login`、`POST /api/auth/logout`
+- 磁盘：`PUT /api/disks/{disk_key}/label`、`GET /api/disks/{disk_key}/smart`、`POST /api/disks/{disk_key}/smart/refresh`
+- pool：创建、销毁、移除设备、属性更新、scrub 启停、设备 offline/online/replace、RAID-Z expansion、clear 和 topology 更新
+- dataset：创建、销毁和属性更新；dataset 名通过 `{dataset_name:path}` 支持 `/`
+- snapshot：分页列表、筛选值、详情、按 dataset 查询、创建、删除和回滚；snapshot 名通过 `{snapshot_name:path}` 支持 `/`
+- 任务：任务列表/详情，以及计划列表、创建、局部更新和删除
+- 实时状态：`WS /ws/state`
+
+快照列表支持 `search`、`pool`、`dataset`、`snapshot_type`、`sort_by`、`sort_order`、`page` 和 `page_size`。
 
 ## 当前规则
 
@@ -55,6 +48,9 @@
 - 已在 pool 内的成员维护必须落到 `commandTarget`
 - 校验层会接受 `displayName`、`kernelPath`、`byIdPath`、`aliases` 等多种别名
 - 但真正执行命令前仍会回落到当前快照里的正确执行目标
+- 对现有 pool 的 topology 更新当前只允许添加 `log`、`cache`、`spare`、`special` 和 `dedup`；不允许添加新的 data vdev
+- 所有会修改 ZFS 的写操作和计划执行都要求 `poller.mode=ssh`；设置、登录和磁盘标签不受此限制
+- 从单盘 SMART 接口发起的手动刷新目前调用 `refresh_once(force_all=True)`，会刷新完整状态，而不只是该磁盘
 
 ## 维护相关说明
 

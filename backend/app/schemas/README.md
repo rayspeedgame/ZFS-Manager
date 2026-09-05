@@ -17,13 +17,20 @@ This layer defines the data models used internally and externally by the backend
 - `SettingsSaveResponse`: Settings save response
 - `SSHConnectionTestRequest` / `SSHConnectionTestResponse`
 - `AuthStatusResponse` / `LoginRequest` / `LoginResponse`
+- `DiskLabelUpdateRequest` / `DiskLabelUpdateResponse`
 - `PoolCreateRequest` / `PoolCreateResponse`
+- `PoolDestroyResponse` / `PoolRemoveRequest` / `PoolRemoveResponse`
 - `PoolPropertyUpdateRequest` / `PoolPropertyUpdateResponse`
 - `PoolTopologyUpdateRequest` / `PoolTopologyUpdateResponse`
-- `PoolScrubResponse`
+- `PoolScrubResponse` / `PoolDeviceActionRequest` / `PoolMaintenanceActionResponse`
+- `PoolReplaceRequest` / `PoolReplaceResponse`
+- `PoolRaidzExpandRequest` / `PoolRaidzExpandResponse`
 - `DatasetCreateRequest` / `DatasetCreateResponse`
 - `DatasetPropertyUpdateRequest` / `DatasetPropertyUpdateResponse`
 - `DatasetDestroyResponse`
+- `SnapshotListResponse` / `SnapshotDetailResponse` / `SnapshotFiltersResponse`
+- `SnapshotCreateRequest` / `SnapshotCreateResponse`
+- `SnapshotDestroyResponse` / `SnapshotRollbackRequest` / `SnapshotRollbackResponse`
 - `TaskListResponse` / `TaskDetailResponse`
 - `TaskScheduleCreateRequest` / `TaskScheduleUpdateRequest`
 - `TaskScheduleListResponse` / `TaskScheduleDetailResponse`
@@ -34,3 +41,5 @@ This layer defines the data models used internally and externally by the backend
 - Provides `summary / disks / pools / datasets` simultaneously to reduce frontend duplicate assembly
 - Write responses try to preserve command, exit code, and stdout for troubleshooting
 - Task list responses now carry pagination and filtering metadata for the task records page
+- Snapshot list items carry capability flags such as whether delete or rollback is allowed, so the frontend does not have to re-derive action availability
+- Schedule models normalize frequency parameters into `TaskSchedulePattern` for reuse by the scheduler and API
