@@ -129,14 +129,42 @@ Vue 3 前端
 
 ### Docker Compose
 
-复制示例并按远程主机修改环境变量：
+示例 Compose 会直接拉取 Docker Hub 上的 `rayspeedgame/zfs-manager:latest`，无需在部署主机安装 Node.js 或 Python，也无需克隆源码进行本地构建。
+
+1. 下载或复制 [`compose.example.yaml`](./compose.example.yaml)，并创建部署配置：
 
 ```bash
 cp compose.example.yaml compose.yaml
-docker compose up --build -d
 ```
 
-默认通过 `http://localhost:8080` 访问。配置和任务数据库保存在 `/data` 对应的数据卷中。使用 SSH 密钥时，请只读挂载密钥并设置 `ZFS_MANAGER_SSH_KEY_FILES`。
+2. 编辑 `compose.yaml`，至少设置远程 ZFS 主机地址、SSH 用户和认证信息，并修改默认的网页登录密码。不要把真实密码提交到 Git。
+
+3. 拉取镜像并启动：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+4. 检查运行状态和日志：
+
+```bash
+docker compose ps
+docker compose logs -f zfs-manager
+```
+
+默认通过 `http://localhost:8080` 访问。应用设置和任务数据库保存在 `zfs_manager_data` 卷挂载的 `/data` 中，普通 `docker compose down` 不会删除该卷。
+
+使用 SSH 密钥时，请删除 `ZFS_MANAGER_SSH_PASSWORD`，只读挂载密钥，并设置 `ZFS_MANAGER_SSH_KEY_FILES`。远程主机需要安装 ZFS 命令行工具和 `smartmontools`，SSH 用户需要具备相应读取与管理权限。
+
+升级到最新镜像：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+如需可复现部署，建议把 `latest` 替换为实际发布的固定版本标签。
 
 ### 本地开发
 

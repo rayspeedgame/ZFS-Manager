@@ -129,14 +129,42 @@ Vue 3 frontend
 
 ### Docker Compose
 
-Copy the example and update its environment variables for the remote host:
+The example Compose file pulls `rayspeedgame/zfs-manager:latest` directly from Docker Hub. The deployment host does not need Node.js, Python, a source checkout, or a local image build.
+
+1. Download or copy [`compose.example.yaml`](./compose.example.yaml) and create the deployment file:
 
 ```bash
 cp compose.example.yaml compose.yaml
-docker compose up --build -d
 ```
 
-Open `http://localhost:8080`. Configuration and the task database are stored in the volume mounted at `/data`. For SSH key authentication, mount the key read-only and set `ZFS_MANAGER_SSH_KEY_FILES`.
+2. Edit `compose.yaml`. At minimum, set the remote ZFS host, SSH user, authentication details, and a non-default web-login password. Do not commit real credentials to Git.
+
+3. Pull and start the image:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+4. Check status and follow logs:
+
+```bash
+docker compose ps
+docker compose logs -f zfs-manager
+```
+
+Open `http://localhost:8080`. Application settings and the task database persist under `/data` in the `zfs_manager_data` volume; a normal `docker compose down` does not remove that volume.
+
+For SSH key authentication, remove `ZFS_MANAGER_SSH_PASSWORD`, mount the key read-only, and set `ZFS_MANAGER_SSH_KEY_FILES`. The remote host needs the ZFS command-line tools and `smartmontools`, and the SSH account needs the corresponding read and management permissions.
+
+To upgrade to the latest image:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+For reproducible deployments, replace `latest` with a published fixed-version tag.
 
 ### Local development
 

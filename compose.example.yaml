@@ -1,8 +1,7 @@
 services:
   zfs-manager:
-    build:
-      context: .
-    image: zfs-manager:latest
+    image: rayspeedgame/zfs-manager:latest
+    restart: unless-stopped
     ports:
       - "8080:80"
     environment:
@@ -13,6 +12,7 @@ services:
       ZFS_MANAGER_SSH_HOST: 192.168.1.10
       ZFS_MANAGER_SSH_USERNAME: root
       ZFS_MANAGER_SSH_PORT: "22"
+      ZFS_MANAGER_SSH_PASSWORD: change-me
       ZFS_MANAGER_AUTH_ENABLED: "true"
       ZFS_MANAGER_AUTH_PASSWORD: change-me
     volumes:
